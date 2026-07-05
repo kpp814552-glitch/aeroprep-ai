@@ -43,7 +43,7 @@ export default function AppFrame({
             </Link>
           </div>
 
-          <nav className="hidden items-center gap-2 rounded-full bg-white/28 p-1 md:flex">
+          <nav className="flex items-center gap-2 rounded-full bg-white/28 p-1 overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-none md:overflow-visible">
             {[
               { href: "/", label: "首页" },
               { href: "/interview", label: "AI面试" },
@@ -53,7 +53,7 @@ export default function AppFrame({
               <Link
                 key={item.href}
                 href={item.href}
-                className="rounded-full px-4 py-2 text-sm text-slate-600 transition hover:bg-white/52 hover:text-slate-900"
+                className="shrink-0 rounded-full px-3 py-2 text-xs text-slate-600 transition hover:bg-white/52 hover:text-slate-900 md:px-4 md:text-sm"
               >
                 {item.label}
               </Link>

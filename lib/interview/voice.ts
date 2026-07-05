@@ -12,6 +12,8 @@ export type InterviewVoiceSession = {
     providerName: VoiceProviderName;
     voiceLabel: string | null;
   }>;
+  /** Pre-fetches TTS audio for the next question so speakQuestion can play it instantly. */
+  preloadQuestion: (text: string) => Promise<void>;
   stop: () => void;
 };
 
@@ -174,6 +176,15 @@ export function createInterviewVoiceSession(
       console.log("[InterviewVoice] prepare called");
       await prepare();
     },
+    async preloadQuestion(text: string) {
+      const normalizedText = buildInterviewerPrompt(text);
+      await prepare();
+      try {
+        await ttsPlayer?.preload(normalizedText);
+      } catch {
+        console.error("[InterviewVoice] preload failed, speakQuestion will fetch directly.");
+      }
+    },
     async speakQuestion(text: string) {
       const normalizedText = buildInterviewerPrompt(text);
       console.log("[InterviewVoice] speakQuestion called", {
@@ -187,7 +198,6 @@ export function createInterviewVoiceSession(
           onDebug: (message) => console.log(message),
         });
         providerName = "doubao-tts";
-        await wait(250);
         return { providerName, voiceLabel: options.voiceId || "zh_female_vv_uranus_bigtts" };
       } catch (error) {
         if (error instanceof TtsAutoplayBlockedError) {
@@ -197,7 +207,6 @@ export function createInterviewVoiceSession(
         console.error("[TTS] Doubao playback failed, falling back to native voice.", error);
         await speakWithNativeChineseVoice(normalizedText, fixedVoice);
         providerName = "native-preview";
-        await wait(250);
         return {
           providerName,
           voiceLabel: fixedVoice ? `${fixedVoice.name} (${fixedVoice.lang})` : "native-preview",

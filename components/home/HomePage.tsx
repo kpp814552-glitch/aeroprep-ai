@@ -10,6 +10,7 @@ import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { GlassLinkButton } from "@/components/ui/glass-link";
 import { interviewHighlights } from "@/lib/site";
+import { PREP_COUNTDOWN_SECONDS } from "@/lib/interview/config";
 
 const modules = [
   {
@@ -29,6 +30,7 @@ const modules = [
 ];
 
 export default function HomePage() {
+  const moduleCount = modules.length;
   return (
     <AppFrame>
       <main className="relative z-10 px-5 pb-14 pt-8 md:px-8 md:pb-20 md:pt-10">
@@ -108,15 +110,15 @@ export default function HomePage() {
                     <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
                       Immersive
                     </p>
-                    <p className="mt-3 text-2xl font-semibold text-slate-950">10s</p>
+                    <p className="mt-3 text-2xl font-semibold text-slate-950">{PREP_COUNTDOWN_SECONDS}s</p>
                     <p className="mt-2 text-sm text-slate-600">问题思考倒计时</p>
                   </div>
                   <div className="glass-card rounded-[24px] p-4">
                     <p className="text-xs uppercase tracking-[0.24em] text-slate-500">
                       Session
                     </p>
-                    <p className="mt-3 text-2xl font-semibold text-slate-950">2模块</p>
-                    <p className="mt-2 text-sm text-slate-600">只保留AI面试与AI问答</p>
+                    <p className="mt-3 text-2xl font-semibold text-slate-950">{moduleCount}模块</p>
+                    <p className="mt-2 text-sm text-slate-600">AI面试与AI问答</p>
                   </div>
                 </div>
               </div>

@@ -160,7 +160,7 @@ export default function InterviewPrepPage() {
                         面试官人格：{selectedPersona}
                       </div>
                       <div className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-slate-200">
-                        题型节奏：AI提问 + 10秒思考 + 语音回答
+                        题型节奏：AI提问 + 语音回答 + 实时反馈
                       </div>
                       <div className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-slate-200">
                         风格：现代会议室 / 浅景深 / 高端纪录片采访感

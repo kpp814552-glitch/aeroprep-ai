@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   getAnswerSecondsForStage,
+  interviewStageLabels,
   PREP_COUNTDOWN_SECONDS,
   TOTAL_INTERVIEW_ROUNDS,
 } from "@/lib/interview/config";
@@ -262,7 +263,7 @@ export default function InterviewSessionPage() {
   const currentQuestionRef = useRef("");
   const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
   const activeQuestionPlayRef = useRef("");
-  const hasPlayedFirstQuestionRef = useRef(false);
+  const isPlayingVoiceRef = useRef(false);
   const hasInitializedTtsRef = useRef(false);
   const voiceSession = useMemo<InterviewVoiceSession | null>(() => {
     if (typeof window === "undefined") return null;
@@ -615,12 +616,8 @@ export default function InterviewSessionPage() {
       stopRecognition();
       clearAnswerTimer();
       currentQuestionRef.current = questionText;
-      setCurrentQuestion(questionText);
       console.log("[InterviewSession] question set", questionText);
       setCurrentStage(nextStage);
-      setStatusText("面试官正在提问...");
-      setVoiceActivityState("tts_generating");
-      setAnswerCountdown(answerSeconds);
       setIsAnswering(false);
       setLiveTranscript("");
       setInterimTranscript("");
@@ -638,43 +635,69 @@ export default function InterviewSessionPage() {
         throw new Error("语音会话初始化失败");
       }
 
-      setVoiceActivityState("tts_playing");
-      setStatusText("面试官正在提问...");
-      let voiceResult: Awaited<ReturnType<InterviewVoiceSession["speakQuestion"]>>;
+      if (options.forcePlay) {
+        // Questions 2+: continueInterview did the preload — show text and play immediately
+        setCurrentQuestion(questionText);
+        setStatusText("面试官正在提问...");
+        setVoiceActivityState("tts_playing");
+        let voiceResult: Awaited<ReturnType<InterviewVoiceSession["speakQuestion"]>>;
 
-      try {
-        console.log("[InterviewSession] sending question to TTS", questionText);
-        voiceResult = await voiceSession.speakQuestion(questionText);
-        saveGrowthEvent({
-          type: "tts_played",
-          sessionId: sessionIdRef.current,
-          company,
-          roleLabel: payload.roleLabel || roleLabel,
-          mode,
-          question: questionText,
-        });
-      } catch (error) {
-        if (error instanceof TtsAutoplayBlockedError) {
-          setPendingQuestionState({
-            payload,
-            waitingForGesture: true,
+        try {
+          console.log("[InterviewSession] playing TTS for question", questionText);
+          voiceResult = await voiceSession.speakQuestion(questionText);
+          saveGrowthEvent({
+            type: "tts_played",
+            sessionId: sessionIdRef.current,
+            company,
+            roleLabel: payload.roleLabel || roleLabel,
+            mode,
+            question: questionText,
           });
-          setVoiceActivityState("tts_playing");
-          setStatusText("请点击下方按钮，允许播放面试官语音");
-          return;
+        } catch (error) {
+          if (error instanceof TtsAutoplayBlockedError) {
+            setPendingQuestionState({
+              payload,
+              waitingForGesture: true,
+            });
+            setVoiceActivityState("tts_playing");
+            setStatusText("请点击下方按钮，允许播放面试官语音");
+            return;
+          }
+
+          activeQuestionPlayRef.current = "";
+          throw error;
         }
 
-        activeQuestionPlayRef.current = "";
-        throw error;
-      }
+        setVoiceProviderName(voiceResult.providerName);
+        setVoiceActivityState("waiting_answer");
+        setStatusText("请开始作答");
+        setAnswerCountdown(answerSeconds);
+        setPendingQuestionState(null);
+        await startRecognition();
+        startAnswerCountdown(answerSeconds);
 
-      setVoiceProviderName(voiceResult.providerName);
-      setVoiceActivityState("waiting_answer");
-      setStatusText("请开始作答");
-      setPendingQuestionState(null);
-      await startRecognition();
-      startAnswerCountdown(answerSeconds);
-      hasPlayedFirstQuestionRef.current = true;
+      } else {
+        // First question: preload TTS first, then show text + button
+        setStatusText("正在准备语音...");
+        setVoiceActivityState("tts_generating");
+
+        try {
+          console.log("[InterviewSession] preloading TTS for first question", questionText);
+          await voiceSession.preloadQuestion(questionText);
+        } catch (error) {
+          console.warn("[InterviewSession] TTS preload failed, will use direct playback", error);
+        }
+
+        setCurrentQuestion(questionText);
+
+        // Show play button — user tap required
+        setStatusText("点击下方按钮开始播放面试官语音");
+        setVoiceActivityState("tts_playing");
+        setPendingQuestionState({
+          payload,
+          waitingForGesture: true,
+        });
+      }
     },
     [
       clearAnswerTimer,
@@ -690,20 +713,60 @@ export default function InterviewSessionPage() {
 
   const handleResumeAudioPlayback = useCallback(async () => {
     if (!pendingQuestionState?.waitingForGesture) return;
+    if (isPlayingVoiceRef.current) return;
+    isPlayingVoiceRef.current = true;
 
     setFatalError("");
-    setStatusText("正在播放面试官语音...");
+    setStatusText("面试官正在提问...");
+    setVoiceActivityState("tts_playing");
     const pendingPayload = pendingQuestionState.payload;
+    const pendingQuestionText = pendingPayload.question?.trim() ?? "";
     setPendingQuestionState(null);
 
     try {
-      activeQuestionPlayRef.current = "";
-      await runQuestionRound(pendingPayload, { forcePlay: true });
+      if (!voiceSession) throw new Error("语音会话初始化失败");
+
+      console.log("[InterviewSession] playing cached TTS for question", pendingQuestionText);
+      const voiceResult = await voiceSession.speakQuestion(pendingQuestionText);
+
+      saveGrowthEvent({
+        type: "tts_played",
+        sessionId: sessionIdRef.current,
+        company,
+        roleLabel: pendingPayload.roleLabel || roleLabel,
+        mode,
+        question: pendingQuestionText,
+      });
+
+      setVoiceProviderName(voiceResult.providerName);
+      setVoiceActivityState("waiting_answer");
+      setStatusText("请开始作答");
+      const answerSeconds = getAnswerSecondsForStage(pendingPayload.stage ?? "self-intro");
+      setAnswerCountdown(answerSeconds);
+      await startRecognition();
+      startAnswerCountdown(answerSeconds);
     } catch (error) {
+      if (error instanceof TtsAutoplayBlockedError) {
+        setPendingQuestionState({ payload: pendingPayload, waitingForGesture: true });
+        setVoiceActivityState("tts_playing");
+        setStatusText("请点击下方按钮，允许播放面试官语音");
+        return;
+      }
+      isPlayingVoiceRef.current = false;
+      activeQuestionPlayRef.current = "";
       setFatalError(error instanceof Error ? error.message : "语音播放失败");
       setStatusText("语音播放失败，请稍后刷新重试");
     }
-  }, [pendingQuestionState, runQuestionRound]);
+    isPlayingVoiceRef.current = false;
+  }, [
+    company,
+    mode,
+    pendingQuestionState,
+    roleLabel,
+    startAnswerCountdown,
+    startRecognition,
+    voiceSession,
+  ]);
 
   const continueInterview = useCallback(async () => {
     if (isGeneratingReport || isInterviewCompleted) return;
@@ -754,7 +817,15 @@ export default function InterviewSessionPage() {
 
     try {
       const nextQuestion = await fetchNextQuestion(nextTurns);
-      await runQuestionRound(nextQuestion);
+
+      // Fire-and-forget TTS preload so speakQuestion can use cached audio
+      if (nextQuestion.question?.trim()) {
+        voiceSession?.preloadQuestion(nextQuestion.question.trim()).catch(() => {
+          console.log("[InterviewSession] TTS preload failed, will fetch inline");
+        });
+      }
+
+      await runQuestionRound(nextQuestion, { forcePlay: true });
     } catch (error) {
       setFatalError(error instanceof Error ? error.message : "下一轮问题生成失败");
       setStatusText("下一轮问题生成失败，请稍后刷新重试");
@@ -770,6 +841,7 @@ export default function InterviewSessionPage() {
     isGeneratingReport,
     isInterviewCompleted,
     mode,
+    pendingQuestionState,
     roleLabel,
     runQuestionRound,
     stopRecognition,
@@ -795,7 +867,7 @@ export default function InterviewSessionPage() {
         mode,
       });
       const firstQuestion = await fetchOpeningQuestion();
-      await runQuestionRound(firstQuestion, { forcePlay: !hasPlayedFirstQuestionRef.current });
+      await runQuestionRound(firstQuestion);
     } catch (error) {
       setFatalError(error instanceof Error ? error.message : "面试启动失败");
       setStatusText("面试启动失败，请刷新后重试");
@@ -980,7 +1052,7 @@ export default function InterviewSessionPage() {
                         <div className="flex items-center gap-3">
                           <div>
                             <p className="text-[0.64rem] uppercase tracking-[0.26em] text-white/42">
-                              Answer Time
+                              {interviewStageLabels[currentStage] || "答题"}
                             </p>
                             <p className="mt-1 font-light tabular-nums text-[1.18rem] tracking-[0.12em] text-white/84 md:text-[1.32rem]">
                               {answerCountdownLabel}
@@ -992,7 +1064,7 @@ export default function InterviewSessionPage() {
                               : isAnswering
                                 ? "你可以继续作答，或主动结束当前回答"
                                 : pendingQuestionState?.waitingForGesture
-                                  ? "浏览器需要一次点击来播放面试官语音"
+                                  ? "音频已就绪，点击开始面试"
                                   : "AI 提问结束后将进入答题阶段"}
                           </p>
                         </div>
@@ -1000,16 +1072,20 @@ export default function InterviewSessionPage() {
                           <button
                             type="button"
                             onClick={handleResumeAudioPlayback}
+                            aria-label="播放面试官语音"
+                            title="音频已就绪，点击后文字和语音同时出现"
                             className="pointer-events-auto inline-flex items-center rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
                           >
-                            Tap To Play
+                            开始面试
                           </button>
                         ) : (
                           <button
                             type="button"
                             onClick={handleEndAnswer}
+                            aria-label="结束回答"
+                            title="结束当前回答，进入下一轮"
                             disabled={!isAnswering || isGeneratingReport || isInterviewCompleted}
-                            className="pointer-events-auto inline-flex items-center rounded-full border border-white/10 bg-white/6 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-white/74 transition hover:border-white/16 hover:bg-white/9 hover:text-white disabled:cursor-not-allowed disabled:border-white/6 disabled:bg-white/4 disabled:text-white/28"
+                            className="pointer-events-auto inline-flex items-center rounded-full border border-white/20 bg-white/14 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-white/88 transition hover:border-white/30 hover:bg-white/22 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35"
                           >
                             End Answer
                           </button>

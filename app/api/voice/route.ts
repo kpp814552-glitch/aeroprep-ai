@@ -1,3 +1,4 @@
+// ⚠️ 已废弃：Kokoro TTS 本地合成。依赖本地 .venv-kokoro311，生产环境不可用。
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
