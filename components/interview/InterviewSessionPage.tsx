@@ -887,17 +887,22 @@ export default function InterviewSessionPage() {
   }, [prepIndex]);
 
   useEffect(() => {
-    if (prepIndex < PREP_COUNTDOWN_SECONDS || hasStartedFlowRef.current) return;
+    if (prepIndex < PREP_COUNTDOWN_SECONDS) return;
 
-    hasStartedFlowRef.current = true;
-    startAtRef.current = Date.now();
+    // Start the timer (Strict Mode double-invocation safe: de-duped via interval check)
+    if (elapsedTimerRef.current === null) {
+      startAtRef.current = Date.now();
+      elapsedTimerRef.current = window.setInterval(() => {
+        if (startAtRef.current === null) return;
+        setElapsedSeconds(Math.max(0, Math.round((Date.now() - startAtRef.current) / 1000)));
+      }, 1000);
+    }
 
-    elapsedTimerRef.current = window.setInterval(() => {
-      if (startAtRef.current === null) return;
-      setElapsedSeconds(Math.max(0, Math.round((Date.now() - startAtRef.current) / 1000)));
-    }, 1000);
-
-    void startInterviewFlow();
+    // Start interview flow only once
+    if (!hasStartedFlowRef.current) {
+      hasStartedFlowRef.current = true;
+      void startInterviewFlow();
+    }
 
     return () => {
       if (elapsedTimerRef.current) {
