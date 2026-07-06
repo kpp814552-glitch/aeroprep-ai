@@ -60,6 +60,80 @@ const PERSONA_CONFIG: Record<string, PersonaProfile> = {
   },
 };
 
+
+// ===== Airline Company Configurations =====
+type CompanyProfile = {
+  label: string;
+  culture: string;
+  values: string[];
+  interviewFocus: string;
+  styleHint: string;
+};
+
+const COMPANY_CONFIG: Record<string, CompanyProfile> = {
+  "国航": {
+    label: "国航",
+    culture: "载旗航空，中国民航的代表。企业文化以'安全第一、严谨规范'为核心，强调纪律性和责任感。",
+    values: ["安全", "责任", "严谨", "规范"],
+    interviewFocus: "重点考察候选人的安全意识、规范执行能力、责任感和职业素养。对运行标准和规章制度的理解非常重要。",
+    styleHint: "面试风格偏正式严谨，对专业知识和规章熟悉度要求较高。",
+  },
+  "东航": {
+    label: "东航",
+    culture: "总部上海，中国三大航之一。企业文化融合国际化视野与本土服务创新，强调'精准、舒适、高效'。",
+    values: ["国际化", "服务创新", "精准", "高效"],
+    interviewFocus: "重点考察候选人的服务意识、沟通能力和国际化视野。对英语能力和跨文化沟通有一定要求。",
+    styleHint: "面试风格偏专业国际范，注重综合素质和沟通表达能力。",
+  },
+  "南航": {
+    label: "南航",
+    culture: "亚洲机队规模最大的航空公司，总部广州。企业文化以'安全、高效、亲和、创新'为核心，拥有丰富的国际国内航线网络。",
+    values: ["安全", "亲和", "创新", "规模运营"],
+    interviewFocus: "重点考察候选人的专业基础、实操能力和团队协作精神。对大规模运行环境下的适应能力有要求。",
+    styleHint: "面试风格偏务实，注重实际能力和岗位匹配度。",
+  },
+  "厦航": {
+    label: "厦航",
+    culture: "总部厦门，以精细化服务和优秀安全记录著称。企业文化倡导'诚信、精进、担当、创新'，服务品质在业内口碑突出。",
+    values: ["精细化", "服务品质", "诚信", "精进"],
+    interviewFocus: "重点考察候选人的服务细节意识、职业操守和精益求精的态度。对服务标准和质量追求有较高期望。",
+    styleHint: "面试风格偏细致深入，会考察候选人对服务细节和品质的理解。",
+  },
+  "海航": {
+    label: "海航",
+    culture: "总部海口，五星航空，以国际化服务和独特企业文化闻名。企业文化融合东方哲学与现代管理，强调'至诚、至善、至精、至美'。",
+    values: ["国际化", "五星服务", "东方文化", "至善至美"],
+    interviewFocus: "重点考察候选人的服务意识、职业形象和国际化素养。对服务标准和旅客体验有较高要求。",
+    styleHint: "面试风格偏国际化，注重候选人的整体职业素养和服务理念。",
+  },
+  "深航": {
+    label: "深航",
+    culture: "总部深圳，以创新和务实著称。企业文化倡导'创新、务实、高效、卓越'，立足深圳这一创新之都。",
+    values: ["创新", "务实", "高效", "卓越"],
+    interviewFocus: "重点考察候选人的创新思维、解决问题的能力和务实的工作态度。对现代化管理理念的接受度有关注。",
+    styleHint: "面试风格偏现代化，注重候选人的综合素质和创新潜力。",
+  },
+  "吉祥": {
+    label: "吉祥航空",
+    culture: "民营航空公司的代表之一，总部上海。企业文化强调'高效运营、成本意识、灵活应变'，注重团队战斗力。",
+    values: ["高效", "成本意识", "灵活", "团队"],
+    interviewFocus: "重点考察候选人的成本意识、多岗位适应能力和工作执行力。对高效运营环境的适应能力有要求。",
+    styleHint: "面试风格偏务实高效，节奏较快，注重候选人的执行力和适应性。",
+  },
+  "春秋": {
+    label: "春秋航空",
+    culture: "中国最大的廉价航空公司，总部上海。企业文化以'低成本、高效率、严管理'为核心，强调节约意识和快速决策。",
+    values: ["低成本", "高效率", "严管理", "灵活"],
+    interviewFocus: "重点考察候选人的成本控制意识、工作强度和压力承受能力。对高效、简化的运营模式有明确要求。",
+    styleHint: "面试风格偏直接高效，节奏紧凑，注重候选人的抗压能力和工作效率。",
+  },
+};
+
+function getCompanyConfig(company?: string): CompanyProfile {
+  return COMPANY_CONFIG[company || "国航"] || COMPANY_CONFIG["国航"];
+}
+
+
 function getPersonaConfig(persona?: string): PersonaProfile {
   return PERSONA_CONFIG[persona || "专业型HR"] || PERSONA_CONFIG["专业型HR"];
 }
@@ -163,6 +237,7 @@ function buildFallbackNextQuestion(
   const anchor = pickResumeAnchor(lastTurn?.answer ?? "你刚才提到的内容");
   const airline = company || "这家航司";
   const interviewerTone = persona || "专业型HR";
+  const companyCfg = getCompanyConfig(company);
   const personaCfg = getPersonaConfig(persona);
 
   const stageQuestions: Record<InterviewStage, string> = {
@@ -227,6 +302,7 @@ function buildNextQuestionPrompt(
   persona?: string
 ) {
   const roleConfig = getRoleConfig(role);
+  const companyCfg = getCompanyConfig(company);
   const nextStage = getStageByTurnCount(turns);
   const lastTurn = turns.at(-1);
   const personaCfg = getPersonaConfig(persona);
@@ -245,6 +321,12 @@ function buildNextQuestionPrompt(
 - 语气和措辞要求：${personaCfg.toneInstruction}
 - 提问方式要求：${personaCfg.approachInstruction}
 - 追问/反馈风格：${personaCfg.feedbackInstruction}
+
+目标公司背景（面试官需体现该航司特色）：
+- 航司：${companyCfg.label}
+- 企业文化：${companyCfg.culture}
+- 核心价值：${companyCfg.values.join("、")}
+- 面试考察重点：${companyCfg.interviewFocus}
 
 当前面试进度：
 - 下一阶段必须是：${interviewStageLabels[nextStage]}
@@ -290,6 +372,7 @@ function buildReportPrompt(
   fallbackReport?: InterviewReport
 ) {
   const roleConfig = getRoleConfig(role);
+  const companyCfg = getCompanyConfig(company);
   const personaCfg = getPersonaConfig(persona);
 
   return `
