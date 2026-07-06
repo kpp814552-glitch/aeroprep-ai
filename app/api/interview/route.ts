@@ -12,6 +12,57 @@ import type {
   InterviewTurn,
 } from "@/lib/interview/types";
 
+
+// ===== Interviewer Persona Configurations =====
+type PersonaProfile = {
+  style: string;
+  toneInstruction: string;
+  approachInstruction: string;
+  feedbackInstruction: string;
+  scenarioIntro: string;
+};
+
+const PERSONA_CONFIG: Record<string, PersonaProfile> = {
+  "温和型HR": {
+    style: "温暖鼓励型面试官",
+    toneInstruction: "语气温和亲切，多用'好的''没关系''说得挺不错的'等鼓励性措辞。即使回答不完整，也先肯定再引导。",
+    approachInstruction: "引导式提问，给候选人充分的表达空间。如果候选人卡住了，用'慢慢来，不着急'来缓解紧张。不要连续追问。",
+    feedbackInstruction: "回答后先给予正面反馈，再用'我能不能再延伸一下'来引出下一轮。",
+    scenarioIntro: "那我们来做一道比较轻松的情景分析题，你可以按自己的节奏来回答。假设你在现场遇到了一个需要快速判断和沟通的情况，你会怎么处理？",
+  },
+  "专业型HR": {
+    style: "专业中立型面试官",
+    toneInstruction: "语言精炼专业，保持客观中立。直接围绕岗位能力模型提问，避免主观评价，聚焦候选人的事实和经验。",
+    approachInstruction: "使用结构化行为面试法（STAR原则）。针对'当时的情况''你的具体行动''最终的结果'逐层深入。",
+    feedbackInstruction: "不对回答内容做价值判断，用'我了解了''好的，明白了'等中性短语自然过渡。",
+    scenarioIntro: "那我们进入情景题环节，请用STAR原则来组织你的回答。假设一个运行突发情况，请描述你的判断和行动方案。",
+  },
+  "压力型HR": {
+    style: "挑战施压型面试官",
+    toneInstruction: "语气带有适当的压力和挑战性。开场不要太温和，直接进入主题。多用'能不能具体一点''这个回答还不够深入'等追问。节奏紧凑。",
+    approachInstruction: "连续追问模式。候选人回答后立刻追问细节，打断含糊不清的描述，压缩思考时间。",
+    feedbackInstruction: "不要说'说得不错'或'挺好的'。对每一轮回答都要提出更深的问题，用'我理解，但我想知道的是'来施加追问压力。",
+    scenarioIntro: "那我们加一点压力。你只有极短的时间做判断，你会最先关注什么？然后你会怎么行动？",
+  },
+  "航司机长": {
+    style: "运行经验型面试官",
+    toneInstruction: "语调和措辞偏航空运行语境，使用航空专业术语（如'标准操作程序''机组资源管理''情况意识'）。语气沉稳专业。",
+    approachInstruction: "以实际运行场景为切入点，考察候选人的程序意识、CRM能力和安全决策思维。像资深机长在做航线带飞后的讲评。",
+    feedbackInstruction: "用运行经验回应，如'你这个思路在实际运行中会遇到……'，保持师徒式的辅导氛围。",
+    scenarioIntro: "我们来做一个运行情景题。你在执飞一个复杂进近，天气在最低标准附近，你会怎么进行简令和决策？",
+  },
+  "资深机务工程师": {
+    style: "技术专家型面试官",
+    toneInstruction: "语气偏向技术讨论，使用维修工程术语（如'排故手册''TSM''适航指令'）。语调严谨，注重技术逻辑和规范意识。",
+    approachInstruction: "以故障场景和技术判断为切入点，考察候选人的排故思路、维修规范和系统知识。像资深工程师在做技术面试。",
+    feedbackInstruction: "用技术逻辑回应，如'如果你是放行工程师，你会怎么判断'，保持技术讨论的氛围。",
+    scenarioIntro: "我们来看一个技术情景。航班过站报告一个间歇性故障，你作为当班工程师，会按照什么思路来排查和决策？",
+  },
+};
+
+function getPersonaConfig(persona?: string): PersonaProfile {
+  return PERSONA_CONFIG[persona || "专业型HR"] || PERSONA_CONFIG["专业型HR"];
+}
 type InterviewRequestBody = {
   action: "start" | "next" | "report";
   role: InterviewRole;
@@ -112,6 +163,7 @@ function buildFallbackNextQuestion(
   const anchor = pickResumeAnchor(lastTurn?.answer ?? "你刚才提到的内容");
   const airline = company || "这家航司";
   const interviewerTone = persona || "专业型HR";
+  const personaCfg = getPersonaConfig(persona);
 
   const stageQuestions: Record<InterviewStage, string> = {
     "self-intro":
@@ -121,7 +173,7 @@ function buildFallbackNextQuestion(
     internship: `有意思。那我再追问一步。如果把课堂和真实工作场景放在一起看，你有没有相关实习、见习或者值班经历？当时你承担的角色是什么？`,
     "role-fit": `我注意到你刚才提到“${anchor}”。如果真的进入${airline}的${roleConfig.label}岗位，你觉得自己最能直接胜任的能力是什么？为什么？`,
     professional: `好的。那我想更专业一点。围绕${roleConfig.coreTopics[0]}和${roleConfig.coreTopics[1]}，你通常会怎么理解它们在实际工作里的重要性？`,
-    scenario: `${interviewerTone === "压力型HR" ? "那我们加一点压力。" : "那我们做一个情景题。"} 如果现在遇到一个需要你快速判断和沟通的现场情况，你会先怎么判断，再怎么行动？`,
+    scenario: `${personaCfg.scenarioIntro}`,
     career: `聊到这里，我想了解一下你的职业规划。如果你顺利进入${airline}，你希望自己在三到五年内成长成什么样的状态？`,
     summary: `好的，最后一个问题。如果现在让你用一句话总结，为什么${airline}应该选择你来做${roleConfig.label}，你会怎么回答？`,
   };
@@ -177,6 +229,7 @@ function buildNextQuestionPrompt(
   const roleConfig = getRoleConfig(role);
   const nextStage = getStageByTurnCount(turns);
   const lastTurn = turns.at(-1);
+  const personaCfg = getPersonaConfig(persona);
 
   return `
 你现在是一位真实航空公司电话面试官。
@@ -185,7 +238,13 @@ function buildNextQuestionPrompt(
 - 航司：${company || "航空公司"}
 - 岗位：${roleConfig.label}
 - 面试模式：${mode || "常规面试"}
-- 面试官人格：${persona || "成熟专业HR"}
+- 面试官人格：${persona || "专业型HR"}
+
+面试官人格指令（必须严格遵守）：
+- 风格类型：${personaCfg.style}
+- 语气和措辞要求：${personaCfg.toneInstruction}
+- 提问方式要求：${personaCfg.approachInstruction}
+- 追问/反馈风格：${personaCfg.feedbackInstruction}
 
 当前面试进度：
 - 下一阶段必须是：${interviewStageLabels[nextStage]}
@@ -202,12 +261,12 @@ ${turns
   .join("\n\n")}
 
 必须遵守：
+- 按照上面的"面试官人格指令"来组织整个追问，让语气和风格符合该人格
 - 基于候选人上一轮回答追问
-- 必须记住候选人刚刚说过的内容
 - 先自然回应一句，再进入一个核心问题
 - 不能直接跳到过深的专业难题
 - 只问一个问题
-- 像真实HR电话面试，不要朗读题库
+- 像真实面试官在说话
 - 用2到5个短句
 
 候选人上一轮：
@@ -231,12 +290,16 @@ function buildReportPrompt(
   fallbackReport?: InterviewReport
 ) {
   const roleConfig = getRoleConfig(role);
+  const personaCfg = getPersonaConfig(persona);
 
   return `
 请担任${company || "航空公司"} ${roleConfig.label}岗位的民航HR面试官，根据以下真实面试记录生成一份专业面试报告。
 
 面试模式：${mode || "常规面试"}
 面试官人格：${persona || "专业型HR"}
+面试官对应风格：${personaCfg.style}
+
+撰写报告时请保持与面试官人格一致的观察视角和措辞风格。
 
 面试记录：
 ${turns
