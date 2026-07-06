@@ -1,11 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, type ChangeEvent } from "react";
 import { FileText, Mic, MoveRight, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { GlassLinkButton } from "@/components/ui/glass-link";
+import { useAuth } from "@/hooks/useAuth";
+import LoginModal from "@/components/auth/LoginModal";
 import {
   interviewCompanies,
   interviewerPersonas,
@@ -55,6 +58,9 @@ function formatFileSize(size: number) {
 }
 
 export default function InterviewPrepPage() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [resume, setResume] = useState<UploadState>(null);
   const [selectedCompany, setSelectedCompany] = useState<InterviewCompany>("国航");
   const [selectedRole, setSelectedRole] = useState(prepRoleOptions[0].value);
@@ -308,13 +314,30 @@ export default function InterviewPrepPage() {
                   </div>
 
                   <div className="mt-8 flex flex-col gap-3">
-                    <GlassLinkButton
-                      href={sessionHref}
-                      className="w-full justify-center px-6 py-3.5 text-base"
-                    >
-                      开始面试
-                      <MoveRight className="h-4 w-4" />
-                    </GlassLinkButton>
+                    {user ? (
+                      <GlassLinkButton
+                        href={sessionHref}
+                        className="w-full justify-center px-6 py-3.5 text-base"
+                      >
+                        开始面试
+                        <MoveRight className="h-4 w-4" />
+                      </GlassLinkButton>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setShowLoginModal(true)}
+                        className="shine-border accent-ring inline-flex w-full items-center justify-center gap-2 rounded-full bg-[rgba(37,113,255,0.88)] px-6 py-3.5 text-base font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(37,113,255,0.22)]"
+                      >
+                        开始面试
+                        <MoveRight className="h-4 w-4" />
+                      </button>
+                    )}
+                    <LoginModal
+                      open={showLoginModal}
+                      onClose={() => setShowLoginModal(false)}
+                      message="请先登录后开始AI面试"
+                      redirectAfterLogin={sessionHref}
+                    />
                     <Link
                       href="/interview/report"
                       className="text-center text-sm text-slate-300 underline underline-offset-4"

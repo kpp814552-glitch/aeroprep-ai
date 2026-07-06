@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, Clock3, FileSearch, LineChart, TrendingUp } from "lucide-react";
+import { BarChart3, Clock3, FileSearch, LineChart, TrendingUp, LogIn } from "lucide-react";
+import Link from "next/link";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import {
@@ -9,6 +10,9 @@ import {
   subscribeGrowthEvents,
 } from "@/lib/profile/growth-storage";
 import { readInterviewSessions, subscribeInterviewSessions } from "@/lib/interview/session-storage";
+import { useAuth } from "@/hooks/useAuth";
+import { createClient } from "@/lib/supabase/client";
+import type { UserProfile } from "@/lib/supabase/types";
 
 function formatMeta(value: string) {
   const date = new Date(value);

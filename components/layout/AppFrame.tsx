@@ -1,8 +1,11 @@
+"use client";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, LogOut, UserCircle } from "lucide-react";
 import { appName } from "@/lib/site";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 
 type AppFrameProps = {
   children: ReactNode;
@@ -17,6 +20,10 @@ export default function AppFrame({
   backHref,
   backLabel = "返回",
 }: AppFrameProps) {
+  const pathname = usePathname();
+  const { user, profile, loading, signOut } = useAuth();
+  const isLoggedIn = !!user;
+
   return (
     <div className={cn("relative z-10", className)}>
       <header className="px-5 pt-5 md:px-8 md:pt-7">
@@ -53,11 +60,54 @@ export default function AppFrame({
               <Link
                 key={item.href}
                 href={item.href}
-                className="shrink-0 rounded-full px-3 py-2 text-xs text-slate-600 transition hover:bg-white/52 hover:text-slate-900 md:px-4 md:text-sm"
+                className={cn(
+                  "shrink-0 rounded-full px-3 py-2 text-xs transition md:px-4 md:text-sm",
+                  pathname === item.href
+                    ? "bg-white/60 text-slate-900"
+                    : "text-slate-600 hover:bg-white/52 hover:text-slate-900"
+                )}
               >
                 {item.label}
               </Link>
             ))}
+
+            <div className="ml-1 h-5 w-px bg-white/20" />
+
+            {loading ? null : isLoggedIn ? (
+              <div className="flex items-center gap-2 shrink-0">
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-1.5 rounded-full bg-white/30 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-white/50"
+                >
+                  <UserCircle className="h-4 w-4" />
+                  <span className="max-w-[80px] truncate">{profile?.username || user.email?.split("@")[0]}</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => signOut()}
+                  aria-label="退出登录"
+                  title="退出登录"
+                  className="rounded-full p-1.5 text-slate-500 transition hover:bg-white/40 hover:text-slate-700"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-1 shrink-0">
+                <Link
+                  href="/login"
+                  className="rounded-full px-3 py-1.5 text-xs text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
+                >
+                  登录
+                </Link>
+                <Link
+                  href="/register"
+                  className="rounded-full bg-[rgba(37,113,255,0.88)] px-3 py-1.5 text-xs text-white transition hover:bg-[rgba(37,113,255,1)]"
+                >
+                  注册
+                </Link>
+              </div>
+            )}
           </nav>
         </div>
       </header>

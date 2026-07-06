@@ -27,6 +27,7 @@ import {
   type VoiceProviderName,
 } from "@/lib/interview/voice";
 import { TtsAutoplayBlockedError } from "@/lib/audio/tts-player";
+import { useAuth } from "@/hooks/useAuth";
 
 const prepSequence = ["3", "2", "1", "开始面试"] as const;
 
@@ -265,6 +266,7 @@ export default function InterviewSessionPage() {
   const activeQuestionPlayRef = useRef("");
   const isPlayingVoiceRef = useRef(false);
   const hasInitializedTtsRef = useRef(false);
+  const { user } = useAuth();
   const voiceSession = useMemo<InterviewVoiceSession | null>(() => {
     if (typeof window === "undefined") return null;
 
@@ -370,6 +372,32 @@ export default function InterviewSessionPage() {
 
         saveInterviewCompletionGrowth(record);
         setIsInterviewCompleted(true);
+
+        // Save to Supabase if logged in
+        if (user) {
+          fetch("/api/interview/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              role,
+              role_label: roleLabel,
+              company,
+              mode,
+              persona,
+              score: payload.report?.totalScore || 0,
+              evaluation: payload.report?.overallEvaluation || "",
+              strengths: payload.report?.strengths || [],
+              weaknesses: payload.report?.weaknesses || [],
+              started_at: new Date(sessionIdRef.current.split("-")[1] || Date.now()).toISOString(),
+              ended_at: new Date().toISOString(),
+              duration_seconds: totalElapsedSeconds,
+              total_turns: finalTurns.length,
+            }),
+          }).catch(() => {
+            console.warn("[Interview] Failed to save to DB");
+          });
+        }
+
         persistAndNavigateToReport(record);
       } catch (error) {
         setFatalError(error instanceof Error ? error.message : "报告生成失败");
