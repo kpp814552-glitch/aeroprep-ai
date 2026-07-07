@@ -46,7 +46,11 @@ export const interviewStageAnswerSeconds: Record<InterviewStage, number> = {
 };
 
 /** 单次面试最大时长（秒），超时自动结束生成报告 */
-export const MAX_INTERVIEW_DURATION = 780;
+/** 面试模式对应的最大轮次 */
+export function getTotalRoundsForMode(mode?: string): number {
+  if (mode === "压力面试") return 10;
+  return TOTAL_INTERVIEW_ROUNDS;
+}
 
 export const interviewRoles: InterviewRoleConfig[] = [
   {

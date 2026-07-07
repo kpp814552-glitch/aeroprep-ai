@@ -9,8 +9,8 @@ import {
   getAnswerSecondsForStage,
   interviewStageLabels,
   PREP_COUNTDOWN_SECONDS,
-  MAX_INTERVIEW_DURATION,
   TOTAL_INTERVIEW_ROUNDS,
+  getTotalRoundsForMode,
 } from "@/lib/interview/config";
 import {
   buildSessionRecord } from "@/lib/interview/report";
@@ -844,10 +844,10 @@ export default function InterviewSessionPage() {
     const totalElapsedSeconds =
       startAtRef.current === null ? elapsedSeconds : Math.round((Date.now() - startAtRef.current) / 1000);
 
-    if (totalElapsedSeconds >= MAX_INTERVIEW_DURATION || nextTurns.length >= TOTAL_INTERVIEW_ROUNDS) {
-      if (totalElapsedSeconds >= MAX_INTERVIEW_DURATION) {
-        console.log("[Interview] Max duration reached, ending interview");
-      }
+    // Pressure interview has fewer rounds; normal modes use TOTAL_INTERVIEW_ROUNDS
+    const effectiveMaxRounds = getTotalRoundsForMode(mode);
+
+    if (nextTurns.length >= effectiveMaxRounds) {
       await generateReportAndFinish(nextTurns, totalElapsedSeconds);
       return;
     }
