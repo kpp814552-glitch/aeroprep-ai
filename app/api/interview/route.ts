@@ -281,7 +281,12 @@ async function callDeepSeek(apiKey: string, prompt: string) {
 }
 
 function getStageByTurnCount(turns: InterviewTurn[]) {
-  return interviewStages[Math.min(turns.length, interviewStages.length - 1)] ?? "summary";
+  // Each stage gets at least 2 rounds for main question + follow-up
+  const stageIndex = Math.min(
+    Math.floor(turns.length / 2),
+    interviewStages.length - 1
+  );
+  return interviewStages[stageIndex] ?? "summary";
 }
 
 function pickResumeAnchor(answer: string) {
@@ -444,13 +449,17 @@ ${turns
   .join("\n\n")}
 
 必须遵守：
-- 按照上面的"面试官人格指令"来组织整个追问，让语气和风格符合该人格
-- 基于候选人上一轮回答追问
-- 先自然回应一句，再进入一个核心问题
-- 不能直接跳到过深的专业难题
-- 只问一个问题
-- 像真实面试官在说话
-- 用2到5个短句
+- 按照上面面试官人格指令来组织追问，语气和风格必须保持一致性
+- 基于候选人上一轮回答进行追问，抓住具体细节深入挖掘
+- 如果候选人回答过于简短（少于20字）或答非所问，先温和地说"我理解你的意思"，然后通过具体例子或换一种角度重新引导：
+  例："我理解你的意思，那你能否举个具体的例子来说明？"
+  例："我换个问法，如果当时的情况是XX，你会怎么处理？"
+- 候选人提到关键经历、技能或项目时，必须追问具体细节（"你当时具体做了什么？""结果如何？"）
+- 先自然回应一句再进入核心问题，对话要有真实交流感
+- 允许在同一阶段内连续追问2-3轮，充分挖掘后再进入下一阶段
+- 如果候选人回答充分且有深度，按正常进度继续下一阶段
+- 只问一个问题，问题要基于候选人的个人经历展开
+- 像真实面试官一样自然交流，用2到5个短句
 
 候选人上一轮：
 问：${lastTurn?.question || ""}

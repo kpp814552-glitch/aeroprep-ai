@@ -6,7 +6,7 @@ import type {
 } from './types';
 
 export const MAX_FOLLOW_UPS = 3;
-export const TOTAL_INTERVIEW_ROUNDS = 8;
+export const TOTAL_INTERVIEW_ROUNDS = 20;
 export const PREP_COUNTDOWN_SECONDS = 3;
 
 export const interviewStages: InterviewStage[] = [
