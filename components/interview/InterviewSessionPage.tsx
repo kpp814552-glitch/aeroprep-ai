@@ -207,6 +207,9 @@ export default function InterviewSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const sessionIdRef = useRef(createSessionId());
+  const resumeTextRef = useRef(
+    typeof window !== "undefined" ? sessionStorage.getItem("aeroprep_resume_text") || "" : ""
+  );
   const startAtRef = useRef<number | null>(null);
   const elapsedTimerRef = useRef<number | null>(null);
   const answerTimerRef = useRef<number | null>(null);
@@ -345,6 +348,7 @@ export default function InterviewSessionPage() {
             company,
             mode,
             persona,
+            resumeText: resumeTextRef.current,
             turns: finalTurns,
           }),
         });
@@ -552,7 +556,6 @@ export default function InterviewSessionPage() {
   ]);
 
   const fetchOpeningQuestion = useCallback(async () => {
-    console.log("[InterviewSession] fetching opening question");
     const response = await fetch("/api/interview", {
       method: "POST",
       headers: {
@@ -564,6 +567,7 @@ export default function InterviewSessionPage() {
         company,
         mode,
         persona,
+        resumeText: resumeTextRef.current,
       }),
     });
 
@@ -572,7 +576,6 @@ export default function InterviewSessionPage() {
       throw new Error("首轮问题获取失败");
     }
 
-    console.log("[InterviewSession] opening question received", payload.question);
     return payload;
   }, [company, mode, persona, role]);
 
@@ -589,6 +592,7 @@ export default function InterviewSessionPage() {
           company,
           mode,
           persona,
+          resumeText: resumeTextRef.current,
           turns: nextTurns,
         }),
       });
@@ -628,14 +632,10 @@ export default function InterviewSessionPage() {
       }
 
       if (!options.forcePlay && activeQuestionPlayRef.current === questionText) {
-        console.log("[InterviewSession] skipping duplicate TTS trigger for question", questionText);
         return;
       }
 
-      console.log("[InterviewSession] runQuestionRound called", {
-        questionText,
-        forcePlay: options.forcePlay ?? false,
-      });
+
       activeQuestionPlayRef.current = questionText;
 
       const nextStage = payload.stage ?? "self-intro";
@@ -644,7 +644,6 @@ export default function InterviewSessionPage() {
       stopRecognition();
       clearAnswerTimer();
       currentQuestionRef.current = questionText;
-      console.log("[InterviewSession] question set", questionText);
       setCurrentStage(nextStage);
       setIsAnswering(false);
       setLiveTranscript("");
@@ -671,7 +670,6 @@ export default function InterviewSessionPage() {
         let voiceResult: Awaited<ReturnType<InterviewVoiceSession["speakQuestion"]>>;
 
         try {
-          console.log("[InterviewSession] playing TTS for question", questionText);
           voiceResult = await voiceSession.speakQuestion(questionText);
           saveGrowthEvent({
             type: "tts_played",
@@ -710,7 +708,6 @@ export default function InterviewSessionPage() {
         setVoiceActivityState("tts_generating");
 
         try {
-          console.log("[InterviewSession] preloading TTS for first question", questionText);
           await voiceSession.preloadQuestion(questionText);
         } catch (error) {
           console.warn("[InterviewSession] TTS preload failed, will use direct playback", error);
@@ -754,7 +751,6 @@ export default function InterviewSessionPage() {
     try {
       if (!voiceSession) throw new Error("语音会话初始化失败");
 
-      console.log("[InterviewSession] playing cached TTS for question", pendingQuestionText);
       const voiceResult = await voiceSession.speakQuestion(pendingQuestionText);
 
       saveGrowthEvent({
@@ -849,7 +845,6 @@ export default function InterviewSessionPage() {
       // Fire-and-forget TTS preload so speakQuestion can use cached audio
       if (nextQuestion.question?.trim()) {
         voiceSession?.preloadQuestion(nextQuestion.question.trim()).catch(() => {
-          console.log("[InterviewSession] TTS preload failed, will fetch inline");
         });
       }
 
@@ -884,9 +879,7 @@ export default function InterviewSessionPage() {
     }
 
     try {
-      console.log("[InterviewSession] startInterviewFlow begin");
       await voiceSession?.prepare();
-      console.log("[InterviewSession] TTS prepared before first question");
       saveGrowthEvent({
         type: "interview_started",
         sessionId: sessionIdRef.current,
@@ -967,7 +960,6 @@ export default function InterviewSessionPage() {
     if (!voiceSession || hasInitializedTtsRef.current) return;
 
     hasInitializedTtsRef.current = true;
-    console.log("[InterviewSession] initializing TTS engine on page load");
     void voiceSession.prepare();
   }, [voiceSession]);
 

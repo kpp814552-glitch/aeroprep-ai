@@ -8,6 +8,7 @@ export type AuthContextType = {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  isAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (email: string, password: string, username: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -18,6 +19,7 @@ export const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  isAdmin: false,
   signIn: async () => ({ error: "AuthProvider not mounted" }),
   signUp: async () => ({ error: "AuthProvider not mounted" }),
   signOut: async () => {},

@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
+import type { InterviewMode } from "@/lib/site";
 import {
   getRoleConfig,
   interviewStageLabels,
@@ -12,6 +14,58 @@ import type {
   InterviewTurn,
 } from "@/lib/interview/types";
 
+
+// ===== Mode-Specific Configurations =====
+function getModeInstruction(mode: string, resumeText: string): string {
+  const modeUpper = (mode || "校招").trim();
+
+  // Resume section (empty if no resume)
+  const resumeSection = resumeText?.trim()
+    ? `
+候选人简历内容（面试官已审阅，提问必须紧扣简历中的具体经历，避免泛泛而问）：
+${resumeText.trim().slice(0, 4000)}
+`
+    : "";
+
+  const modeInstructions: Record<string, string> = {
+    "校招": `
+面试模式：校招（应届生/在校生）
+筛选逻辑：关注候选人的教育背景、实习经历、学习能力、职业潜力和动机。
+提问风格：温和引导型。先肯定再追问。重点考察基础素质和可塑性，而非经验深度。
+问题聚焦：围绕课程学习、校园项目、实习经历、职业规划展开。
+不要问需要多年行业经验才能回答的问题。
+评估标准：潜力 > 经验，学习能力 > 已有技能，态度 > 成就。
+`,
+    "社招": `
+面试模式：社招（有经验候选人）
+筛选逻辑：关注候选人的工作经历、项目成果、行业认知和即战力。
+提问风格：专业直接型。直接切入业务场景，追问具体细节和决策过程。
+问题聚焦：围绕过往工作职责、成功案例、失败教训、行业理解、跨部门协作展开。
+使用STAR追问法（情况-任务-行动-结果）。
+评估标准：经验匹配度 > 潜力，实操能力 > 理论，成果 > 态度。
+`,
+    "压力面试": `
+面试模式：压力面试
+筛选逻辑：考察候选人在高压、质疑、打断环境下的情绪控制和思维敏捷度。
+提问风格：挑战质疑型。连续追问打断，质疑候选人的回答，压缩思考时间。
+- 候选人说"我不确定"时，立刻追问"那你为什么敢说前面的话"
+- 候选人说"团队合作"时，追问"具体你做了什么，不是你们做了什么"
+- 不要给予正面反馈，对每个回答都提出更深层的质疑
+- 打断含糊表达，要求具体化
+- 连续递进追问，不给喘息机会
+评估标准：抗压能力 > 回答准确度，思维敏捷度 > 知识深度。
+`,
+    "英语面试": `
+面试模式：英语面试（English Interview）
+IMPORTANT: All questions, feedback, and interactions MUST be in English ONLY.
+The entire interview should be conducted in English.
+Evaluate the candidate's English proficiency for civil aviation context.
+Focus on both professional knowledge AND English communication ability.
+`,
+  };
+
+  return (modeInstructions[modeUpper] || modeInstructions["校招"]) + resumeSection;
+}
 
 // ===== Interviewer Persona Configurations =====
 type PersonaProfile = {
@@ -143,6 +197,7 @@ type InterviewRequestBody = {
   turns?: InterviewTurn[];
   company?: string;
   mode?: string;
+  resumeText?: string;
   persona?: string;
 };
 
@@ -199,6 +254,23 @@ async function callDeepSeek(apiKey: string, prompt: string) {
   }
 
   const data = await response.json();
+
+  // Log token usage
+  const usage = data?.usage;
+  if (usage) {
+    const inputTokens = usage.prompt_tokens || 0;
+    const outputTokens = usage.completion_tokens || 0;
+    logApiUsage({
+      model: 'deepseek',
+      inputTokens,
+      outputTokens,
+      totalTokens: usage.total_tokens || 0,
+      characters: 0,
+      cost: estimateDeepSeekCost(inputTokens, outputTokens),
+      endpoint: 'interview',
+    }).catch(() => {});
+  }
+
   const content =
     data?.choices?.[0]?.message?.content ||
     data?.choices?.[0]?.text ||
@@ -263,9 +335,11 @@ function buildStartQuestionPrompt(
   role: InterviewRole,
   company?: string,
   mode?: string,
-  persona?: string
+  persona?: string,
+  resumeText?: string
 ) {
   const roleConfig = getRoleConfig(role);
+  const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
 
   return `
 你现在是一位真实航空公司电话面试官。
@@ -273,8 +347,8 @@ function buildStartQuestionPrompt(
 面试背景：
 - 航司：${company || "航空公司"}
 - 岗位：${roleConfig.label}
-- 面试模式：${mode || "常规面试"}
 - 面试官人格：${persona || "成熟专业HR"}
+${modeInstruction}
 
 要求：
 - 这是全新的一场面试
@@ -299,13 +373,15 @@ function buildNextQuestionPrompt(
   turns: InterviewTurn[],
   company?: string,
   mode?: string,
-  persona?: string
+  persona?: string,
+  resumeText?: string
 ) {
   const roleConfig = getRoleConfig(role);
   const companyCfg = getCompanyConfig(company);
   const nextStage = getStageByTurnCount(turns);
   const lastTurn = turns.at(-1);
   const personaCfg = getPersonaConfig(persona);
+  const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
 
   return `
 你现在是一位真实航空公司电话面试官。
@@ -313,8 +389,8 @@ function buildNextQuestionPrompt(
 面试背景：
 - 航司：${company || "航空公司"}
 - 岗位：${roleConfig.label}
-- 面试模式：${mode || "常规面试"}
 - 面试官人格：${persona || "专业型HR"}
+${modeInstruction}
 
 面试官人格指令（必须严格遵守）：
 - 风格类型：${personaCfg.style}
@@ -369,16 +445,18 @@ function buildReportPrompt(
   company?: string,
   mode?: string,
   persona?: string,
+  resumeText?: string,
   fallbackReport?: InterviewReport
 ) {
   const roleConfig = getRoleConfig(role);
   const companyCfg = getCompanyConfig(company);
   const personaCfg = getPersonaConfig(persona);
+  const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
 
   return `
 请担任${company || "航空公司"} ${roleConfig.label}岗位的民航HR面试官，根据以下真实面试记录生成一份专业面试报告。
 
-面试模式：${mode || "常规面试"}
+${modeInstruction}
 面试官人格：${persona || "专业型HR"}
 面试官对应风格：${personaCfg.style}
 
@@ -588,7 +666,7 @@ export async function POST(request: Request) {
     try {
       const result = await callDeepSeek(
         apiKey,
-        buildNextQuestionPrompt(body.role, turns, body.company, body.mode, body.persona)
+        buildNextQuestionPrompt(body.role, turns, body.company, body.mode, body.persona, body.resumeText)
       );
 
       return NextResponse.json(normalizeModelQuestion(result, fallback));
@@ -614,12 +692,13 @@ export async function POST(request: Request) {
       const result = await callDeepSeek(
         apiKey,
         buildReportPrompt(
-          body.role,
-          turns,
-          body.company,
-          body.mode,
-          body.persona,
-          fallbackReport
+         body.role,
+         turns,
+         body.company,
+         body.mode,
+         body.persona,
+          body.resumeText,
+         fallbackReport
         )
       );
 

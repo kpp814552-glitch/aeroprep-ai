@@ -21,8 +21,8 @@ export default function AppFrame({
   backLabel = "返回",
 }: AppFrameProps) {
   const pathname = usePathname();
-  const { user, profile, loading, signOut } = useAuth();
-  const isLoggedIn = !!user;
+ const { user, profile, loading, signOut, isAdmin } = useAuth();
+ const isLoggedIn = !!user;
 
   return (
     <div className={cn("relative z-10", className)}>
@@ -73,9 +73,17 @@ export default function AppFrame({
 
             <div className="ml-1 h-5 w-px bg-white/20" />
 
-            {loading ? null : isLoggedIn ? (
-              <div className="flex items-center gap-2 shrink-0">
-                <Link
+           {loading ? null : isLoggedIn ? (
+             <div className="flex items-center gap-2 shrink-0">
+                {isAdmin ? (
+                  <Link
+                    href="/admin"
+                    className="rounded-full bg-white/30 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-white/50"
+                  >
+                    管理后台
+                  </Link>
+                ) : null}
+               <Link
                   href="/profile"
                   className="flex items-center gap-1.5 rounded-full bg-white/30 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-white/50"
                 >
@@ -102,7 +110,7 @@ export default function AppFrame({
                 </Link>
                 <Link
                   href="/register"
-                  className="rounded-full bg-[rgba(37,113,255,0.88)] px-3 py-1.5 text-xs text-white transition hover:bg-[rgba(37,113,255,1)]"
+                  className="rounded-full px-3 py-1.5 text-xs text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
                 >
                   注册
                 </Link>

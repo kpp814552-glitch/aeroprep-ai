@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
 
 type Message = {
   role: "system" | "user" | "assistant";
@@ -190,6 +191,22 @@ export async function POST(request: Request) {
     data?.choices?.[0]?.message?.content ||
     data?.choices?.[0]?.text ||
     "DeepSeek 未返回有效回答。";
+
+  // Log token usage
+  const usage = data?.usage;
+  if (usage) {
+    const inputTokens = usage.prompt_tokens || 0;
+    const outputTokens = usage.completion_tokens || 0;
+    logApiUsage({
+      model: 'deepseek',
+      inputTokens,
+      outputTokens,
+      totalTokens: usage.total_tokens || 0,
+      characters: 0,
+      cost: estimateDeepSeekCost(inputTokens, outputTokens),
+      endpoint: 'chat',
+    }).catch(() => {});
+  }
 
   return NextResponse.json({ assistant: assistantContent, raw: data });
 }

@@ -173,7 +173,7 @@ export function createInterviewVoiceSession(
       return null;
     },
     async prepare() {
-      console.log("[InterviewVoice] prepare called");
+
       await prepare();
     },
     async preloadQuestion(text: string) {
@@ -187,15 +187,12 @@ export function createInterviewVoiceSession(
     },
     async speakQuestion(text: string) {
       const normalizedText = buildInterviewerPrompt(text);
-      console.log("[InterviewVoice] speakQuestion called", {
-        originalText: text,
-        normalizedText,
-      });
+
       await prepare();
 
       try {
         await ttsPlayer?.play(normalizedText, {
-          onDebug: (message) => console.log(message),
+
         });
         providerName = "doubao-tts";
         return { providerName, voiceLabel: options.voiceId || "zh_female_vv_uranus_bigtts" };

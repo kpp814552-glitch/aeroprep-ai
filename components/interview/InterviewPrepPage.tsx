@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, type ChangeEvent } from "react";
-import { FileText, Mic, MoveRight, ShieldCheck, Sparkles, Upload } from "lucide-react";
+import { useCallback, useMemo, useState, type ChangeEvent } from "react";
+import { FileText, Loader2, Mic, MoveRight, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { GlassLinkButton } from "@/components/ui/glass-link";
@@ -24,6 +24,8 @@ type UploadState = {
   name: string;
   sizeLabel: string;
   type: string;
+  text: string;
+  chars: number;
 } | null;
 
 type SelectionPillProps = {
@@ -68,6 +70,7 @@ export default function InterviewPrepPage() {
   const [selectedPersona, setSelectedPersona] =
     useState<InterviewerPersona>("专业型HR");
   const [uploadError, setUploadError] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const selectedRoleLabel = useMemo(
     () => prepRoleOptions.find((item) => item.value === selectedRole)?.label ?? "飞行员",
@@ -90,12 +93,51 @@ export default function InterviewPrepPage() {
     }
 
     setUploadError("");
-    setResume({
-      name: file.name,
-      sizeLabel: formatFileSize(file.size),
-      type: file.type.includes("pdf") ? "PDF" : "DOCX",
-    });
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    fetch("/api/interview/parse-resume", {
+      method: "POST",
+      body: formData,
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "解析失败");
+        }
+        return res.json();
+      })
+      .then((data) => {
+        setResume({
+          name: data.fileName,
+          sizeLabel: formatFileSize(file.size),
+          type: data.fileType,
+          text: data.text,
+          chars: data.chars,
+        });
+        setUploading(false);
+      })
+      .catch((err) => {
+        setUploadError(err.message || "简历解析失败，请重试");
+        setResume(null);
+        setUploading(false);
+      });
   }
+
+  const handleStartInterview = useCallback(() => {
+    if (resume?.text) {
+      sessionStorage.setItem("aeroprep_resume_text", resume.text);
+    } else {
+      sessionStorage.removeItem("aeroprep_resume_text");
+    }
+    router.push(`/interview/session?company=${encodeURIComponent(
+      selectedCompany
+    )}&role=${encodeURIComponent(selectedRole)}&mode=${encodeURIComponent(
+      selectedMode
+    )}&persona=${encodeURIComponent(selectedPersona)}`);
+  }, [resume, selectedCompany, selectedRole, selectedMode, selectedPersona, router]);
 
   const sessionHref = `/interview/session?company=${encodeURIComponent(
     selectedCompany
@@ -315,13 +357,14 @@ export default function InterviewPrepPage() {
 
                   <div className="mt-8 flex flex-col gap-3">
                     {user ? (
-                      <GlassLinkButton
-                        href={sessionHref}
-                        className="w-full justify-center px-6 py-3.5 text-base"
+                      <button
+                        type="button"
+                        onClick={handleStartInterview}
+                        className="shine-border accent-ring inline-flex w-full items-center justify-center gap-2 rounded-full bg-[rgba(37,113,255,0.88)] px-6 py-3.5 text-base font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(37,113,255,0.22)]"
                       >
                         开始面试
                         <MoveRight className="h-4 w-4" />
-                      </GlassLinkButton>
+                      </button>
                     ) : (
                       <button
                         type="button"

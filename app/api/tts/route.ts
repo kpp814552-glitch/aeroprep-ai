@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { logApiUsage, estimateTTSCost } from "@/lib/admin/usage-logger";
 import { ensureVolcengineConfig } from "@/lib/volcengine/config";
 
 type TtsRequestBody = {
@@ -88,9 +89,6 @@ export async function POST(request: Request) {
     },
   };
 
-  console.log("[VolcEngine][TTS] Request URL:", VOLCENGINE_TTS_URL);
-  console.log("[VolcEngine][TTS] Request Headers:", headers);
-  console.log("[VolcEngine][TTS] Request Body:", requestBody);
 
   const response = await fetch(VOLCENGINE_TTS_URL, {
     method: "POST",
@@ -100,9 +98,6 @@ export async function POST(request: Request) {
 
   const responseText = await response.text();
 
-  console.log("[VolcEngine][TTS] Response Status:", response.status);
-  console.log("[VolcEngine][TTS] Response Headers:", Object.fromEntries(response.headers.entries()));
-  console.log("[VolcEngine][TTS] Response Text:", responseText);
 
   if (!response.ok) {
     return NextResponse.json(
@@ -144,6 +139,19 @@ export async function POST(request: Request) {
   }
 
   const audioBuffer = Buffer.from(base64Audio, "base64");
+
+  // Log character usage
+  const ttsText = body.text.trim();
+  const charCount = ttsText.length;
+  logApiUsage({
+    model: 'volcengine-tts',
+    inputTokens: 0,
+    outputTokens: 0,
+    totalTokens: 0,
+    characters: charCount,
+    cost: estimateTTSCost(charCount),
+    endpoint: 'tts',
+  }).catch(() => {});
 
   return new Response(audioBuffer, {
     status: 200,

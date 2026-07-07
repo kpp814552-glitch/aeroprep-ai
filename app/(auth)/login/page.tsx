@@ -37,10 +37,7 @@ function LoginForm() {
     setLoading(false);
 
     if (signInError) {
-      setError(signInError === "Invalid login credentials"
-        ? "邮箱或密码错误"
-        : signInError
-      );
+      setError(signInError);
       return;
     }
 
@@ -103,6 +100,11 @@ function LoginForm() {
                 {error ? (
                   <div className="rounded-2xl border border-rose-200/80 bg-rose-50/70 px-4 py-3 text-sm text-rose-700">
                     {error}
+                  </div>
+                ) : null}
+                {loading ? (
+                  <div className="rounded-2xl border border-blue-200/80 bg-blue-50/70 px-4 py-3 text-sm text-blue-700">
+                    正在登录...
                   </div>
                 ) : null}
 

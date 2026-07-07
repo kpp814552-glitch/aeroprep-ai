@@ -43,10 +43,7 @@ export default function LoginModal({
     setLoading(false);
 
     if (signInError) {
-      setError(signInError === "Invalid login credentials"
-        ? "邮箱或密码错误"
-        : signInError
-      );
+      setError(signInError);
       return;
     }
 

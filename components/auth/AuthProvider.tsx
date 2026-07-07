@@ -5,12 +5,14 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
 import { AuthContext } from "@/hooks/useAuth";
 import type { UserProfile } from "@/lib/supabase/types";
+import { translateAuthError } from "@/lib/supabase/auth-errors";
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const supabase = createClient();
+ const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+ const supabase = createClient();
 
   const fetchProfile = useCallback(async (userId: string) => {
     const { data } = await supabase
@@ -19,9 +21,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       .eq("id", userId)
       .single();
 
-    if (data) {
-      setProfile(data as UserProfile);
-    }
+   if (data) {
+     setProfile(data as UserProfile);
+      setIsAdmin((data as UserProfile).is_admin === true);
+   }
   }, [supabase]);
 
   const refreshProfile = useCallback(async () => {
@@ -46,9 +49,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-        }
+     } else {
+       setProfile(null);
+        setIsAdmin(false);
+     }
       }
     );
 
@@ -56,13 +60,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, fetchProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ?? null };
-  }, []);
+    return { error: error?.message ? translateAuthError(error.message) : null };
+  }, [supabase]);
 
   const signUp = useCallback(async (email: string, password: string, username: string) => {
-    const supabase = createClient();
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -78,18 +80,17 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         await fetchProfile(newUser.id);
       }
     }
-    return { error: error?.message ?? null };
-  }, [fetchProfile]);
+    return { error: error?.message ? translateAuthError(error.message) : null };
+  }, [supabase, fetchProfile]);
 
   const signOut = useCallback(async () => {
-    const supabase = createClient();
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
-  }, []);
+  }, [supabase]);
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, signIn, signUp, signOut, refreshProfile, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

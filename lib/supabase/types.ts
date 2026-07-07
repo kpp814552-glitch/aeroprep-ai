@@ -6,10 +6,11 @@ export type UserProfile = {
   created_at: string;
   interview_count: number;
   highest_score: number;
-  average_score: number;
-  continuous_days: number;
-  total_duration: number;
-  last_login: string;
+ average_score: number;
+ continuous_days: number;
+ total_duration: number;
+ last_login: string;
+  is_admin?: boolean;
 };
 
 export type InterviewRecord = {

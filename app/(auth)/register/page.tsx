@@ -17,6 +17,7 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -53,7 +54,8 @@ export default function RegisterPage() {
       return;
     }
 
-    router.push("/");
+    setSuccess("注册成功！正在跳转...");
+    setTimeout(() => router.push("/"), 500);
   }
 
   return (
@@ -148,11 +150,16 @@ export default function RegisterPage() {
                     {error}
                   </div>
                 ) : null}
+                {success ? (
+                  <div className="rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-4 py-3 text-sm text-emerald-700">
+                    {success}
+                  </div>
+                ) : null}
 
-                <GlassButton
+                <button
                   type="submit"
                   disabled={loading}
-                  className="w-full justify-center py-3.5"
+                  className="accent-ring flex w-full items-center justify-center gap-2 rounded-full bg-[rgba(37,113,255,0.88)] px-5 py-3.5 text-base font-medium text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(37,113,255,0.22)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -160,7 +167,7 @@ export default function RegisterPage() {
                     <LogIn className="h-4 w-4" />
                   )}
                   {loading ? "注册中..." : "注册"}
-                </GlassButton>
+                </button>
               </form>
 
               <div className="mt-6 text-center text-sm text-slate-500">

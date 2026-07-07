@@ -244,7 +244,7 @@ function buildRecommendedTraining(role: InterviewRole, mode?: string) {
     `${roleConfig.coreTopics[0]} 与 ${roleConfig.coreTopics[1]} 场景化表达训练`,
     "项目经历 STAR 结构强化训练",
     mode === "英语面试" ? "民航英语口语表达训练" : "校招半结构化面试训练",
-  ].slice(0, 4);
+  ];
 }
 
 function buildOverallEvaluation(
