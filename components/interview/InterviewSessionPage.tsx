@@ -1,16 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import {
+  useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useRouter, useSearchParams } from "next/navigation";
+import {
+  
   getAnswerSecondsForStage,
   interviewStageLabels,
   PREP_COUNTDOWN_SECONDS,
+  MAX_INTERVIEW_DURATION,
   TOTAL_INTERVIEW_ROUNDS,
 } from "@/lib/interview/config";
-import { buildSessionRecord } from "@/lib/interview/report";
-import { saveInterviewSession } from "@/lib/interview/session-storage";
 import {
+  buildSessionRecord } from "@/lib/interview/report";
+import {
+  saveInterviewSession } from "@/lib/interview/session-storage";
+import {
+  
   saveGrowthEvent,
   saveInterviewCompletionGrowth,
 } from "@/lib/profile/growth-storage";
@@ -22,12 +29,15 @@ import type {
   InterviewTurn,
 } from "@/lib/interview/types";
 import {
+  
   createInterviewVoiceSession,
   type InterviewVoiceSession,
   type VoiceProviderName,
 } from "@/lib/interview/voice";
-import { TtsAutoplayBlockedError } from "@/lib/audio/tts-player";
-import { useAuth } from "@/hooks/useAuth";
+import {
+  TtsAutoplayBlockedError } from "@/lib/audio/tts-player";
+import {
+  useAuth } from "@/hooks/useAuth";
 
 const prepSequence = ["3", "2", "1", "开始面试"] as const;
 
@@ -834,7 +844,10 @@ export default function InterviewSessionPage() {
     const totalElapsedSeconds =
       startAtRef.current === null ? elapsedSeconds : Math.round((Date.now() - startAtRef.current) / 1000);
 
-    if (nextTurns.length >= TOTAL_INTERVIEW_ROUNDS) {
+    if (totalElapsedSeconds >= MAX_INTERVIEW_DURATION || nextTurns.length >= TOTAL_INTERVIEW_ROUNDS) {
+      if (totalElapsedSeconds >= MAX_INTERVIEW_DURATION) {
+        console.log("[Interview] Max duration reached, ending interview");
+      }
       await generateReportAndFinish(nextTurns, totalElapsedSeconds);
       return;
     }

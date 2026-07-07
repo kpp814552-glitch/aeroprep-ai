@@ -34,16 +34,19 @@ export const interviewStageLabels: Record<InterviewStage, string> = {
 };
 
 export const interviewStageAnswerSeconds: Record<InterviewStage, number> = {
-  'self-intro': 120,
-  education: 60,
-  project: 180,
-  internship: 180,
-  'role-fit': 120,
-  professional: 120,
-  scenario: 60,
-  career: 60,
-  summary: 60,
+  'self-intro': 90,
+  education: 45,
+  project: 120,
+  internship: 120,
+  'role-fit': 75,
+  professional: 75,
+  scenario: 45,
+  career: 45,
+  summary: 45,
 };
+
+/** 单次面试最大时长（秒），超时自动结束生成报告 */
+export const MAX_INTERVIEW_DURATION = 780;
 
 export const interviewRoles: InterviewRoleConfig[] = [
   {
