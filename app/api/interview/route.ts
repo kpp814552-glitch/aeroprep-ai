@@ -416,6 +416,9 @@ function buildNextQuestionPrompt(
   const personaCfg = getPersonaConfig(persona);
   const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
 
+  // Only include last 3 turns to keep prompt size bounded and reduce latency
+  const recentTurns = turns.slice(-3);
+
   return `
 你现在是一位真实航空公司电话面试官。
 
@@ -443,7 +446,7 @@ ${modeInstruction}
 自我介绍 -> 教育背景 -> 项目经历 -> 实习经历 -> 岗位能力 -> 专业知识 -> 情景问题 -> 职业规划 -> 总结
 
 已完成问答：
-${turns
+${recentTurns
   .map(
     (turn, index) => `${index + 1}. 阶段：${turn.stage ? interviewStageLabels[turn.stage] : "未知"}
 问：${turn.question}

@@ -221,6 +221,7 @@ export default function InterviewSessionPage() {
   const answerTimerRef = useRef<number | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const finalTranscriptRef = useRef("");
+  const interimTranscriptRef = useRef("");
   const turnStartedAtRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -329,8 +330,30 @@ export default function InterviewSessionPage() {
       recognitionRef.current.abort();
       recognitionRef.current = null;
     }
-
     stopVoiceMonitor();
+  }, [stopVoiceMonitor]);
+
+  const stopRecognitionAsync = useCallback((): Promise<string> => {
+    return new Promise((resolve) => {
+      if (!recognitionRef.current) {
+        stopVoiceMonitor();
+        resolve(finalTranscriptRef.current);
+        return;
+      }
+      recognitionRef.current.onerror = null;
+      const timeout = window.setTimeout(() => {
+        recognitionRef.current = null;
+        stopVoiceMonitor();
+        resolve(finalTranscriptRef.current);
+      }, 5000);
+      recognitionRef.current.onend = () => {
+        window.clearTimeout(timeout);
+        recognitionRef.current = null;
+        stopVoiceMonitor();
+        resolve(finalTranscriptRef.current);
+      };
+      recognitionRef.current.stop();
+    });
   }, [stopVoiceMonitor]);
 
   const persistAndNavigateToReport = useCallback(
@@ -551,6 +574,7 @@ export default function InterviewSessionPage() {
         });
       }
 
+      interimTranscriptRef.current = nextInterim.trim();
       setInterimTranscript(nextInterim.trim());
       setVoiceActivityState("Listening");
     };
@@ -651,15 +675,18 @@ export default function InterviewSessionPage() {
     async function prepare() {
       try {
         // 1. Prepare voice session
-        await voiceSession?.prepare();
+        const [, firstQ] = await Promise.all([
+          voiceSession?.prepare(),
+          fetchOpeningQuestion(),
+        ]);
 
         // 2. Fetch opening question
         setStatusText('正在准备面试内容...');
         setVoiceActivityState('tts_generating');
-        const firstQ = await fetchOpeningQuestion();
         if (cancelled) return;
 
-        const qText = firstQ.question?.trim() ?? '';
+        const firstQuestion = firstQ!;
+        const qText = firstQuestion.question?.trim() ?? '';
         if (!qText) throw new Error('首轮问题内容为空');
 
         // 3. Store pending question (hidden from UI until user clicks start)
@@ -787,12 +814,12 @@ export default function InterviewSessionPage() {
   const handleEndAnswer = useCallback(async () => {
     if (phase !== 'listening' || isGeneratingReport) return;
 
-    stopRecognition();
+    const completeTranscript = await stopRecognitionAsync();
     clearAnswerTimer();
     setIsAnswering(false);
 
     // Build current turn
-    const answerText = finalTranscriptRef.current.trim();
+    const answerText = (completeTranscript || finalTranscriptRef.current.trim() || interimTranscriptRef.current).trim();
     const answerDurationSeconds = turnStartedAtRef.current
       ? Math.max(1, Math.round((Date.now() - turnStartedAtRef.current) / 1000))
       : 0;
@@ -943,8 +970,8 @@ export default function InterviewSessionPage() {
   // ── Computed UI values ──
   const activeVoiceState = voiceStateMeta[voiceActivityState] ?? voiceStateMeta.Silent;
   const answerCountdownLabel = formatAnswerCountdown(answerCountdown);
-  const showHeader = phase === 'playing' || phase === 'listening';
-  const showBottomCard = phase === 'playing' || phase === 'listening';
+  const showHeader = phase === 'playing' || phase === 'listening' || phase === 'processing';
+  const showBottomCard = phase === 'playing' || phase === 'listening' || phase === 'processing';
   const isPlayingPhase = phase === 'playing';
   const isListeningPhase = phase === 'listening';
 
@@ -1045,19 +1072,7 @@ export default function InterviewSessionPage() {
           )}
 
           {/* ── Processing State ── */}
-          {phase === 'processing' && (
-            <div className="flex flex-1 flex-col items-center justify-center pb-24">
-              <Loader2 className="h-10 w-10 animate-spin text-amber-200/70" />
-              <p className="mt-6 text-xl font-light tracking-wider text-white/80">
-                AI 正在分析你的回答...
-              </p>
-              <p className="mt-2 text-sm text-white/50">请稍后</p>
-            </div>
-          )}
-
-          {/* ── Error State ── */}
-          {phase === 'error' && (
-            <div className="flex flex-1 flex-col items-center justify-center pb-24">
+          {/* processing indicator inline in bottom card */}
               <p className="text-xl font-light tracking-wider text-[#ffd1c6]/90">
                 面试出现错误
               </p>
@@ -1086,7 +1101,7 @@ export default function InterviewSessionPage() {
                       <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#f5c689]/28">
                         <span className={activeVoiceState.dotClassName || "h-1.5 w-1.5 rounded-full bg-[#f5c689]/90"} />
                       </span>
-                      {isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
+                      {phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
                     </p>
                     <p className="mt-2 text-pretty text-[1rem] leading-[1.42] tracking-[-0.01em] text-white/92 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)] md:text-[1.28rem]">
                       {currentQuestion}
