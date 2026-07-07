@@ -155,7 +155,6 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [activeTab, setActiveTab] = useState<"dashboard" | "announcements">("dashboard");
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -238,10 +237,11 @@ export default function AdminDashboard() {
         >
           <RefreshCw className="h-4 w-4" />
           刷新
-        </button>
-      </div>
+         </button>
+       </div>
 
-      {/* 用户与面试概览 */}
+
+     {/* 用户与面试概览 */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={Users}
@@ -318,9 +318,7 @@ export default function AdminDashboard() {
       </div>
       
       {/* Announcements Tab */}
-      {activeTab === "announcements" && (
-        <AdminAnnouncements />
-      )}
+      <AdminAnnouncements />
     </div>
   );
 }

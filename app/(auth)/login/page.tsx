@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, type FormEvent } from "react";
 import { Loader2, LogIn, Mail, Lock, Sparkles } from "lucide-react";
+import UserAgreements from "@/components/auth/UserAgreements";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassPanel, GlassButton } from "@/components/ui/glass";
 import { useAuth } from "@/hooks/useAuth";
@@ -130,6 +131,9 @@ function LoginForm() {
                 >
                   立即注册
                 </Link>
+              </div>
+              <div className="mt-4 text-center">
+                <UserAgreements checked={false} onChange={() => {}} showCheckbox={false} />
               </div>
             </div>
           </GlassPanel>
