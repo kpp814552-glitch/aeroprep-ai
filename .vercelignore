@@ -1,0 +1,6 @@
+.next
+.venv*
+scripts/venv
+.git
+*.whl
+samples
