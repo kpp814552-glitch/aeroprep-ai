@@ -65,6 +65,7 @@ export default function ChatWorkspace() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [webSearch, setWebSearch] = useState(false);
 
   useEffect(() => {
     const visibleMessages = messages.filter((message) => message.role !== "system");
@@ -93,6 +94,7 @@ export default function ChatWorkspace() {
         },
         body: JSON.stringify({
           messages: nextMessages,
+          webSearch: webSearch,
         }),
       });
 
@@ -249,9 +251,19 @@ export default function ChatWorkspace() {
                 />
 
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs text-slate-500">
-                    聚焦民航专业、岗位面试与学习场景
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setWebSearch(!webSearch)}
+                      className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all ${
+                        webSearch
+                          ? "bg-blue-100 text-blue-700 shadow-sm"
+                          : "bg-white/50 text-slate-500 hover:bg-white/70 hover:text-slate-700"
+                      }`}
+                    >
+                      ${webSearch ? "🌐 联网搜索" : "联网搜索"}
+                    </button>
+                  </div>
                   <GlassButton type="submit" disabled={loading || !input.trim()}>
                     发送
                     <Send className="h-4 w-4" />

@@ -8,7 +8,6 @@ import {
   BarChart3,
   Brain,
   Volume2,
-  DollarSign,
   TrendingUp,
   Target,
   RefreshCw,
@@ -138,8 +137,7 @@ function TokenUsageSection({ data, title }: { data: TokenSummary; title: string 
         </div>
         <div>
           <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">
-            预估费用
-          </p>
+            </p>
           <p className="mt-1 text-lg font-semibold text-slate-950">
             ¥{data.totalCost.toFixed(4)}
           </p>
@@ -212,8 +210,6 @@ export default function AdminDashboard() {
 
   if (!stats) return null;
 
-  const todaySpend = stats.usage.today.totalCost.toFixed(4);
-  const monthSpend = stats.usage.last30d.totalCost.toFixed(2);
   const activeRate = stats.users.total > 0
     ? ((stats.users.activeToday / stats.users.total) * 100).toFixed(1)
     : "0.0";
@@ -289,13 +285,6 @@ export default function AdminDashboard() {
           sub={`近7天 ${formatNumber(stats.usage.last7d.ttsCharacters)}`}
           accent="violet"
         />
-        <StatCard
-          icon={DollarSign}
-          label="今日预估花费"
-          value={`¥${todaySpend}`}
-          sub={`近30天 ¥${monthSpend}`}
-          accent="amber"
-        />
       </div>
 
       {/* Token 用量详情 */}
@@ -309,13 +298,7 @@ export default function AdminDashboard() {
         <TokenUsageSection data={stats.usage.last30d} title="近 30 天" />
       </div>
 
-      <div className="rounded-2xl border border-amber-200/60 bg-amber-50/50 px-5 py-4 text-xs text-amber-800">
-        <p className="font-medium">💡 提示</p>
-        <p className="mt-1">
-          费用是基于 DeepSeek API（¥1/百万输入 tokens、¥2/百万输出 tokens）和豆包 TTS（¥2/万字符）官方定价的预估值。
-          实际费用请以服务商账单为准。需要付费系统请在 Supabase 中添加订单表并接入支付。
-        </p>
-      </div>
+
       
       {/* Announcements Tab */}
       <AdminAnnouncements />
