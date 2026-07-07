@@ -9,6 +9,7 @@ import {
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { GlassLinkButton } from "@/components/ui/glass-link";
+import AnnouncementsBanner from "@/components/home/AnnouncementsBanner";
 import { interviewHighlights } from "@/lib/site";
 import { PREP_COUNTDOWN_SECONDS } from "@/lib/interview/config";
 
@@ -33,6 +34,7 @@ export default function HomePage() {
   const moduleCount = modules.length;
   return (
     <AppFrame>
+      <AnnouncementsBanner />
       <main className="relative z-10 px-5 pb-14 pt-8 md:px-8 md:pb-20 md:pt-10">
         <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1.18fr_0.82fr]">
           <GlassPanel className="soft-enter overflow-hidden px-6 py-8 md:px-10 md:py-12">

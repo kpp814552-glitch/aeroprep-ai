@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { GlassPanel, GlassCard } from "@/components/ui/glass";
 import { useAuth } from "@/hooks/useAuth";
+import AdminAnnouncements from "./AdminAnnouncements";
 
 type StatsData = {
   users: {
@@ -154,6 +155,7 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "announcements">("dashboard");
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
@@ -314,6 +316,11 @@ export default function AdminDashboard() {
           实际费用请以服务商账单为准。需要付费系统请在 Supabase 中添加订单表并接入支付。
         </p>
       </div>
+      
+      {/* Announcements Tab */}
+      {activeTab === "announcements" && (
+        <AdminAnnouncements />
+      )}
     </div>
   );
 }
