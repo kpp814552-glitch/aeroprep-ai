@@ -112,13 +112,11 @@ export const interviewRoles: InterviewRoleConfig[] = [
 ];
 
 export const phaseLabels: Record<InterviewPhase, string> = {
-  ready: '准备阶段',
-  countdown: '即将开始',
-  asking: 'AI提问',
-  thinking: '思考时间',
-  answering: '请开始回答',
-  processing: 'AI分析回答',
-  scoring: '生成评分',
+  preparing: '准备面试内容',
+  ready: '准备完成，等待开始',
+  playing: 'AI提问中',
+  listening: '请开始作答',
+  processing: 'AI正在分析回答',
   completed: '面试结束',
   error: '异常处理',
 };

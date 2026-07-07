@@ -19,13 +19,11 @@ export type InterviewStage =
   | 'summary';
 
 export type InterviewPhase =
+  | 'preparing'
   | 'ready'
-  | 'countdown'
-  | 'asking'
-  | 'thinking'
-  | 'answering'
+  | 'playing'
+  | 'listening'
   | 'processing'
-  | 'scoring'
   | 'completed'
   | 'error';
 

@@ -4,11 +4,16 @@ export type VoiceProviderName =
   | "doubao-tts"
   | "native-preview";
 
+export type SpeakQuestionOptions = {
+  onPlayStart?: () => void;
+  onPlayEnd?: () => void;
+};
+
 export type InterviewVoiceSession = {
   getProviderName: () => VoiceProviderName | null;
   getVoiceLabel: () => string | null;
   prepare: () => Promise<void>;
-  speakQuestion: (text: string) => Promise<{
+  speakQuestion: (text: string, options?: SpeakQuestionOptions) => Promise<{
     providerName: VoiceProviderName;
     voiceLabel: string | null;
   }>;
@@ -185,14 +190,15 @@ export function createInterviewVoiceSession(
         console.error("[InterviewVoice] preload failed, speakQuestion will fetch directly.");
       }
     },
-    async speakQuestion(text: string) {
+    async speakQuestion(text: string, callbacks?: SpeakQuestionOptions) {
       const normalizedText = buildInterviewerPrompt(text);
 
       await prepare();
 
       try {
         await ttsPlayer?.play(normalizedText, {
-
+          onPlayStart: callbacks?.onPlayStart,
+          onPlayEnd: callbacks?.onPlayEnd,
         });
         providerName = "doubao-tts";
         return { providerName, voiceLabel: options.voiceId || "zh_female_vv_uranus_bigtts" };
