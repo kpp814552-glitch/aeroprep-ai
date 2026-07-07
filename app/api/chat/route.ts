@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
+import { chatExampleQA } from "@/lib/interview/examples";
 
 type Message = {
   role: "system" | "user" | "assistant";
