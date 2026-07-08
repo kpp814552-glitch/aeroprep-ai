@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { BarChart3, Clock3, FileSearch, LineChart, TrendingUp, LogIn } from "lucide-react";
+import { BarChart3, Clock3, FileSearch, LineChart, TrendingUp, LogIn, X } from "lucide-react";
 import Link from "next/link";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
@@ -10,6 +10,7 @@ import {
   subscribeGrowthEvents,
 } from "@/lib/profile/growth-storage";
 import { readInterviewSessions, subscribeInterviewSessions } from "@/lib/interview/session-storage";
+import type { InterviewSessionRecord } from "@/lib/interview/types";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/lib/supabase/client";
 import type { UserProfile } from "@/lib/supabase/types";
@@ -26,6 +27,7 @@ function formatMeta(value: string) {
 export default function ProfilePage() {
   const [sessions, setSessions] = useState(() => readInterviewSessions());
   const [growthEvents, setGrowthEvents] = useState(() => readGrowthEvents());
+  const [selectedSession, setSelectedSession] = useState<InterviewSessionRecord | null>(null);
 
   useEffect(() => {
     const sync = () => {
@@ -50,10 +52,15 @@ export default function ProfilePage() {
 
   const historyItems = useMemo(
     () =>
-      completedSessions.slice(0, 6).map((session) => ({
+      completedSessions.map((session) => ({
+        sessionId: session.sessionId,
         title: `${session.company} · ${session.roleLabel} · ${session.mode}`,
         meta: formatMeta(session.createdAt),
         score: session.report?.totalScore ?? 0,
+        rounds: session.turns?.length ?? 0,
+        durationSeconds: session.elapsedSeconds ?? 0,
+        hiringProbability: session.report?.hiringProbability ?? 0,
+        report: session.report,
       })),
     [completedSessions]
   );
@@ -156,16 +163,36 @@ export default function ProfilePage() {
 
               <div className="mt-5 space-y-3">
                 {historyItems.length ? historyItems.map((item) => (
-                  <GlassCard key={`${item.title}-${item.meta}`} className="px-4 py-4">
+                  <GlassCard
+                    key={`${item.sessionId}`}
+                    className="px-4 py-4 transition hover:bg-white/40"
+                  >
+                    <div
+                      className="relative cursor-pointer"
+                      onClick={() => {
+                        const session = completedSessions.find((s) => s.sessionId === item.sessionId);
+                        if (session) setSelectedSession(session);
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); const session = completedSessions.find((s) => s.sessionId === item.sessionId); if (session) setSelectedSession(session); } }}
+                    >
                     <div className="relative flex items-center justify-between gap-3">
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-slate-900">{item.title}</p>
-                        <p className="mt-2 text-xs text-slate-500">{item.meta}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.meta}</p>
+                        <p className="mt-0.5 text-xs text-slate-400">
+                          {item.rounds} 轮 · {Math.floor(item.durationSeconds / 60)} 分 {item.durationSeconds % 60} 秒 · 录取率 {item.hiringProbability}%
+                        </p>
                       </div>
-                      <div className="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
-                        {item.score}
+                      <div className="flex flex-col items-end gap-1">
+                        <div className="rounded-full bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700">
+                          {item.score}
+                        </div>
+                        <p className="text-[10px] text-slate-400">点击查看详情</p>
                       </div>
                     </div>
+                  </div>
                   </GlassCard>
                 )) : (
                   <GlassCard className="px-4 py-4">
@@ -234,6 +261,112 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
+      {selectedSession && selectedSession.report && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+          onClick={() => setSelectedSession(null)}
+        >
+          <div
+            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/28 bg-white/92 px-6 py-6 shadow-[0_28px_72px_rgba(0,0,0,0.28)] backdrop-blur-xl md:px-8 md:py-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedSession(null)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/60 text-slate-500 transition hover:bg-white hover:text-slate-800"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="space-y-5">
+              <div>
+                <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
+                  {selectedSession.company} · {selectedSession.roleLabel} · {selectedSession.mode}
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">
+                  面试报告
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {selectedSession.turns?.length ?? 0} 轮 · 用时 {Math.floor((selectedSession.elapsedSeconds ?? 0) / 60)} 分 · 评分 {selectedSession.report.totalScore}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  { label: "表达能力", value: selectedSession.report.scores.expressionAbility },
+                  { label: "逻辑能力", value: selectedSession.report.scores.logicalThinking },
+                  { label: "专业能力", value: selectedSession.report.scores.professionalKnowledge },
+                  { label: "岗位匹配", value: selectedSession.report.scores.roleFit },
+                ].map((score) => (
+                  <div key={score.label} className="rounded-[20px] border border-slate-200/60 bg-slate-50/60 px-4 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">{score.label}</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-900">{score.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="rounded-[20px] border border-slate-200/60 bg-slate-50/60 px-5 py-4">
+                <p className="text-sm leading-7 text-slate-700">{selectedSession.report.overallEvaluation}</p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-[20px] border border-emerald-200/60 bg-emerald-50/50 px-4 py-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-emerald-700">优势</p>
+                  <ul className="mt-3 space-y-2">
+                    {selectedSession.report.strengths.map((s, i) => (
+                      <li key={i} className="text-sm leading-6 text-emerald-900"><span className="mr-2 text-emerald-500">+</span>{s}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="rounded-[20px] border border-amber-200/60 bg-amber-50/50 px-4 py-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-amber-700">待改进</p>
+                  <ul className="mt-3 space-y-2">
+                    {selectedSession.report.weaknesses.map((w, i) => (
+                      <li key={i} className="text-sm leading-6 text-amber-900"><span className="mr-2 text-amber-500">-</span>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+
+              {selectedSession.report.hiringProbability > 0 && (
+                <div className="rounded-[20px] border border-blue-200/60 bg-blue-50/50 px-4 py-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-blue-700">模拟录取率</p>
+                  <p className="mt-1 text-2xl font-semibold text-blue-800">{selectedSession.report.hiringProbability}%</p>
+                </div>
+              )}
+
+              {selectedSession.report.highlights.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">亮点摘要</p>
+                  {selectedSession.report.highlights.map((h, i) => (
+                    <div key={i} className="rounded-[16px] border border-slate-200/40 bg-white/60 px-4 py-3">
+                      <p className="text-sm leading-6 text-slate-700">{h}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {selectedSession.report.improvementSuggestions.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">改进建议</p>
+                  {selectedSession.report.improvementSuggestions.map((a, i) => (
+                    <div key={i} className="rounded-[16px] border border-slate-200/40 bg-white/60 px-4 py-3">
+                      <p className="text-sm leading-6 text-slate-700">{a}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {selectedSession.report.narrativeSummary && (
+                <div className="rounded-[20px] border border-violet-200/60 bg-violet-50/50 px-4 py-4">
+                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-violet-700">总结</p>
+                  <p className="mt-2 text-sm leading-7 text-violet-900">{selectedSession.report.narrativeSummary}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </AppFrame>
   );
 }
