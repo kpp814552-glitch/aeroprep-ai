@@ -267,7 +267,7 @@ export default function ProfilePage() {
           onClick={() => setSelectedSession(null)}
         >
           <div
-            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/28 bg-white/92 px-6 py-6 shadow-[0_28px_72px_rgba(0,0,0,0.28)] backdrop-blur-xl md:px-8 md:py-8"
+            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/28 px-6 py-6 shadow-[0_28px_72px_rgba(0,0,0,0.28)] backdrop-blur-xl md:px-8 md:py-8" style={{ background: 'var(--surface-strong)' }}
             onClick={(e) => e.stopPropagation()}
           >
             <button
