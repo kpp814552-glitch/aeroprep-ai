@@ -993,8 +993,8 @@ export default function InterviewSessionPage() {
 
           {/* ── Header: Transcript + Timer (playing/listening only) ── */}
           {showHeader && (
-            <div className="flex items-start justify-between gap-4">
-              <div className="w-full max-w-[13.2rem] rounded-[16px] border border-white/6 bg-[linear-gradient(180deg,rgba(26,15,10,0.42),rgba(8,6,6,0.3))] px-2.5 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.12)] backdrop-blur-md">
+            <div className="flex max-sm:flex-col max-sm:gap-3 items-start justify-between gap-4">
+              <div className="w-full max-sm:max-w-full max-w-[13.2rem] rounded-[16px] border border-white/6 bg-[linear-gradient(180deg,rgba(26,15,10,0.42),rgba(8,6,6,0.3))] px-2.5 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.12)] backdrop-blur-md">
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-4 items-end gap-1 text-[#ffd9ae]/80">
                     <span className="h-2 w-[2px] rounded-full bg-current/55" />
@@ -1010,7 +1010,7 @@ export default function InterviewSessionPage() {
 
                 <div
                   ref={transcriptScrollRef}
-                  className="mt-2.5 h-[12.4rem] space-y-2 overflow-y-auto pr-1 text-[0.7rem] leading-6 text-white/74 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/12"
+                  className="mt-2.5 h-[12.4rem] max-sm:h-[8rem] space-y-2 overflow-y-auto pr-1 text-[0.7rem] leading-6 text-white/74 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/12"
                 >
                   <p>
                     <span className="text-white/56">{interviewerLabel}：</span>
@@ -1031,11 +1031,11 @@ export default function InterviewSessionPage() {
                 </div>
               </div>
 
-              <div className="rounded-[20px] border border-white/7 bg-[linear-gradient(180deg,rgba(52,45,40,0.34),rgba(23,19,18,0.34))] px-4 py-2.5 text-right shadow-[0_10px_28px_rgba(0,0,0,0.16)] backdrop-blur-md">
+              <div className="rounded-[20px] max-sm:w-full border border-white/7 bg-[linear-gradient(180deg,rgba(52,45,40,0.34),rgba(23,19,18,0.34))] px-4 py-2.5 text-right shadow-[0_10px_28px_rgba(0,0,0,0.16)] backdrop-blur-md">
                 <p className="text-[10px] uppercase tracking-[0.26em] text-white/56">
                   面试时长 / Duration
                 </p>
-                <p className="mt-2 text-[2.15rem] font-light tracking-[0.12em] text-white/92 md:text-[2.85rem]">
+                <p className="mt-2 text-[1.5rem] sm:text-[2.15rem] font-light tracking-[0.12em] text-white/92 md:text-[2.85rem]">
                   {formatDuration(elapsedSeconds)}
                 </p>
               </div>
@@ -1147,10 +1147,10 @@ export default function InterviewSessionPage() {
                       </span>
                       {phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
                     </p>
-                    <p className="mt-2 text-pretty text-[1rem] leading-[1.42] tracking-[-0.01em] text-white/92 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)] md:text-[1.28rem]">
+                    <p className="mt-2 text-pretty text-[0.9rem] sm:text-[1rem] leading-[1.42] tracking-[-0.01em] text-white/92 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)] md:text-[1.28rem]">
                       {currentQuestion}
                     </p>
-                    <div className="mt-2 flex items-center justify-between gap-3">
+                    <div className="mt-2 flex max-sm:flex-col max-sm:items-stretch items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div>
                           <p className="text-[0.64rem] uppercase tracking-[0.26em] text-white/42">

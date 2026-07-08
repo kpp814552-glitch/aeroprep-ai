@@ -209,7 +209,7 @@ export default function ProfilePage() {
               </div>
 
               <div className="mt-8 rounded-[28px] border border-white/36 bg-white/22 px-5 py-6">
-                <div className="flex h-56 items-end justify-between gap-3">
+                <div className="flex h-40 sm:h-56 items-end justify-between gap-1 sm:gap-3">
                   {trendBars.map((height, index) => (
                     <div key={`trend-${height}-${index}`} className="flex flex-1 flex-col items-center gap-3">
                       <div
@@ -267,7 +267,7 @@ export default function ProfilePage() {
           onClick={() => setSelectedSession(null)}
         >
           <div
-            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/28 px-6 py-6 shadow-[0_28px_72px_rgba(0,0,0,0.28)] backdrop-blur-xl md:px-8 md:py-8" style={{ background: 'var(--surface-strong)' }}
+            className="relative max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-white/28 px-6 py-6 shadow-[0_28px_72px_rgba(0,0,0,0.28)] backdrop-blur-xl md:px-8 md:py-8" style={{ background: 'var(--surface-strong)', margin: '0 8px' }}
             onClick={(e) => e.stopPropagation()}
           >
             <button

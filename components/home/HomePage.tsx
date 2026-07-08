@@ -47,7 +47,7 @@ export default function HomePage() {
               </div>
 
               <div className="mt-12 max-w-3xl">
-                <h1 className="text-balance text-4xl font-semibold tracking-[-0.04em] text-slate-950 md:text-6xl md:leading-[1.02]">
+                <h1 className="text-balance text-3xl sm:text-4xl font-semibold tracking-[-0.04em] text-slate-950 md:text-6xl md:leading-[1.02]">
                   重新定义民航求职训练
                 </h1>
                 <p className="text-balance mt-6 max-w-2xl text-base leading-7 text-slate-600 md:text-xl">
@@ -128,7 +128,7 @@ export default function HomePage() {
           </GlassPanel>
         </section>
 
-        <section className="mx-auto mt-6 grid max-w-7xl gap-6 md:grid-cols-2">
+        <section className="mx-auto mt-6 grid max-w-7xl gap-6 md:grid-cols-2 xl:grid-cols-[1.15fr_0.85fr]">
           {modules.map((module, index) => {
             const Icon = module.icon;
 

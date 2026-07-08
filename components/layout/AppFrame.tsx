@@ -50,7 +50,7 @@ export default function AppFrame({
             </Link>
           </div>
 
-          <nav className="flex items-center gap-2 rounded-full bg-white/28 p-1 overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-none md:overflow-visible">
+          <nav className="flex items-center gap-1 sm:gap-2 rounded-full bg-white/28 p-1 overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-none md:overflow-visible">
             {[
               { href: "/", label: "首页" },
               { href: "/interview", label: "AI面试" },
@@ -61,7 +61,7 @@ export default function AppFrame({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "shrink-0 rounded-full px-3 py-2 text-xs transition md:px-4 md:text-sm",
+                  "shrink-0 rounded-full px-2 sm:px-3 py-2 text-xs transition md:px-4 md:text-sm",
                   pathname === item.href
                     ? "bg-white/60 text-slate-900"
                     : "text-slate-600 hover:bg-white/52 hover:text-slate-900"
