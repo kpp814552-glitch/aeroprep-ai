@@ -172,9 +172,7 @@ export default function AdminDashboard() {
     }
   }, []);
 
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  useEffect(() => { const t = setTimeout(() => fetchStats(), 0); return () => clearTimeout(t); }, [fetchStats]);
 
   if (!user) {
     return (

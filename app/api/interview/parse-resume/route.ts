@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       // Use pdf-parse to extract text
       const pdfParse = (await import("pdf-parse"));
       // pdf-parse might be ESM or CJS
-      const data = await (typeof pdfParse === "function" ? pdfParse : (pdfParse as any).default)(buffer);
+      const data = await (typeof pdfParse === "function" ? pdfParse : (pdfParse as unknown as { default: (buf: Buffer) => Promise<{ text: string }> }).default)(buffer);
       text = data.text || "";
     } else if (fileName.endsWith(".docx")) {
       const mammoth = await import("mammoth");

@@ -1110,10 +1110,10 @@ export default function InterviewSessionPage() {
                 面试已结束
               </p>
               <p className="mt-2 text-sm text-white/50">
-                {completedTurnsRef.current} 轮 · 用时 {Math.floor(elapsedSeconds / 60)} 分 {elapsedSeconds % 60} 秒
+                {completedTurnsRef.current /* eslint-disable-line react-hooks/refs */} 轮 · 用时 {Math.floor(elapsedSeconds / 60)} 分 {elapsedSeconds % 60} 秒
               </p>
               <p className="mt-1 text-sm text-white/50">
-                综合评分：{completedScoreRef.current} 分
+                综合评分：{completedScoreRef.current /* eslint-disable-line react-hooks/refs */} 分
               </p>
               <button
                 type="button"

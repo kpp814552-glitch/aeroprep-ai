@@ -54,7 +54,7 @@ export default function AdminAnnouncements() {
     }
   }, []);
 
-  useEffect(() => { fetchAnnouncements(); }, [fetchAnnouncements]);
+  useEffect(() => { const t = setTimeout(() => fetchAnnouncements(), 0); return () => clearTimeout(t); }, [fetchAnnouncements]);
 
   function openCreate() {
     setForm(emptyForm);
@@ -172,7 +172,7 @@ export default function AdminAnnouncements() {
         <div className="flex flex-col items-center justify-center py-16 text-slate-400">
           <Megaphone className="h-10 w-10 mb-3" />
           <p className="text-sm">暂无公告</p>
-          <p className="text-xs mt-1">点击"发布公告"添加第一条</p>
+          <p className="text-xs mt-1">点击“发布公告”添加第一条</p>
         </div>
       ) : (
         <div className="space-y-3">
