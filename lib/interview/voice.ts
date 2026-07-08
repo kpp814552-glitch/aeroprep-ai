@@ -27,10 +27,6 @@ type CreateInterviewVoiceSessionOptions = {
   voiceId?: string;
 };
 
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
 export async function ensureVoicesReady() {
   const existingVoices = window.speechSynthesis.getVoices();
   if (existingVoices.length > 0) return existingVoices;
@@ -114,7 +110,8 @@ export function buildInterviewerPrompt(text: string) {
 
 export async function speakWithNativeChineseVoice(
   text: string,
-  fixedVoice: SpeechSynthesisVoice | null
+  fixedVoice: SpeechSynthesisVoice | null,
+  callbacks?: SpeakQuestionOptions
 ) {
   if (!("speechSynthesis" in window)) {
     throw new Error("当前浏览器不支持语音播放。");
@@ -134,7 +131,11 @@ export async function speakWithNativeChineseVoice(
       utterance.voice = fixedVoice;
       utterance.lang = fixedVoice.lang || utterance.lang;
     }
-    utterance.onend = () => resolve();
+    utterance.onstart = () => callbacks?.onPlayStart?.();
+    utterance.onend = () => {
+      callbacks?.onPlayEnd?.();
+      resolve();
+    };
     utterance.onerror = () => reject(new Error("语音播放失败。"));
 
     window.speechSynthesis.speak(utterance);
@@ -208,7 +209,7 @@ export function createInterviewVoiceSession(
         }
 
         console.error("[TTS] Doubao playback failed, falling back to native voice.", error);
-        await speakWithNativeChineseVoice(normalizedText, fixedVoice);
+        await speakWithNativeChineseVoice(normalizedText, fixedVoice, callbacks);
         providerName = "native-preview";
         return {
           providerName,

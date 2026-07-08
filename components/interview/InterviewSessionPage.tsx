@@ -233,9 +233,6 @@ export default function InterviewSessionPage() {
   const mode = searchParams.get("mode") ?? "校招";
   const persona = searchParams.get("persona") ?? "专业型HR";
 
-  const playbackSupported =
-    typeof window !== "undefined" &&
-    (typeof window.Audio !== "undefined" || "speechSynthesis" in window);
   const recognitionSupported =
     typeof window !== "undefined" && Boolean(getSpeechRecognitionConstructor());
   const mediaSupported =
@@ -255,7 +252,7 @@ export default function InterviewSessionPage() {
   const [roleLabel, setRoleLabel] = useState("飞行员");
   const [liveTranscript, setLiveTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
-  const [voiceProviderName, setVoiceProviderName] =
+  const [voiceProviderName] =
     useState<VoiceProviderName | null>(null);
   const [voiceActivityState, setVoiceActivityState] =
     useState<VoiceActivityState>("Silent");
@@ -529,6 +526,7 @@ export default function InterviewSessionPage() {
     }
 
     const RecognitionConstructor = getSpeechRecognitionConstructor();
+    setIsAnswering(true);
     if (!RecognitionConstructor) {
       setStatusText("当前浏览器不支持实时语音识别");
       return;
@@ -787,7 +785,7 @@ export default function InterviewSessionPage() {
       }
       throw error;
     }
-  }, [company, mode, roleLabel, startAnswerCountdown, startRecognition, voiceSession]);
+  }, [company, mode, startAnswerCountdown, startRecognition, voiceSession]);
 
   // ── Handle user clicking "开始面试" (ready → playing) ──
   const handleStartInterview = useCallback(async () => {
@@ -808,7 +806,7 @@ export default function InterviewSessionPage() {
 
     setPhase('playing');
     await playCurrentQuestion(pending);
-  }, [company, mode, phase, playCurrentQuestion, roleLabel, startElapsedTimer]);
+  }, [company, mode, phase, playCurrentQuestion, startElapsedTimer]);
 
   // ── Handle user ending answer (listening → processing → playing) ──
   const handleEndAnswer = useCallback(async () => {
@@ -905,7 +903,7 @@ export default function InterviewSessionPage() {
     phase,
     playCurrentQuestion,
     roleLabel,
-    stopRecognition,
+    stopRecognitionAsync,
     turns,
     voiceSession,
   ]);
@@ -1071,8 +1069,9 @@ export default function InterviewSessionPage() {
             </div>
           )}
 
-          {/* ── Processing State ── */}
-          {/* processing indicator inline in bottom card */}
+          {/* ── Error State ── */}
+          {phase === 'error' && (
+            <div className="flex flex-1 flex-col items-center justify-center pb-24">
               <p className="text-xl font-light tracking-wider text-[#ffd1c6]/90">
                 面试出现错误
               </p>
