@@ -266,6 +266,9 @@ export default function InterviewSessionPage() {
   // ── Refs for async-safe data flow ──
   const pendingQuestionRef = useRef<PendingQuestion | null>(null);
   const activeQuestionRef = useRef("");
+  const completedSessionIdRef = useRef<string | null>(null);
+  const completedScoreRef = useRef(0);
+  const completedTurnsRef = useRef(0);
 
   const transcriptPreview = useMemo(() => {
     const combined = `${liveTranscript}${interimTranscript ? ` ${interimTranscript}` : ""}`.trim();
@@ -439,7 +442,7 @@ export default function InterviewSessionPage() {
           });
         }
 
-        persistAndNavigateToReport(record);
+        // User clicks "查看面试报告" to navigate
       } catch (error) {
         setFatalError(error instanceof Error ? error.message : "报告生成失败");
         setStatusText("报告生成失败，请稍后重试");
@@ -1066,6 +1069,11 @@ export default function InterviewSessionPage() {
               >
                 点击开始面试
               </button>
+              <div className="mt-12 max-w-md rounded-xl border border-white/8 bg-white/5 px-5 py-4 text-center">
+                <p className="text-xs leading-relaxed text-white/50">
+                  为保证语音识别效果，建议佩戴耳机并使用收音清晰的麦克风，以确保您的回答被完整记录。
+                </p>
+              </div>
             </div>
           )}
 
@@ -1086,6 +1094,43 @@ export default function InterviewSessionPage() {
                 className="mt-10 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/14 px-6 py-3 text-sm uppercase tracking-[0.22em] text-white/70 transition hover:border-white/30 hover:bg-white/22 hover:text-white"
               >
                 刷新重试
+              </button>
+            </div>
+          )}
+
+          {/* ── Completed State ── */}
+          {phase === 'completed' && (
+            <div className="flex flex-1 flex-col items-center justify-center pb-24">
+              <div className="inline-flex h-16 w-16 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10">
+                <svg className="h-8 w-8 text-emerald-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              </div>
+              <p className="mt-6 text-xl font-light tracking-wider text-white/90">
+                面试已结束
+              </p>
+              <p className="mt-2 text-sm text-white/50">
+                {completedTurnsRef.current} 轮 · 用时 {Math.floor(elapsedSeconds / 60)} 分 {elapsedSeconds % 60} 秒
+              </p>
+              <p className="mt-1 text-sm text-white/50">
+                综合评分：{completedScoreRef.current} 分
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  const sid = completedSessionIdRef.current;
+                  if (sid) router.push('/interview/report?sessionId=' + encodeURIComponent(sid));
+                }}
+                className="mt-10 inline-flex items-center gap-2 rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
+              >
+                查看面试报告
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/interview')}
+                className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/14 px-4 py-2 text-xs uppercase tracking-[0.22em] text-white/60 transition hover:border-white/30 hover:bg-white/22 hover:text-white"
+              >
+                返回面试选择
               </button>
             </div>
           )}
