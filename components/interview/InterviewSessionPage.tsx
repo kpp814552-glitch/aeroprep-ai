@@ -228,7 +228,7 @@ export default function InterviewSessionPage() {
   const voiceMonitorFrameRef = useRef<number | null>(null);
   const waveformCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const recordingTimerRef = useRef<HTMLSpanElement | null>(null);
-  const lastSoundTimeRef = useRef<number>(Date.now());
+  const lastSoundTimeRef = useRef<number>(0);  // initialized when recording starts
   const silenceWarningRef = useRef<HTMLParagraphElement | null>(null);
 
   const company = searchParams.get("company") ?? "国航";
@@ -675,6 +675,7 @@ export default function InterviewSessionPage() {
         voiceMonitorFrameRef.current = window.requestAnimationFrame(tick);
       };
 
+      lastSoundTimeRef.current = Date.now();
       voiceMonitorFrameRef.current = window.requestAnimationFrame(tick);
     } catch {
       setStatusText("麦克风权限已打开，但声音检测初始化失败");
