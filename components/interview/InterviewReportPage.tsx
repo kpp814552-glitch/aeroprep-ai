@@ -157,9 +157,9 @@ export default function InterviewReportPage() {
       { label: "逻辑能力", value: report.scores.logicalThinking },
       { label: "专业能力", value: report.scores.professionalKnowledge },
       { label: "岗位匹配", value: report.scores.roleFit },
-      { label: "语言清晰", value: report.scores.articulation },
-      { label: "应变能力", value: report.scores.adaptability },
-      { label: "服务意识", value: report.scores.serviceAwareness },
+      { label: "语言清晰", value: report.scores?.articulation ?? 0 },
+      { label: "应变能力", value: report.scores?.adaptability ?? 0 },
+      { label: "服务意识", value: report.scores?.serviceAwareness ?? 0 },
     ];
   }, [sessionRecord]);
 
@@ -429,7 +429,7 @@ export default function InterviewReportPage() {
                  </div>
                </div>
              ) : null}
-             {report.highlights.length ? (
+             {report.highlights?.length ? (
                 <div className="mt-6 space-y-3">
                   {report.highlights.map((item, index) => (
                     <div
@@ -451,7 +451,7 @@ export default function InterviewReportPage() {
                   `目标岗位：${sessionRecord.roleLabel}`,
                   `面试模式：${sessionRecord.mode}`,
                   `面试官风格：${sessionRecord.persona}`,
-                  `总时长：${Math.max(1, sessionRecord.elapsedSeconds)} 秒`,
+                  `总时长：${Math.max(1, sessionRecord.elapsedSeconds ?? 0)} 秒`,
                 ].map((item) => (
                   <div
                     key={item}

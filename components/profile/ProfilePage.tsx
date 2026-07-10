@@ -91,8 +91,8 @@ export default function ProfilePage() {
 
     return [
       `最近完成：${latestSession.company} · ${latestSession.roleLabel} · 综合分 ${latestSession.report.totalScore}`,
-      latestSession.report.highlights[0] || "最近一次训练已写入成长档案。",
-      latestSession.report.improvementSuggestions[0] || "继续完成更多训练以生成更稳定的成长建议。",
+      latestSession.report.highlights?.[0] || "最近一次训练已写入成长档案。",
+      latestSession.report.improvementSuggestions?.[0] || "继续完成更多训练以生成更稳定的成长建议。",
     ];
   }, [completedSessions]);
 
