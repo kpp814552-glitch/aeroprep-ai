@@ -449,6 +449,7 @@ export default function InterviewSessionPage() {
         completedScoreRef.current = payload.report?.totalScore ?? 0;
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
+        setIsGeneratingReport(false);
         setPhase('completed');
 
         // Save to Supabase if logged in
@@ -500,6 +501,7 @@ export default function InterviewSessionPage() {
         completedScoreRef.current = 0;
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
+        setIsGeneratingReport(false);
         setPhase('completed');
         setStatusText('面试已完成，报告生成遇到问题');
       }
@@ -599,7 +601,8 @@ export default function InterviewSessionPage() {
               ctx.beginPath();
 
               const step = Math.max(1, Math.floor(samples.length / drawWidth));
-              const sliceWidth = 1;
+              const effectiveCount = Math.ceil(samples.length / step);
+              const sliceWidth = drawWidth / effectiveCount;
               let x = 0;
 
               for (let i = 0; i < samples.length; i += step) {
@@ -1096,6 +1099,17 @@ export default function InterviewSessionPage() {
     transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
   }, [transcriptPreview, statusText, voiceActivityState]);
 
+  // ── Auto-navigate to report after completion ──
+  useEffect(() => {
+    if (phase === 'completed' && completedSessionIdRef.current && !isGeneratingReport) {
+      const sid = completedSessionIdRef.current;
+      const timer = setTimeout(() => {
+        router.push('/interview/report?sessionId=' + encodeURIComponent(sid));
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, isGeneratingReport, router]);
+
   // ── Cleanup on unmount ──
   useEffect(() => {
     return () => {
@@ -1270,6 +1284,9 @@ export default function InterviewSessionPage() {
               >
                 查看面试报告
               </button>
+              <p className="mt-2 text-[0.6rem] tracking-[0.15em] text-[#f5c689]/50">
+                报告已生成 · 即将自动跳转
+              </p>
               <button
                 type="button"
                 onClick={() => router.push('/interview')}
