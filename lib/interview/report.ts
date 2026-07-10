@@ -234,8 +234,12 @@ function buildWeaknesses(scores: InterviewReport["scores"], turns: InterviewTurn
     items.push("求职动机和岗位匹配理由表达得还不够集中，没完全把“为什么适合这份工作”说透。");
   }
 
-  if (turns.some((turn) => turn.answer.trim().length < 35)) {
-    items.push("个别回答展开不足，信息量偏少，导致亮点没有完全体现出来。");
+  // Note: if short answers exist, mention once with ASR caveat
+  const shortAnswerCount = turns.filter((t) => t.answer.trim().length < 35).length;
+  if (shortAnswerCount > 0 && shortAnswerCount <= turns.length * 0.5) {
+    items.push("部分回答在语音识别中记录较短，可能是收音或识别原因导致的转录不完整，建议在安静环境中重测以确保回答被完整记录。");
+  } else if (shortAnswerCount > turns.length * 0.5) {
+    items.push("多数回答识别文本偏短，建议检查麦克风设置和周围环境噪音，确保语音识别能完整捕捉您的回答。");
   }
 
   return items.slice(0, 4);
@@ -359,7 +363,7 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     .map((turn) => `${stageSummary(turn.stage)}回答信息量较充足，与题目相关性较好。`);
 
   const interviewEvalLines: string[] = [];
-  interviewEvalLines.push(`本次 ${options.company || "目标航司"} ${options.role} 岗位模拟面试，共进行 ${options.turns.length} 轮问答。`);
+  interviewEvalLines.push(`本次 ${options.company || "目标航司"} ${options.role} 岗位模拟面试，共进行 ${options.turns.length} 轮问答（注：识别质量可能影响部分转录完整性）。`);
   interviewEvalLines.push(overallEvaluation);
   if (strengths.length) interviewEvalLines.push(`最大优势：${strengths[0]}`);
   if (weaknesses.length) interviewEvalLines.push(`最大短板：${weaknesses[0]}`);
@@ -368,7 +372,7 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     const ansLen = turn.answer.trim().length;
     const hasStructure = structureSignals.some(s => turn.answer.includes(s));
     const hasExamples = resultSignals.some(s => turn.answer.includes(s));
-    let comment = `第${idx+1}题回答${ansLen > 50 ? '较充分' : '偏简短'}`;
+    let comment = `第${idx+1}题回答${ansLen > 50 ? '较充分' : '因识别记录较短，建议在安静环境重测'}`;
     if (hasStructure) comment += '，有层次感';
     if (hasExamples) comment += '，有具体案例支撑';
     if (!hasStructure) comment += '，建议补充结构信号词（首先/其次/最后）';

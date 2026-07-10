@@ -573,6 +573,8 @@ ${JSON.stringify(fallbackReport ?? {}, null, 2)}
 八、成长寄语（专业有温度）
 
 注意：
+- 语音识别（ASR）质量可能影响部分回答的转录完整性，术语不准确或回答偏简短可能是识别问题而非用户能力问题。
+  请在 comprehensiveEvaluation 开头用一句话简要提及识别质量影响，但不在后续分析中反复批评。
 - comprehensiveEvaluation 必须结合用户真实回答，不能模板化
 - perQuestionAnalysis 每个元素针对一个面试问题
 - 优化示范不要给标准答案，要根据用户特点优化作答方向
