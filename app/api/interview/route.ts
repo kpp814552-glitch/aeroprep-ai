@@ -540,7 +540,7 @@ ${JSON.stringify(fallbackReport ?? {}, null, 2)}
     "logicalThinking": 0,
     "professionalKnowledge": 0,
     "roleFit": 0,
-    "appearance": 0,
+    "articulation": 0,
     "adaptability": 0,
     "serviceAwareness": 0
   },
@@ -593,10 +593,10 @@ function normalizeReportPayload(payload: unknown, fallback: InterviewReport) {
         typeof candidate.scores?.roleFit === "number"
           ? candidate.scores.roleFit
           : fallback.scores.roleFit,
-      appearance:
-        typeof candidate.scores?.appearance === "number"
-          ? candidate.scores.appearance
-          : fallback.scores.appearance,
+      articulation:
+        typeof candidate.scores?.articulation === "number"
+          ? candidate.scores.articulation
+          : fallback.scores.articulation,
       adaptability:
         typeof candidate.scores?.adaptability === "number"
           ? candidate.scores.adaptability

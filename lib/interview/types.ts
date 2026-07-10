@@ -43,7 +43,7 @@ export type InterviewReportScores = {
   logicalThinking: number;
   professionalKnowledge: number;
   roleFit: number;
-  appearance: number;
+  articulation: number;
   adaptability: number;
   serviceAwareness: number;
 };

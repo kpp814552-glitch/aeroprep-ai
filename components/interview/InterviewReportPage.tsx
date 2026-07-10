@@ -157,7 +157,7 @@ export default function InterviewReportPage() {
       { label: "逻辑能力", value: report.scores.logicalThinking },
       { label: "专业能力", value: report.scores.professionalKnowledge },
       { label: "岗位匹配", value: report.scores.roleFit },
-      { label: "仪态表现", value: report.scores.appearance },
+      { label: "语言清晰", value: report.scores.articulation },
       { label: "应变能力", value: report.scores.adaptability },
       { label: "服务意识", value: report.scores.serviceAwareness },
     ];

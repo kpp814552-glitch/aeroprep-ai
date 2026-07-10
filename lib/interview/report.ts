@@ -113,7 +113,7 @@ function countQuestionAnswerAlignment(turns: InterviewTurn[]) {
   }, 0);
 }
 
-function scoreAppearance(turns: InterviewTurn[]) {
+function scoreArticulation(turns: InterviewTurn[]) {
   const totalText = tokenizeText(turns);
   const fillerPenalty = countMatches(totalText, fillerWords) * 1.5;
   const punctuationCount = (totalText.match(/[。！？]/g)?.length ?? 0);
@@ -296,7 +296,7 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
   const logicalThinking = scoreLogic(options.turns);
   const professionalKnowledge = scoreProfessional(options.turns, options.role);
   const roleFit = scoreRoleFit(options.turns, options.role, options.company);
-  const appearance = scoreAppearance(options.turns);
+  const articulation = scoreArticulation(options.turns);
   const adaptability = scoreAdaptability(options.turns);
   const serviceAwareness = scoreServiceAwareness(options.turns, options.role);
 
@@ -305,7 +305,7 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
       logicalThinking * 0.16 +
       professionalKnowledge * 0.18 +
       roleFit * 0.16 +
-      appearance * 0.12 +
+      articulation * 0.12 +
       adaptability * 0.12 +
       serviceAwareness * 0.10
   );
@@ -337,7 +337,7 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     logicalThinking,
     professionalKnowledge,
     roleFit,
-    appearance,
+    articulation,
     adaptability,
     serviceAwareness,
   };
