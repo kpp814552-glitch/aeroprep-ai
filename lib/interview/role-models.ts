@@ -17,6 +17,8 @@ export type RoleModel = {
   label: string;
   /** 岗位核心能力（带权重） */
   abilities: RoleModelAbility[];
+  /** 专属评分模型（用于最终报告评价，权重总和=100%） */
+  scoringModel: RoleModelAbility[];
   /** 必须优先获取的信息 */
   keyInfoToCollect: string[];
   /** 最终报告的评价重心 */
@@ -58,6 +60,14 @@ const ROLE_MODELS: Record<string, RoleModel> = {
         "请描述一次你在模拟机中处理的紧急情况。"
       ]},
     ],
+    scoringModel: [
+      { name: "安全意识", weight: 30, questionExamples: [] },
+      { name: "决策能力", weight: 20, questionExamples: [] },
+      { name: "纪律意识", weight: 15, questionExamples: [] },
+      { name: "压力管理", weight: 15, questionExamples: [] },
+      { name: "学习能力", weight: 10, questionExamples: [] },
+      { name: "团队协作", weight: 10, questionExamples: [] },
+    ],
     keyInfoToCollect: ["是否参加过飞行训练", "航校经历", "飞行小时数", "飞行阶段", "理论考试成绩", "私照/商照情况", "仪表等级", "英语水平", "体检情况"],
     evaluationFocus: ["安全意识", "责任意识", "学习能力", "飞行职业认知", "压力管理"],
     fallbackDirection: "虽然你目前没有飞行训练经历，但请谈谈你为什么选择飞行员职业？你为成为飞行员做过哪些准备？",
@@ -89,6 +99,13 @@ const ROLE_MODELS: Record<string, RoleModel> = {
         "你如何理解乘务员的职业形象？"
       ]},
     ],
+    scoringModel: [
+      { name: "服务意识", weight: 30, questionExamples: [] },
+      { name: "沟通能力", weight: 25, questionExamples: [] },
+      { name: "情绪管理", weight: 20, questionExamples: [] },
+      { name: "应急能力", weight: 15, questionExamples: [] },
+      { name: "职业礼仪", weight: 10, questionExamples: [] },
+    ],
     keyInfoToCollect: ["是否参加航空服务相关培训", "礼仪经历", "艺考成绩（如适用）", "外语能力", "服务行业经历", "身高条件"],
     evaluationFocus: ["服务意识", "沟通能力", "情绪管理", "应变能力", "职业形象"],
     fallbackDirection: "虽然没有直接的服务经验，但你为什么想从事乘务员工作？你认为自己具备哪些适合服务行业的特点？",
@@ -119,6 +136,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
         "你如何理解'维修签字就是承担责任'这句话？"
       ]},
     ],
+    scoringModel: [
+      { name: "专业能力", weight: 35, questionExamples: [] },
+      { name: "安全意识", weight: 30, questionExamples: [] },
+      { name: "工程思维", weight: 20, questionExamples: [] },
+      { name: "责任意识", weight: 15, questionExamples: [] },
+    ],
     keyInfoToCollect: ["专业方向", "是否学习航空器维修课程", "是否考取维修执照", "实习经历", "是否接触过飞机维护"],
     evaluationFocus: ["专业能力", "规范意识", "安全责任", "动手能力", "责任心"],
     fallbackDirection: "虽然没有直接的机务维修背景，你为什么对这个方向感兴趣？你对机务工作的日常内容有什么了解？",
@@ -133,6 +156,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "沟通协调", weight: 20, questionExamples: ["如何与机组沟通运行决策？", "跨部门协调时，你的沟通方式是什么？"] },
       { name: "应急处置", weight: 20, questionExamples: ["航班途中遇到紧急情况，签派员应该做什么？", "备降决策时考虑哪些因素？"] },
       { name: "学习能力", weight: 15, questionExamples: ["你对航空气象和航行通告了解多少？", "如何学习和掌握最新的运行规章？"] },
+    ],
+    scoringModel: [
+      { name: "风险判断", weight: 35, questionExamples: [] },
+      { name: "运行知识", weight: 30, questionExamples: [] },
+      { name: "天气分析", weight: 20, questionExamples: [] },
+      { name: "沟通能力", weight: 15, questionExamples: [] },
     ],
     keyInfoToCollect: ["专业背景", "是否学习签派相关课程", "是否了解签派员执照考试", "英语水平", "是否关注民航运行"],
     evaluationFocus: ["运行控制能力", "安全意识", "沟通协调", "应急处置", "学习能力"],
@@ -149,6 +178,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "英语能力", weight: 20, questionExamples: ["请用英语进行基本的陆空通话。", "如何准备ICAO英语考试？"] },
       { name: "团队协作", weight: 15, questionExamples: ["如何与相邻扇区协调移交？", "团队中如何处理好与机组的关系？"] },
     ],
+    scoringModel: [
+      { name: "安全意识", weight: 35, questionExamples: [] },
+      { name: "决策能力", weight: 30, questionExamples: [] },
+      { name: "规则意识", weight: 20, questionExamples: [] },
+      { name: "抗压能力", weight: 15, questionExamples: [] },
+    ],
     keyInfoToCollect: ["专业背景", "是否学习空管相关课程", "ICAO英语等级", "是否参加管制基础培训", "心理素质"],
     evaluationFocus: ["管制意识", "应急处置", "抗压能力", "英语能力", "团队协作"],
     fallbackDirection: "虽然没有管制背景，你为什么想从事空管工作？你对管制员的工作内容和要求了解多少？",
@@ -164,6 +199,13 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "安全意识", weight: 20, questionExamples: ["航电系统故障可能对飞行安全造成什么影响？", "改装或维修后如何验证系统功能正常？"] },
       { name: "学习能力", weight: 15, questionExamples: ["航空技术更新很快，你如何保持学习？", "是否关注最新的航电技术发展？"] },
     ],
+    scoringModel: [
+      { name: "航电系统知识", weight: 25, questionExamples: [] },
+      { name: "故障定位", weight: 25, questionExamples: [] },
+      { name: "工程实践", weight: 20, questionExamples: [] },
+      { name: "安全意识", weight: 20, questionExamples: [] },
+      { name: "学习能力", weight: 10, questionExamples: [] },
+    ],
     keyInfoToCollect: ["专业方向", "电子工程相关课程", "项目经历", "是否了解航空电子系统", "英语水平"],
     evaluationFocus: ["航电系统知识", "故障定位能力", "工程实践", "安全意识", "学习能力"],
     fallbackDirection: "虽然没有航电相关工作经验，你为什么对民航电子工程感兴趣？你平时是否关注航空技术领域？",
@@ -178,6 +220,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "风险提示", weight: 25, questionExamples: ["如何向运控中心和机组传达气象风险？", "遇到突发恶劣天气时，你的预警流程是什么？"] },
       { name: "学习能力", weight: 20, questionExamples: ["你对气象卫星和数值预报产品了解多少？", "如何保持对最新气象技术的跟进？"] },
     ],
+    scoringModel: [
+      { name: "气象分析", weight: 35, questionExamples: [] },
+      { name: "风险判断", weight: 35, questionExamples: [] },
+      { name: "运行知识", weight: 15, questionExamples: [] },
+      { name: "沟通能力", weight: 15, questionExamples: [] },
+    ],
     keyInfoToCollect: ["专业方向", "气象相关课程", "是否了解航空气象业务", "数据分析能力", "英语水平"],
     evaluationFocus: ["气象分析能力", "运行影响认知", "风险提示能力", "学习能力"],
     fallbackDirection: "虽然不是气象专业出身，你为什么对航空气象感兴趣？你平时是否关注天气对航空的影响？",
@@ -191,6 +239,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "法规意识", weight: 20, questionExamples: ["民航安保相关法规你了解哪些？", "在执法过程中如何平衡安全和法律边界？"] },
       { name: "心理素质", weight: 10, questionExamples: ["面对冲突时如何保持情绪稳定？", "你认为安全员最重要的心理品质是什么？"] },
     ],
+    scoringModel: [
+      { name: "安全意识", weight: 35, questionExamples: [] },
+      { name: "应急能力", weight: 30, questionExamples: [] },
+      { name: "法规意识", weight: 20, questionExamples: [] },
+      { name: "身体素质", weight: 15, questionExamples: [] },
+    ],
     keyInfoToCollect: ["体育经历", "安保经历", "军警经历", "安全培训", "身体素质"],
     evaluationFocus: ["安全意识", "应急能力", "身体素质", "法规意识"],
     fallbackDirection: "虽然没有安保相关经验，你为什么想从事客舱安全工作？你认为什么样的性格适合安全员岗位？",
@@ -202,6 +256,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "信息处理", weight: 25, questionExamples: ["多个信息源同时反馈问题时，你的处理优先级是什么？", "如何确保运行信息准确传递？"] },
       { name: "应急管理", weight: 25, questionExamples: ["突发状况下，AOC如何快速做出决策？", "应急响应启动后，AOC的指挥流程是什么？"] },
       { name: "压力管理", weight: 20, questionExamples: ["高压力环境下如何保持判断力？", "AOC岗位最大的挑战是什么？"] },
+    ],
+    scoringModel: [
+      { name: "协调能力", weight: 35, questionExamples: [] },
+      { name: "应急能力", weight: 30, questionExamples: [] },
+      { name: "信息处理", weight: 20, questionExamples: [] },
+      { name: "压力管理", weight: 15, questionExamples: [] },
     ],
     keyInfoToCollect: ["运行管理专业", "实习经历", "沟通能力", "英语水平"],
     evaluationFocus: ["运行安全", "协调能力", "应急能力", "抗压能力"],
@@ -215,6 +275,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "应急处理", weight: 25, questionExamples: ["机场突发事件如何处理？", "遇到不正常航班时，你的处置流程是什么？"] },
       { name: "协调能力", weight: 20, questionExamples: ["如何与航司、空管、地服等多方沟通？", "意见不一致时如何达成共识？"] },
     ],
+    scoringModel: [
+      { name: "现场能力", weight: 35, questionExamples: [] },
+      { name: "协调能力", weight: 30, questionExamples: [] },
+      { name: "应急处理", weight: 25, questionExamples: [] },
+      { name: "表达能力", weight: 10, questionExamples: [] },
+    ],
     keyInfoToCollect: ["运行管理专业", "实习经历", "英语水平", "沟通能力"],
     evaluationFocus: ["现场管理", "信息能力", "应急处理", "协调能力"],
     fallbackDirection: "虽然没有机场运行经验，你为什么对这个岗位感兴趣？你如何理解机场运行指挥在民航中的作用？",
@@ -226,6 +292,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "工作效率", weight: 25, questionExamples: ["在高峰时段如何保持高效服务？", "多窗口排队时，如何优化旅客等待时间？"] },
       { name: "沟通能力", weight: 25, questionExamples: ["如何向旅客解释航班超售？", "语言不通的外籍旅客如何沟通？"] },
       { name: "外语能力", weight: 20, questionExamples: ["请用英语为外籍旅客办理值机。", "如何准备民航英语日常会话？"] },
+    ],
+    scoringModel: [
+      { name: "服务意识", weight: 35, questionExamples: [] },
+      { name: "沟通能力", weight: 30, questionExamples: [] },
+      { name: "工作效率", weight: 20, questionExamples: [] },
+      { name: "外语能力", weight: 15, questionExamples: [] },
     ],
     keyInfoToCollect: ["服务经历", "外语能力", "计算机操作", "沟通能力"],
     evaluationFocus: ["服务意识", "工作效率", "沟通能力", "外语水平"],
@@ -239,6 +311,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "责任意识", weight: 25, questionExamples: ["安检工作的最大责任是什么？", "发现漏检后的处置流程是什么？"] },
       { name: "安全意识", weight: 20, questionExamples: ["安检中的安全底线是什么？", "如何判断需要升级处置的异常情况？"] },
     ],
+    scoringModel: [
+      { name: "规则执行", weight: 35, questionExamples: [] },
+      { name: "细节观察", weight: 25, questionExamples: [] },
+      { name: "责任意识", weight: 25, questionExamples: [] },
+      { name: "安全意识", weight: 15, questionExamples: [] },
+    ],
     keyInfoToCollect: ["安检培训", "安全意识", "责任心", "沟通能力"],
     evaluationFocus: ["规则执行", "责任意识", "细节观察", "安全意识"],
     fallbackDirection: "虽然没有安检经验，你为什么想从事安检工作？你如何理解安全检查和公共安全的关系？",
@@ -250,6 +328,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "应急服务", weight: 25, questionExamples: ["航班取消后如何安抚旅客？", "航站楼内突发情况如何应对？"] },
       { name: "服务意识", weight: 25, questionExamples: ["如何主动发现需要帮助的旅客？", "你认为航站楼服务最重要的品质是什么？"] },
       { name: "综合保障", weight: 20, questionExamples: ["高峰时段如何保持航站楼秩序？", "多个航班同时延误时如何分配服务资源？"] },
+    ],
+    scoringModel: [
+      { name: "沟通能力", weight: 35, questionExamples: [] },
+      { name: "应急能力", weight: 30, questionExamples: [] },
+      { name: "服务意识", weight: 25, questionExamples: [] },
+      { name: "综合保障", weight: 10, questionExamples: [] },
     ],
     keyInfoToCollect: ["服务经历", "沟通能力", "志愿经历", "外语能力"],
     evaluationFocus: ["沟通能力", "应急服务", "服务意识", "综合保障"],
@@ -263,6 +347,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "技术保障", weight: 25, questionExamples: ["如何确保导航信号持续稳定？", "新设备安装后的调试流程是什么？"] },
       { name: "安全意识", weight: 20, questionExamples: ["通信中断可能对飞行造成什么影响？", "设备故障时的应急备份方案是什么？"] },
     ],
+    scoringModel: [
+      { name: "技术能力", weight: 40, questionExamples: [] },
+      { name: "故障分析", weight: 30, questionExamples: [] },
+      { name: "安全意识", weight: 20, questionExamples: [] },
+      { name: "责任意识", weight: 10, questionExamples: [] },
+    ],
     keyInfoToCollect: ["通信电子专业", "技术课程", "故障排查经历", "网络知识"],
     evaluationFocus: ["技术能力", "故障处理", "安全保障", "学习能力"],
     fallbackDirection: "虽然没有通信导航工作经验，你为什么对这个技术岗位感兴趣？你平时是否关注通信技术发展？",
@@ -274,6 +364,12 @@ const ROLE_MODELS: Record<string, RoleModel> = {
       { name: "安全文化", weight: 25, questionExamples: ["如何推动组织建立安全文化？", "安全报告制度的目的是什么？"] },
       { name: "数据分析", weight: 25, questionExamples: ["如何通过安全数据分析预防事故？", "事故调查的基本流程是什么？"] },
       { name: "体系思维", weight: 20, questionExamples: ["安全管理体系（SMS）的核心要素是什么？", "如何将安全理念融入日常运营？"] },
+    ],
+    scoringModel: [
+      { name: "风险管理", weight: 35, questionExamples: [] },
+      { name: "安全文化", weight: 25, questionExamples: [] },
+      { name: "数据分析", weight: 25, questionExamples: [] },
+      { name: "体系思维", weight: 15, questionExamples: [] },
     ],
     keyInfoToCollect: ["安全管理课程", "安全相关经历", "数据分析能力", "系统思维"],
     evaluationFocus: ["风险管理", "安全文化", "数据分析", "体系思维"],

@@ -581,8 +581,8 @@ ${(() => { const p = getAirlineProfile(company); return `
 【岗位评价重心】（评价必须围绕岗位核心能力展开）
 ${(() => { const r = getRoleModel(role); return `
 岗位：${r.label}
-核心评价维度权重：${r.abilities.map(a => `${a.name}${a.weight}%`).join("、")}
-评价重点：${r.evaluationFocus.join("、")}
+核心评价维度权重：${(r.scoringModel || r.abilities).map(a => `${a.name}${a.weight}%`).join("、")}
+评分维度：${(r.scoringModel || r.abilities).map(a => a.name).join("、")}
 禁止：对非核心能力（如与岗位无关的专业背景）进行过度评价。
 `; })()}
 
