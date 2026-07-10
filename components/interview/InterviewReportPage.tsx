@@ -195,7 +195,7 @@ export default function InterviewReportPage() {
             <div className="mt-8 flex justify-center">
               <Link
                 href="/interview"
-                className="inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-sm text-white transition hover:bg-slate-800"
+                className="inline-flex items-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-700 shadow-none transition-all duration-200 ease-in-out hover:-translate-y-px hover:border-white/25 hover:bg-white/18"
               >
                 返回面试准备页
                 <ArrowRight className="h-4 w-4" />
