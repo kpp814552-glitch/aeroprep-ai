@@ -232,7 +232,10 @@ function parseJsonResponse(text: string) {
 async function callDeepSeek(apiKey: string, prompt: string) {
   console.log('[LLM Request] action=' + (prompt.includes('"action":"report"') ? 'report' : prompt.includes('"action":"next"') ? 'next' : 'start') + ' prompt_length=' + prompt.length);
   const startTime = Date.now();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
   const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
+    signal: controller.signal,
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -255,6 +258,8 @@ async function callDeepSeek(apiKey: string, prompt: string) {
       max_tokens: 4096,
     }),
   });
+
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errorText = await response.text();
