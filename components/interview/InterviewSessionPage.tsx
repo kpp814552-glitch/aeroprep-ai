@@ -12,6 +12,7 @@ import {
   getTotalRoundsForMode,
 } from "@/lib/interview/config";
 import {
+  analyzeInterviewReport,
   buildSessionRecord } from "@/lib/interview/report";
 import {
   saveInterviewSession } from "@/lib/interview/session-storage";
@@ -476,45 +477,18 @@ export default function InterviewSessionPage() {
 
         // User clicks "查看面试报告" to navigate
       } catch (error) {
-        console.error('[Report] generateReportAndFinish failed, creating local fallback with basic report:', error);
-        // Create basic report from available turn data so user can still see results
-        const avgAnswerLen = finalTurns.reduce((s,t) => s + t.answer.trim().length, 0) / Math.max(1, finalTurns.length);
-        const basicScore = Math.min(95, Math.max(40, Math.round(avgAnswerLen * 0.5 + 50)));
-        const fallbackReport = {
-          scores: {
-            expressionAbility: Math.min(90, Math.max(40, basicScore - Math.round(Math.random() * 10))),
-            logicalThinking: Math.min(90, Math.max(40, basicScore - Math.round(Math.random() * 15))),
-            professionalKnowledge: Math.min(90, Math.max(40, basicScore - Math.round(Math.random() * 20))),
-            roleFit: Math.min(90, Math.max(40, basicScore - Math.round(Math.random() * 10))),
-            articulation: Math.min(90, Math.max(40, basicScore)),
-            adaptability: Math.min(90, Math.max(40, basicScore - Math.round(Math.random() * 10))),
-            serviceAwareness: Math.min(90, Math.max(40, basicScore - Math.round(Math.random() * 10))),
-          },
-          totalScore: basicScore,
-          overallEvaluation: "报告后端生成遇到临时问题，当前评分基于回答长度和完整性初步估算。建议重新测试获取更精准的分析结果。请参考报告中的改进建议进行针对性训练。",
-          strengths: ["具有一定的表达基础", "完成了面试流程"],
-          weaknesses: ["报告详细分析暂时不可用", "建议重新测试获取完整评估"],
-          improvementSuggestions: ["重复答题可提高报告精准度", "建议在不同模式下尝试面试"],
-          recommendedTraining: ["模拟面试反复训练"],
-          hiringProbability: Math.min(90, Math.max(30, basicScore - 10)),
-          narrativeSummary: "基于模拟面试表现的初步评估。",
-          highlights: [],
-          comprehensiveEvaluation: "报告后端处理遇到临时问题，以下分析为基于回答数据的初步估算。" + (finalTurns.length > 0 ? "本次共完成" + finalTurns.length + "轮问答。" : ""),
-          perQuestionAnalysis: finalTurns.map((t, i) => "第" + (i+1) + "题回答长度" + t.answer.trim().length + "字。" + (t.answer.trim().length > 30 ? "回答较为完整。" : "回答偏简短。")),
-          personalProfile: "优势：基础表达清晰，完成了完整面试流程。\n风险点：语音识别环境可能影响回答完整性，建议在安静环境测试以确保最佳效果。",
-          careerMatch: roleLabel + "岗位方向适合继续探索。建议根据面试反馈针对性强化岗位核心能力。",
-          improvementPlan: "【7天快速提升】重新进行一次完整面试；检查网络环境和麦克风设置；熟悉岗位常见问题。" + "\n" + "【30天能力提升】每周至少完成2次模拟面试；针对识别问题优化答题环境；通过文字面试补充训练。",
-          nextPrediction: "当前估算竞争力约" + basicScore + "分。完成系统训练后预计可提升至" + Math.min(95, basicScore + 15) + "分。",
-          growthMessage: "面试中出现的技术问题不影响你的真实能力。建议检查设备后重新测试，获取更精准的成长报告。民航面试不仅是考察知识，更是考察面对问题的态度——你已经迈出了最重要的一步。",
-          competitiveLevel: basicScore >= 80 ? 'A' : basicScore >= 60 ? 'B' : basicScore >= 40 ? 'C' : 'D',
-          competitiveScore: basicScore,
-          competitiveRange: basicScore >= 80 ? '80%-90%' : basicScore >= 60 ? '60%-80%' : basicScore >= 40 ? '40%-60%' : '40%以下',
-          competitiveStrengths: ['完成了全部面试流程'],
-          competitiveWeaknesses: ['语音识别环境可能影响部分回答完整性'],
-          interviewerPerspective: '从面试官视角看，完成面试流程是积极的一步，但详细评估需要完整的报告分析。',
-          externalFactors: '真实录取还受到多种因素影响。本评估仅基于本次模拟面试表现生成。',
-          trainingProjection: '完成系统训练后，评估分数预计可提升10-15分。',
-        };
+        console.error('[Report] generateReportAndFinish failed, using local analyzeInterviewReport:', error);
+        // IMPORTANT: analyzeInterviewReport generates the SAME detailed report as the server fallback
+        // This ensures every interview gets a complete report regardless of API availability
+        // Use same local analysis engine as server fallback for complete detailed report
+        const fallbackReport = analyzeInterviewReport({
+          role,
+          company,
+          mode,
+          persona,
+          turns: finalTurns,
+          elapsedSeconds: totalElapsedSeconds,
+        });
         const fallbackRecord = buildSessionRecord({
           sessionId: sessionIdRef.current,
           company,
