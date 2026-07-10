@@ -336,6 +336,50 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     )
   );
 
+  // ─── 民航岗位竞争力评估（5维度加权） ───
+  const dimInterview = normalizeScore(
+    expressionAbility * 0.30 + articulation * 0.25 + logicalThinking * 0.25 +
+    (options.turns.reduce((s,t) => s + t.answer.trim().length, 0) / Math.max(1, options.turns.length) >= 40 ? 20 : 10)
+  );
+  const dimFit = normalizeScore(roleFit * 0.50 + serviceAwareness * 0.50);
+  const dimProfessional = normalizeScore(professionalKnowledge * 0.60 +
+    (options.turns.filter(t => t.stage === 'professional' || t.stage === 'scenario').length >= 1 ? 40 : 20));
+  const dimComprehensive = normalizeScore(adaptability * 0.40 + articulation * 0.30 + expressionAbility * 0.30);
+  const dimGrowth = normalizeScore(clamp(
+    100 - (expressionAbility + logicalThinking + professionalKnowledge + roleFit) / 4,
+    20, 90
+  ));
+
+  const competitiveScore = normalizeScore(
+    dimInterview * 0.40 + dimFit * 0.20 + dimProfessional * 0.15 + dimComprehensive * 0.15 + dimGrowth * 0.10
+  );
+
+  let competitiveLevel: string, competitiveRange: string;
+  if (competitiveScore >= 80) { competitiveLevel = 'A'; competitiveRange = '80%-90%'; }
+  else if (competitiveScore >= 60) { competitiveLevel = 'B'; competitiveRange = '60%-80%'; }
+  else if (competitiveScore >= 40) { competitiveLevel = 'C'; competitiveRange = '40%-60%'; }
+  else { competitiveLevel = 'D'; competitiveRange = '40%以下'; }
+
+  const competitiveStrengths: string[] = [];
+  if (dimInterview >= 70) competitiveStrengths.push('面试表达流畅，回答有基本结构和层次');
+  if (dimFit >= 70) competitiveStrengths.push('对民航岗位有较好的认知和职业动机');
+  if (dimProfessional >= 70) competitiveStrengths.push('具备一定的民航专业基础和行业认知');
+  if (dimComprehensive >= 70) competitiveStrengths.push('情绪稳定，面对问题能做出合理反应');
+  if (competitiveStrengths.length === 0) competitiveStrengths.push('具备基础表达能力，有进一步提升空间');
+
+  const competitiveWeaknesses: string[] = [];
+  if (dimInterview < 60) competitiveWeaknesses.push('表达流畅度和答题完整性需进一步提升');
+  if (dimFit < 60) competitiveWeaknesses.push('岗位认知和服务意识可进一步加强');
+  if (dimProfessional < 60) competitiveWeaknesses.push('民航专业知识和行业认知有待补充');
+  if (dimComprehensive < 60) competitiveWeaknesses.push('应变能力和综合素质需通过模拟训练强化');
+  if (competitiveWeaknesses.length === 0) competitiveWeaknesses.push('当前无明显短板，建议保持训练节奏持续提升');
+
+  const externalFactors = '真实录取结果还受到多种因素影响，包括但不限于：招聘人数与报考人数比例、学历背景、外语水平（尤其英语）、身体条件与形象、航空公司的具体招聘标准、面试官主观判断等。本评估仅基于本次模拟面试表现生成，不代表真实招聘结果。';
+
+  const trainingProjection = competitiveLevel >= 'B'
+    ? '当前已具备基础竞争力，完成30天专项训练后有望进入更高竞争区间。建议重点针对限制因素进行强化训练。'
+    : '通过系统训练（详见"未来提升方案"），30天后预计可提升1-2个竞争等级。建议每周至少完成2次模拟面试并复盘。';
+
   const scores = {
     expressionAbility,
     logicalThinking,
@@ -392,6 +436,17 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     improvementSuggestions,
     recommendedTraining,
     hiringProbability,
+    competitiveLevel,
+    competitiveScore,
+    competitiveRange,
+    competitiveStrengths,
+    competitiveWeaknesses,
+    interviewerPerspective: competitiveLevel >= 'B'
+      ? '从面试官视角看，回答中能体现' + (scores.serviceAwareness >= 65 ? '一定的服务意识' : '基础表达能力') +
+        (scores.professionalKnowledge >= 65 ? '和专业知识储备' : '') + '，但在具体案例支撑和安全意识体现方面仍需加强。'
+      : '回答整体偏简短，缺少具体案例和安全意识的体现。建议在后续练习中注重用STAR原则组织答案，增加民航运行场景的具体描述。',
+    externalFactors,
+    trainingProjection,
     narrativeSummary: overallEvaluation,
     highlights,
     comprehensiveEvaluation: interviewEvalLines.join("\n"),

@@ -73,6 +73,15 @@ export type InterviewReport = {
   nextPrediction: string;
   /** 八、成长寄语 */
   growthMessage: string;
+  /** 民航岗位竞争力评估 */
+  competitiveLevel: string;         // "A"|"B"|"C"|"D"
+  competitiveScore: number;         // 0-100
+  competitiveRange: string;         // "80%-90%"
+  competitiveStrengths: string[];   // 优势因素
+  competitiveWeaknesses: string[];  // 限制因素
+  interviewerPerspective: string;   // 面试官视角分析
+  externalFactors: string;          // 影响因素说明
+  trainingProjection: string;       // 提升模拟
 };
 
 export type InterviewRoleConfig = {

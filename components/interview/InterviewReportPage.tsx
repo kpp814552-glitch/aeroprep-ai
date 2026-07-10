@@ -225,7 +225,7 @@ export default function InterviewReportPage() {
                 </h1>
                 <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
                   基于本次 {sessionRecord.company} · {sessionRecord.roleLabel} · {sessionRecord.mode}
-                  面试记录生成，包含真实评分、优势、不足、改进方向与模拟录用概率。
+                  面试记录生成，包含真实评分、优势、不足、改进方向与岗位竞争力评估。
                 </p>
                 <p className="mt-6 text-sm leading-7 text-slate-700">{report.narrativeSummary}</p>
               </div>
@@ -243,10 +243,13 @@ export default function InterviewReportPage() {
                 <div className="rounded-[28px] border border-white/46 bg-white/68 px-5 py-5">
                   <TrendingUp className="h-5 w-5 text-emerald-600" />
                   <p className="mt-4 text-xs uppercase tracking-[0.24em] text-slate-500">
-                    模拟录用概率
+                    竞争力等级
                   </p>
                   <p className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {report.hiringProbability}%
+                    {report.competitiveLevel || '—'}
+                  </p>
+                  <p className="mt-0.5 text-xs tracking-[0.08em] text-slate-500">
+                    参考区间：{report.competitiveRange || '—'}
                   </p>
                 </div>
                 <div className="rounded-[28px] border border-white/46 bg-white/68 px-5 py-5">
@@ -263,6 +266,94 @@ export default function InterviewReportPage() {
           </div>
 
           <ScoreRadar items={radarItems} />
+
+          {/* ── 民航岗位竞争力评估 ── */}
+          {report.competitiveLevel ? (
+            <div className="rounded-[34px] border border-white/44 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.46))] p-6 shadow-[0_22px_58px_rgba(72,52,31,0.08)]">
+              <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                <TrendingUp className="h-5 w-5 text-emerald-600" />
+                民航岗位竞争力评估
+              </p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                本评估仅基于本次模拟面试表现生成，不代表真实招聘结果。
+              </p>
+
+              {/* 竞争力分数 + 等级 */}
+              <div className="mt-5 grid gap-4 sm:grid-cols-4">
+                <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">当前等级</p>
+                  <p className="mt-1 text-3xl font-bold tracking-[-0.04em] text-slate-950">{report.competitiveLevel}</p>
+                </div>
+                <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">综合评分</p>
+                  <p className="mt-1 text-3xl font-bold tracking-[-0.04em] text-slate-950">{report.competitiveScore}</p>
+                </div>
+                <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">参考区间</p>
+                  <p className="mt-1 text-2xl font-bold tracking-[-0.04em] text-slate-950">{report.competitiveRange}</p>
+                </div>
+                <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
+                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">判分模型</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    面试表现40% · 岗位匹配20%<br/>专业素养15% · 综合素质15% · 成长潜力10%
+                  </p>
+                </div>
+              </div>
+
+              {/* 优势因素 */}
+              {report.competitiveStrengths && report.competitiveStrengths.length > 0 ? (
+                <div className="mt-5">
+                  <p className="text-sm font-medium text-emerald-700">优势因素</p>
+                  <div className="mt-2 space-y-2">
+                    {report.competitiveStrengths.map((item, i) => (
+                      <div key={i} className="rounded-[16px] border border-emerald-200/60 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-800">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* 限制因素 */}
+              {report.competitiveWeaknesses && report.competitiveWeaknesses.length > 0 ? (
+                <div className="mt-4">
+                  <p className="text-sm font-medium text-amber-700">限制因素</p>
+                  <div className="mt-2 space-y-2">
+                    {report.competitiveWeaknesses.map((item, i) => (
+                      <div key={i} className="rounded-[16px] border border-amber-200/60 bg-amber-50/50 px-4 py-3 text-sm text-amber-800">
+                        {item}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {/* 面试官视角 */}
+              {report.interviewerPerspective ? (
+                <div className="mt-5 rounded-[20px] border border-sky-100 bg-sky-50/60 px-5 py-4">
+                  <p className="text-sm font-medium text-sky-800">如果我是航空公司面试官</p>
+                  <p className="mt-2 text-sm leading-7 text-sky-700">{report.interviewerPerspective}</p>
+                </div>
+              ) : null}
+
+              {/* 影响因素说明 */}
+              {report.externalFactors ? (
+                <div className="mt-4 rounded-[20px] border border-white/48 bg-white/60 px-5 py-4">
+                  <p className="text-xs font-medium text-slate-600">影响因素说明</p>
+                  <p className="mt-2 text-xs leading-6 text-slate-500">{report.externalFactors}</p>
+                </div>
+              ) : null}
+
+              {/* 提升模拟 */}
+              {report.trainingProjection ? (
+                <div className="mt-4 rounded-[20px] border border-indigo-100 bg-indigo-50/60 px-5 py-4">
+                  <p className="text-sm font-medium text-indigo-800">训练提升预测</p>
+                  <p className="mt-2 text-sm leading-7 text-indigo-700">{report.trainingProjection}</p>
+                </div>
+              ) : null}
+
+            </div>
+          ) : null}
 
           <div className="grid gap-6 lg:grid-cols-2">
             <ReportList title="优势分析" items={report.strengths} />

@@ -559,7 +559,15 @@ ${JSON.stringify(fallbackReport ?? {}, null, 2)}
   "careerMatch": "五、岗位匹配分析（分析适合空中乘务/民航空保/地勤服务/民航管理等哪些方向）",
   "improvementPlan": "六、未来提升方案（含7天快速提升计划和30天能力提升计划，每天具体可执行任务）",
   "nextPrediction": "七、下一次面试预测（保持现状的成功概率和风险，完成训练后的预计提升）",
-  "growthMessage": "八、成长寄语（像航空培训老师面对学生说话，专业且有温度）"
+  "growthMessage": "八、成长寄语（像航空培训老师面对学生说话，专业且有温度）",
+  "competitiveLevel": "A/B/C/D",
+  "competitiveScore": 0,
+  "competitiveRange": "80%-90%",
+  "competitiveStrengths": ["优势因素1", "优势因素2"],
+  "competitiveWeaknesses": ["限制因素1", "限制因素2"],
+  "interviewerPerspective": "四、如果我是航空公司面试官，我会关注...",
+  "externalFactors": "五、真实录取还受到招聘人数、报考人数、学历背景、外语能力、形象条件、航空公司招聘要求、面试官主观判断等影响。",
+  "trainingProjection": "六、完成30天训练后预计提升空间..."
 }
 
 【报告结构要求】
@@ -700,6 +708,38 @@ function normalizeReportPayload(payload: unknown, fallback: InterviewReport) {
       typeof candidate.growthMessage === "string" && candidate.growthMessage.trim()
         ? candidate.growthMessage.trim()
         : fallback.growthMessage,
+    competitiveLevel:
+      typeof candidate.competitiveLevel === "string" && ['A','B','C','D'].includes(candidate.competitiveLevel)
+        ? candidate.competitiveLevel
+        : fallback.competitiveLevel,
+    competitiveScore:
+      typeof candidate.competitiveScore === "number"
+        ? candidate.competitiveScore
+        : fallback.competitiveScore,
+    competitiveRange:
+      typeof candidate.competitiveRange === "string" && candidate.competitiveRange.trim()
+        ? candidate.competitiveRange.trim()
+        : fallback.competitiveRange,
+    competitiveStrengths:
+      Array.isArray(candidate.competitiveStrengths) && candidate.competitiveStrengths.length
+        ? candidate.competitiveStrengths.filter((item): item is string => typeof item === "string")
+        : fallback.competitiveStrengths,
+    competitiveWeaknesses:
+      Array.isArray(candidate.competitiveWeaknesses) && candidate.competitiveWeaknesses.length
+        ? candidate.competitiveWeaknesses.filter((item): item is string => typeof item === "string")
+        : fallback.competitiveWeaknesses,
+    interviewerPerspective:
+      typeof candidate.interviewerPerspective === "string" && candidate.interviewerPerspective.trim()
+        ? candidate.interviewerPerspective.trim()
+        : fallback.interviewerPerspective,
+    externalFactors:
+      typeof candidate.externalFactors === "string" && candidate.externalFactors.trim()
+        ? candidate.externalFactors.trim()
+        : fallback.externalFactors,
+    trainingProjection:
+      typeof candidate.trainingProjection === "string" && candidate.trainingProjection.trim()
+        ? candidate.trainingProjection.trim()
+        : fallback.trainingProjection,
   };
 }
 
