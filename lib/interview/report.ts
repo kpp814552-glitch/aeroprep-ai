@@ -113,6 +113,31 @@ function countQuestionAnswerAlignment(turns: InterviewTurn[]) {
   }, 0);
 }
 
+function scoreAppearance(turns: InterviewTurn[]) {
+  const totalText = tokenizeText(turns);
+  const fillerPenalty = countMatches(totalText, fillerWords) * 1.5;
+  const punctuationCount = (totalText.match(/[。！？]/g)?.length ?? 0);
+  const avgCharsPerTurn = turns.length ? totalText.length / turns.length : 0;
+  const clarityBonus = punctuationCount >= turns.length * 2 ? 8 : punctuationCount >= turns.length ? 4 : 0;
+  const stableLengthBonus = avgCharsPerTurn >= 60 ? 5 : avgCharsPerTurn >= 30 ? 2 : -3;
+  return normalizeScore(70 + clarityBonus + stableLengthBonus - fillerPenalty);
+}
+
+function scoreAdaptability(turns: InterviewTurn[]) {
+  const totalText = tokenizeText(turns);
+  const crossKeywords = countMatches(totalText, ["如果", "假设", "突发", "异常", "应急", "变化", "调整", "应对", "灵活"]);
+  const actionBonus = countMatches(totalText, ["判断", "决策", "选择", "方案", "优先", "权衡"]) * 1.5;
+  const variedStages = new Set(turns.filter(t => t.stage).map(t => t.stage)).size;
+  return normalizeScore(68 + Math.min(12, crossKeywords * 2) + Math.min(10, actionBonus) + variedStages * 2);
+}
+
+function scoreServiceAwareness(turns: InterviewTurn[], role: InterviewRole) {
+  const totalText = tokenizeText(turns);
+  const serviceKeywords = countMatches(totalText, ["服务", "乘客", "旅客", "沟通", "解释", "安抚", "帮助", "体验", "关怀", "耐心"]);
+  const teamKeywords = countMatches(totalText, ["协作", "配合", "团队", "分工", "支援", "协助"]);
+  return normalizeScore(65 + Math.min(18, serviceKeywords * 3) + Math.min(10, teamKeywords * 2));
+}
+
 function scoreExpression(turns: InterviewTurn[]) {
   const totalText = tokenizeText(turns);
   const avgLength = averageAnswerLength(turns);
@@ -271,12 +296,18 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
   const logicalThinking = scoreLogic(options.turns);
   const professionalKnowledge = scoreProfessional(options.turns, options.role);
   const roleFit = scoreRoleFit(options.turns, options.role, options.company);
+  const appearance = scoreAppearance(options.turns);
+  const adaptability = scoreAdaptability(options.turns);
+  const serviceAwareness = scoreServiceAwareness(options.turns, options.role);
 
   const totalScore = normalizeScore(
-    expressionAbility * 0.24 +
-      logicalThinking * 0.24 +
-      professionalKnowledge * 0.27 +
-      roleFit * 0.25
+    expressionAbility * 0.16 +
+      logicalThinking * 0.16 +
+      professionalKnowledge * 0.18 +
+      roleFit * 0.16 +
+      appearance * 0.12 +
+      adaptability * 0.12 +
+      serviceAwareness * 0.10
   );
 
   const adjustedScore = normalizeScore(
@@ -306,6 +337,9 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     logicalThinking,
     professionalKnowledge,
     roleFit,
+    appearance,
+    adaptability,
+    serviceAwareness,
   };
 
   const strengths = buildStrengths(scores, options.turns, options.role);

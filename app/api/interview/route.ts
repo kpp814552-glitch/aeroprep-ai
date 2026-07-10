@@ -228,6 +228,8 @@ function parseJsonResponse(text: string) {
 }
 
 async function callDeepSeek(apiKey: string, prompt: string) {
+  console.log('[LLM Request] action=' + (prompt.includes('"action":"report"') ? 'report' : prompt.includes('"action":"next"') ? 'next' : 'start') + ' prompt_length=' + prompt.length);
+  const startTime = Date.now();
   const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -248,7 +250,7 @@ async function callDeepSeek(apiKey: string, prompt: string) {
         },
       ],
       temperature: 0.45,
-      max_tokens: 1800,
+      max_tokens: 4096,
     }),
   });
 
@@ -279,6 +281,8 @@ async function callDeepSeek(apiKey: string, prompt: string) {
     data?.choices?.[0]?.message?.content ||
     data?.choices?.[0]?.text ||
     "";
+  const elapsed = Date.now() - startTime;
+  console.log('[LLM Response] elapsed=' + elapsed + 'ms content_length=' + content.length);
 
   return parseJsonResponse(content);
 }
@@ -416,8 +420,8 @@ function buildNextQuestionPrompt(
   const personaCfg = getPersonaConfig(persona);
   const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
 
-  // Only include last 3 turns to keep prompt size bounded and reduce latency
-  const recentTurns = turns.slice(-3);
+  // Only include last 5 turns to keep prompt size bounded and reduce latency
+  const recentTurns = turns.slice(-5);
 
   return `
 你现在是一位真实航空公司电话面试官。
@@ -535,7 +539,10 @@ ${JSON.stringify(fallbackReport ?? {}, null, 2)}
     "expressionAbility": 0,
     "logicalThinking": 0,
     "professionalKnowledge": 0,
-    "roleFit": 0
+    "roleFit": 0,
+    "appearance": 0,
+    "adaptability": 0,
+    "serviceAwareness": 0
   },
   "totalScore": 0,
   "overallEvaluation": "string",
@@ -586,6 +593,18 @@ function normalizeReportPayload(payload: unknown, fallback: InterviewReport) {
         typeof candidate.scores?.roleFit === "number"
           ? candidate.scores.roleFit
           : fallback.scores.roleFit,
+      appearance:
+        typeof candidate.scores?.appearance === "number"
+          ? candidate.scores.appearance
+          : fallback.scores.appearance,
+      adaptability:
+        typeof candidate.scores?.adaptability === "number"
+          ? candidate.scores.adaptability
+          : fallback.scores.adaptability,
+      serviceAwareness:
+        typeof candidate.scores?.serviceAwareness === "number"
+          ? candidate.scores.serviceAwareness
+          : fallback.scores.serviceAwareness,
     },
     totalScore:
       typeof candidate.totalScore === "number"
@@ -716,6 +735,7 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "report") {
+    console.log('[Report Generate] turns=' + turns.length + ' role=' + body.role);
     const fallbackReport = analyzeInterviewReport({
       role: body.role,
       company: body.company,

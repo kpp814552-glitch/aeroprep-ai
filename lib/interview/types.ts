@@ -43,6 +43,9 @@ export type InterviewReportScores = {
   logicalThinking: number;
   professionalKnowledge: number;
   roleFit: number;
+  appearance: number;
+  adaptability: number;
+  serviceAwareness: number;
 };
 
 export type InterviewReport = {

@@ -6,7 +6,7 @@ import type {
 } from './types';
 
 export const MAX_FOLLOW_UPS = 3;
-export const TOTAL_INTERVIEW_ROUNDS = 20;
+export const TOTAL_INTERVIEW_ROUNDS = 8;
 export const PREP_COUNTDOWN_SECONDS = 3;
 
 export const interviewStages: InterviewStage[] = [
@@ -34,21 +34,21 @@ export const interviewStageLabels: Record<InterviewStage, string> = {
 };
 
 export const interviewStageAnswerSeconds: Record<InterviewStage, number> = {
-  'self-intro': 90,
-  education: 45,
-  project: 120,
-  internship: 120,
-  'role-fit': 75,
-  professional: 75,
-  scenario: 45,
-  career: 45,
-  summary: 45,
+  'self-intro': 60,
+  education: 40,
+  project: 60,
+  internship: 60,
+  'role-fit': 50,
+  professional: 50,
+  scenario: 40,
+  career: 40,
+  summary: 30,
 };
 
 /** 单次面试最大时长（秒），超时自动结束生成报告 */
 /** 面试模式对应的最大轮次 */
 export function getTotalRoundsForMode(mode?: string): number {
-  if (mode === "压力面试") return 10;
+  if (mode === "压力面试") return 7;
   return TOTAL_INTERVIEW_ROUNDS;
 }
 

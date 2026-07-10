@@ -150,12 +150,16 @@ export default function InterviewReportPage() {
   const radarItems = useMemo(() => {
     const report = sessionRecord?.report;
     if (!report) return [];
+    console.log('[Report Render] sessionId=' + (sessionRecord?.sessionId || 'none') + ' scores=', report.scores);
 
     return [
       { label: "表达能力", value: report.scores.expressionAbility },
       { label: "逻辑能力", value: report.scores.logicalThinking },
       { label: "专业能力", value: report.scores.professionalKnowledge },
       { label: "岗位匹配", value: report.scores.roleFit },
+      { label: "仪态表现", value: report.scores.appearance },
+      { label: "应变能力", value: report.scores.adaptability },
+      { label: "服务意识", value: report.scores.serviceAwareness },
     ];
   }, [sessionRecord]);
 

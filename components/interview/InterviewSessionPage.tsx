@@ -264,6 +264,7 @@ export default function InterviewSessionPage() {
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   // ── Refs for async-safe data flow ──
+  const interviewFinishedRef = useRef(false);
   const pendingQuestionRef = useRef<PendingQuestion | null>(null);
   const activeQuestionRef = useRef("");
   const completedSessionIdRef = useRef<string | null>(null);
@@ -345,7 +346,7 @@ export default function InterviewSessionPage() {
         recognitionRef.current = null;
         stopVoiceMonitor();
         resolve(finalTranscriptRef.current);
-      }, 1500);
+      }, 3000);
       recognitionRef.current.onend = () => {
         window.clearTimeout(timeout);
         recognitionRef.current = null;
@@ -416,10 +417,14 @@ export default function InterviewSessionPage() {
           report: payload.report,
         });
 
+        console.log('[Report Save] sessionId=' + record.sessionId + ' score=' + payload.report?.totalScore);
+        saveInterviewSession(record);
         saveInterviewCompletionGrowth(record);
+        console.log('[Interview Finish] turns=' + finalTurns.length + ' elapsed=' + totalElapsedSeconds + 's score=' + payload.report?.totalScore);
         completedSessionIdRef.current = record.sessionId;
         completedScoreRef.current = payload.report?.totalScore ?? 0;
         completedTurnsRef.current = finalTurns.length;
+        interviewFinishedRef.current = true;
         setPhase('completed');
 
         // Save to Supabase if logged in
@@ -449,9 +454,11 @@ export default function InterviewSessionPage() {
 
         // User clicks "查看面试报告" to navigate
       } catch (error) {
+        console.error('[Report] generateReportAndFinish failed:', error);
         setFatalError(error instanceof Error ? error.message : "报告生成失败");
         setStatusText("报告生成失败，请稍后重试");
         setIsGeneratingReport(false);
+        setPhase('error');
       }
     },
     [
@@ -566,8 +573,10 @@ export default function InterviewSessionPage() {
         const text = result[0]?.transcript ?? "";
 
         if (result.isFinal) {
+          console.log('[ASR Final] text=' + text + ' len=' + text.length);
           appendedFinal += text;
         } else {
+          console.log('[ASR Partial] interim len=' + text.length);
           nextInterim += text;
         }
       }
@@ -819,6 +828,10 @@ export default function InterviewSessionPage() {
   // ── Handle user ending answer (listening → processing → playing) ──
   const handleEndAnswer = useCallback(async () => {
     if (phase !== 'listening' || isGeneratingReport) return;
+    if (interviewFinishedRef.current) {
+      console.log('[Interview] interviewFinishedRef=true, rejecting answer');
+      return;
+    }
 
     // Enter processing UI immediately
     setPhase('processing');
@@ -826,14 +839,23 @@ export default function InterviewSessionPage() {
     setStatusText('正在结束本轮回答...');
     setAnswerCountdown(0);
 
+    // Snapshot transcript BEFORE stopping recognition (protect against lost chunks)
+    const transcriptSnapshot = finalTranscriptRef.current.trim();
+
     const completeTranscript = await stopRecognitionAsync();
     clearAnswerTimer();
     setIsAnswering(false);
     setLiveTranscript('');
     setInterimTranscript('');
 
-    // Build current turn
-    const answerText = (completeTranscript || finalTranscriptRef.current.trim() || interimTranscriptRef.current).trim();
+    // Use the most complete transcript: prefer post-stop (may include final results),
+    // but fall back to snapshot if stop resolved too early
+    const transcriptAfterStop = finalTranscriptRef.current.trim();
+    const bestTranscript = transcriptAfterStop.length >= transcriptSnapshot.length
+      ? transcriptAfterStop
+      : transcriptSnapshot;
+    const answerText = (completeTranscript || bestTranscript || interimTranscriptRef.current).trim();
+    console.log('[ASR] Final transcript length=' + answerText.length + ' snapshot=' + transcriptSnapshot.length);
     const answerDurationSeconds = turnStartedAtRef.current
       ? Math.max(1, Math.round((Date.now() - turnStartedAtRef.current) / 1000))
       : 0;
