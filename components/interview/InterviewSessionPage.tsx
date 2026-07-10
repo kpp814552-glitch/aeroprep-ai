@@ -454,11 +454,30 @@ export default function InterviewSessionPage() {
 
         // User clicks "查看面试报告" to navigate
       } catch (error) {
-        console.error('[Report] generateReportAndFinish failed:', error);
-        setFatalError(error instanceof Error ? error.message : "报告生成失败");
-        setStatusText("报告生成失败，请稍后重试");
-        setIsGeneratingReport(false);
-        setPhase('error');
+        console.error('[Report] generateReportAndFinish failed, creating local fallback:', error);
+        // Create fallback record without a report so the user can still navigate to completed
+        const fallbackRecord = buildSessionRecord({
+          sessionId: sessionIdRef.current,
+          company,
+          role,
+          roleLabel,
+          mode,
+          persona,
+          interviewer: interviewerLabel,
+          voiceProviderName,
+          elapsedSeconds: totalElapsedSeconds,
+          turns: finalTurns,
+          createdAt: new Date().toISOString(),
+        });
+        console.log('[Report Save] Saving fallback record (no report)', fallbackRecord.sessionId);
+        saveInterviewSession(fallbackRecord);
+        saveInterviewCompletionGrowth(fallbackRecord);
+        completedSessionIdRef.current = fallbackRecord.sessionId;
+        completedScoreRef.current = 0;
+        completedTurnsRef.current = finalTurns.length;
+        interviewFinishedRef.current = true;
+        setPhase('completed');
+        setStatusText('面试已完成，报告生成遇到问题');
       }
     },
     [
@@ -1043,7 +1062,7 @@ export default function InterviewSessionPage() {
                 >
                   <p>
                     <span className="text-white/56">{interviewerLabel}：</span>
-                    {phase === 'processing' ? '正在分析问题内容...' : (currentQuestion || '请稍等，面试官正在进入面试室。')}
+                    {phase === 'processing' && isGeneratingReport ? '面试结束，正在生成面试报告...' : phase === 'processing' ? '正在分析问题内容...' : (currentQuestion || '请稍等，面试官正在进入面试室。')}
                   </p>
                   <p className="break-words">
                     <span className="text-white/56">考生：</span>
@@ -1174,10 +1193,10 @@ export default function InterviewSessionPage() {
                       <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#f5c689]/28">
                         <span className={activeVoiceState.dotClassName || "h-1.5 w-1.5 rounded-full bg-[#f5c689]/90"} />
                       </span>
-                      {phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
+                      {phase === 'processing' && isGeneratingReport ? '面试结束 / Interview Complete' : phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
                     </p>
                     <p className="mt-2 text-pretty text-[0.9rem] sm:text-[1rem] leading-[1.42] tracking-[-0.01em] text-white/92 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)] md:text-[1.28rem]">
-                      {phase === 'processing' ? '正在分析问题内容...' : currentQuestion}
+                      {phase === 'processing' && isGeneratingReport ? '面试结束，正在生成面试报告...' : phase === 'processing' ? '正在分析问题内容...' : currentQuestion}
                     </p>
                     <div className="mt-2 flex max-sm:flex-col max-sm:items-stretch items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
