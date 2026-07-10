@@ -268,6 +268,8 @@ export default function InterviewSessionPage() {
 
   // ── Refs for async-safe data flow ──
   const interviewFinishedRef = useRef(false);
+  const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const pendingSaveDataRef = useRef<Record<string, unknown> | null>(null);
   const pendingQuestionRef = useRef<PendingQuestion | null>(null);
   const activeQuestionRef = useRef("");
   const completedSessionIdRef = useRef<string | null>(null);
@@ -512,8 +514,17 @@ export default function InterviewSessionPage() {
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
         setIsGeneratingReport(false);
-        setPhase('completed');
-        setStatusText('面试已完成，报告生成遇到问题');
+        pendingSaveDataRef.current = {
+          version: 1,
+          sessionId: fallbackRecord.sessionId,
+          timestamp: new Date().toISOString(),
+          role, company, mode, persona,
+          turns: finalTurns,
+          elapsedSeconds: totalElapsedSeconds,
+          report: fallbackReport,
+        };
+        setStatusText('面试数据未完成上传');
+        setShowSaveDialog(true);
       }
     },
     [
@@ -1109,6 +1120,31 @@ export default function InterviewSessionPage() {
     transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
   }, [transcriptPreview, statusText, voiceActivityState]);
 
+  // ── Download interview data to local file ──
+  const handleDownloadSave = useCallback(() => {
+    const data = pendingSaveDataRef.current;
+    if (!data) { setShowSaveDialog(false); setPhase('completed'); return; }
+    try {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'aeroprep-interview-' + (data.sessionId || Date.now()) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) { console.error('[Download] Failed:', e); }
+    setShowSaveDialog(false);
+    setPhase('completed');
+  }, []);
+
+  const handleDismissSave = useCallback(() => {
+    pendingSaveDataRef.current = null;
+    setShowSaveDialog(false);
+    setPhase('completed');
+  }, []);
+
   // ── Retry report generation (for network failure recovery) ──
   const handleRetryReport = useCallback(async () => {
     const sid = completedSessionIdRef.current;
@@ -1183,8 +1219,40 @@ export default function InterviewSessionPage() {
   const isPlayingPhase = phase === 'playing';
   const isListeningPhase = phase === 'listening';
 
-  // ── Render ──
-  return (
+  // ── Save dialog (shown when API fails) ──
+  return showSaveDialog ? (
+    <main className="relative min-h-screen overflow-hidden bg-[#1f140f] text-white">
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("/session-background.png")' }} />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,10,7,0.08),rgba(24,13,10,0.18)_34%,rgba(14,8,6,0.42)_100%)]" />
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
+        <div className="w-full max-w-md rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,15,10,0.85),rgba(8,6,6,0.85))] px-6 py-8 shadow-[0_24px_64px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+          <p className="text-sm uppercase tracking-[0.3em] text-[#f5c689]/80">数据保存</p>
+          <p className="mt-4 text-base leading-7 text-white/80">
+            面试数据未完成上传至服务器，是否将本次面试数据导出到本地电脑备用？
+          </p>
+          <p className="mt-2 text-xs leading-6 text-white/50">
+            导出的文件可在网络恢复后手动读取，重新生成完整报告。
+          </p>
+          <div className="mt-8 flex flex-col gap-3">
+            <button
+              type="button"
+              onClick={handleDownloadSave}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
+            >
+              保存到电脑
+            </button>
+            <button
+              type="button"
+              onClick={handleDismissSave}
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/14 px-5 py-2.5 text-xs uppercase tracking-[0.22em] text-white/60 transition hover:border-white/30 hover:bg-white/22 hover:text-white"
+            >
+              不保存，直接查看本地报告
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  ) : (
     <main className="relative min-h-screen overflow-hidden bg-[#1f140f] text-white">
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
