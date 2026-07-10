@@ -909,7 +909,8 @@ export async function POST(request: Request) {
 
   if (body.action === "report") {
     console.log('[Report Generate] turns=' + turns.length + ' role=' + body.role);
-    const fallbackReport = analyzeInterviewReport({
+    try {
+      const fallbackReport = analyzeInterviewReport({
       role: body.role,
       company: body.company,
       mode: body.mode,
@@ -940,6 +941,23 @@ export async function POST(request: Request) {
       });
     } catch {
       return NextResponse.json({ report: fallbackReport });
+    }
+    } catch (outerErr) {
+      console.error('[Report] Outer catch:', outerErr);
+      const emergencyReport = {
+        scores: { expressionAbility: 0, logicalThinking: 0, professionalKnowledge: 0, roleFit: 0, articulation: 0, adaptability: 0, serviceAwareness: 0 },
+        totalScore: 0, overallEvaluation: "报告生成遇到临时问题，请重新测试。",
+        strengths: ["完成面试流程"], weaknesses: ["报告分析暂不可用"],
+        improvementSuggestions: ["请重新面试获取完整报告"],
+        recommendedTraining: [], hiringProbability: 0,
+        narrativeSummary: "", highlights: [], comprehensiveEvaluation: "",
+        perQuestionAnalysis: [], personalProfile: "", careerMatch: "",
+        improvementPlan: "", nextPrediction: "", growthMessage: "",
+        competitiveLevel: "D", competitiveScore: 0, competitiveRange: "",
+        competitiveStrengths: [], competitiveWeaknesses: [],
+        interviewerPerspective: "", externalFactors: "", trainingProjection: "",
+      };
+      return NextResponse.json({ report: emergencyReport });
     }
   }
 
