@@ -71,12 +71,27 @@ export default function AppFrame({
               </Link>
             ))}
 
-            <div className="ml-1 h-5 w-px bg-white/20" />
+      <div className="ml-1 h-5 w-px bg-white/20" />
 
-           {loading ? null : isLoggedIn ? (
-             <div className="flex items-center gap-2 shrink-0">
-                {isAdmin ? (
-                  <Link
+    {loading || !isLoggedIn ? (
+      <div className="flex items-center gap-1 shrink-0">
+        <Link
+          href="/login"
+          className="rounded-full px-3 py-1.5 text-xs text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
+        >
+          登录
+        </Link>
+        <Link
+          href="/register"
+          className="rounded-full px-3 py-1.5 text-xs text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
+        >
+          注册
+        </Link>
+      </div>
+    ) : isLoggedIn ? (
+      <div className="flex items-center gap-2 shrink-0">
+        {isAdmin ? (
+          <Link
                     href="/admin"
                     className="rounded-full bg-white/30 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-white/50"
                   >
@@ -98,24 +113,8 @@ export default function AppFrame({
                   className="rounded-full p-1.5 text-slate-500 transition hover:bg-white/40 hover:text-slate-700"
                 >
                   <LogOut className="h-4 w-4" />
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 shrink-0">
-                <Link
-                  href="/login"
-                  className="rounded-full px-3 py-1.5 text-xs text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
-                >
-                  登录
-                </Link>
-                <Link
-                  href="/register"
-                  className="rounded-full px-3 py-1.5 text-xs text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
-                >
-                  注册
-                </Link>
-              </div>
-            )}
+        </button>
+      </div>
           </nav>
         </div>
       </header>
