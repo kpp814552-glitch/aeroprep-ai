@@ -8,6 +8,7 @@ import {
   interviewStages,
 } from "@/lib/interview/config";
 import { analyzeInterviewReport } from "@/lib/interview/report";
+import { getAirlineProfile } from "@/lib/interview/airline-profiles";
 import type {
   InterviewReport,
   InterviewRole,
@@ -306,8 +307,9 @@ function pickResumeAnchor(answer: string) {
   return normalized.find((item) => item.length >= 6) ?? answer.slice(0, 24);
 }
 
-function buildFallbackStartQuestion(role: InterviewRole) {
-  return getRoleConfig(role).firstQuestion;
+function buildFallbackStartQuestion(role: InterviewRole, company?: string) {
+  const base = getRoleConfig(role).firstQuestion;
+  return company ? `${company}面试官：${base}` : base;
 }
 
 function buildFallbackNextQuestion(
@@ -355,7 +357,19 @@ function buildStartQuestionPrompt(
   const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
 
   return `
-你现在是一位真实航空公司电话面试官。
+你现在是一家真实航空公司的招聘面试官。请根据以下航空公司画像进行面试。
+
+【航空公司画像】
+${(() => { const p = getAirlineProfile(company); return `
+企业定位：${p.positioning}
+品牌关键词：${p.brandKeywords.join("、")}
+服务理念：${p.servicePhilosophy}
+面试风格：${p.interviewStyle}
+重点考察能力权重：${p.keyAreas.map(a => `${a.name}${a.weight}%`).join("、")}
+考察方向比例：${(p.questionDirections || []).map(d => `${d.category}${d.proportion}%`).join("、")}
+面试官性格：${p.aiInterviewerPersona}
+理想候选人画像：${p.idealCandidateProfile}
+`; })()}
 
 面试背景：
 - 航司：${company || "航空公司"}
@@ -364,6 +378,7 @@ function buildStartQuestionPrompt(
 ${modeInstruction}
 
 要求：
+- 这是全新的一场面试，请严格遵循上方航空公司画像的风格
 - 这是全新的一场面试
 - 第一题必须永远是自我介绍
 - 必须明确要求候选人介绍：姓名、年龄、学校、专业、相关经历
@@ -424,7 +439,20 @@ function buildNextQuestionPrompt(
   const recentTurns = turns.slice(-5);
 
   return `
-你现在是一位真实航空公司电话面试官。
+你现在是一家真实航空公司的招聘面试官。请根据以下航空公司画像进行面试。
+
+【航空公司画像】
+${(() => { const p = getAirlineProfile(company); return `
+企业定位：${p.positioning}
+品牌关键词：${p.brandKeywords.join("、")}
+服务理念：${p.servicePhilosophy}
+面试风格：${p.interviewStyle}
+重点考察能力权重：${p.keyAreas.map(a => `${a.name}${a.weight}%`).join("、")}
+高分回答特点：${p.highScoreCharacteristics.slice(0, 3).join("；")}
+扣分行为：${p.deductionPoints.slice(0, 3).join("；")}
+面试官性格：${p.aiInterviewerPersona}
+理想候选人画像：${p.idealCandidateProfile}
+`; })()}
 
 面试背景：
 - 航司：${company || "航空公司"}
@@ -509,7 +537,17 @@ ${modeInstruction}
 面试官人格：${persona || "专业型HR"}
 面试官对应风格：${personaCfg.style}
 
-撰写报告时请保持与面试官人格一致的观察视角和措辞风格。
+【航空公司招聘画像】
+${(() => { const p = getAirlineProfile(company); return `
+企业定位：${p.positioning}
+品牌关键词：${p.brandKeywords.join("、")}
+服务理念：${p.servicePhilosophy}
+招聘偏好：${p.recruitmentPreferences.join("；")}
+高分回答特点：${p.highScoreCharacteristics.join("；")}
+扣分行为：${p.deductionPoints.join("；")}
+`; })()}
+
+撰写报告时请保持与面试官人格一致的观察视角和措辞风格，并以上述航空公司招聘标准为评估依据。
 
 面试记录：
 ${turns
@@ -772,7 +810,7 @@ export async function POST(request: Request) {
   if (body.action === "start") {
     const fallback = {
       stage: "self-intro" as InterviewStage,
-      question: buildFallbackStartQuestion(body.role),
+      question: buildFallbackStartQuestion(body.role, body.company),
     };
 
     if (!apiKey) {
