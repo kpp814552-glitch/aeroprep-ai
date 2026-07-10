@@ -227,6 +227,10 @@ export default function InterviewSessionPage() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const microphoneStreamRef = useRef<MediaStream | null>(null);
   const voiceMonitorFrameRef = useRef<number | null>(null);
+  const waveformCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const recordingTimerRef = useRef<HTMLSpanElement | null>(null);
+  const lastSoundTimeRef = useRef<number>(Date.now());
+  const silenceWarningRef = useRef<HTMLParagraphElement | null>(null);
 
   const company = searchParams.get("company") ?? "国航";
   const role = normalizeRole(searchParams.get("role"));
@@ -309,6 +313,26 @@ export default function InterviewSessionPage() {
       window.cancelAnimationFrame(voiceMonitorFrameRef.current);
       voiceMonitorFrameRef.current = null;
     }
+
+    // Clear waveform
+    if (waveformCanvasRef.current) {
+      const canvas = waveformCanvasRef.current;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.strokeStyle = "rgba(245, 198, 137, 0.2)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height / 2);
+        ctx.lineTo(canvas.width, canvas.height / 2);
+        ctx.stroke();
+      }
+    }
+
+    // Reset recording timer
+    recordingTimerRef.current = null;
+    lastSoundTimeRef.current = Date.now();
+    if (silenceWarningRef.current) silenceWarningRef.current.style.display = "none";
 
     analyserRef.current = null;
 
@@ -525,10 +549,13 @@ export default function InterviewSessionPage() {
 
         analyserRef.current.getByteTimeDomainData(samples);
         let sum = 0;
+        let maxAmplitude = 0;
 
         for (let index = 0; index < samples.length; index += 1) {
           const normalized = (samples[index] - 128) / 128;
           sum += normalized * normalized;
+          const absVal = Math.abs(normalized);
+          if (absVal > maxAmplitude) maxAmplitude = absVal;
         }
 
         const rms = Math.sqrt(sum / samples.length);
@@ -539,9 +566,79 @@ export default function InterviewSessionPage() {
             previousState = "Listening";
             setVoiceActivityState("Listening");
           }
+          lastSoundTimeRef.current = Date.now();
         } else if (previousState !== "Processing") {
           previousState = "Silent";
           setVoiceActivityState("Silent");
+        }
+
+        // ─── Draw waveform canvas ───
+        if (waveformCanvasRef.current) {
+          const canvas = waveformCanvasRef.current;
+          const rect = canvas.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          // Only resize if dimensions changed
+          if (canvas.width !== Math.round(rect.width * dpr)) {
+            canvas.width = Math.round(rect.width * dpr);
+            canvas.height = Math.round(rect.height * dpr);
+          }
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+            const drawWidth = rect.width;
+            const drawHeight = rect.height;
+            const centerY = drawHeight / 2;
+
+            if (rms > 0.01 || speaking) {
+              // Active waveform
+              ctx.strokeStyle = "rgba(245, 198, 137, 0.7)";
+              ctx.lineWidth = 1.5;
+              ctx.lineJoin = "round";
+              ctx.beginPath();
+
+              const step = Math.max(1, Math.floor(samples.length / drawWidth));
+              const sliceWidth = 1;
+              let x = 0;
+
+              for (let i = 0; i < samples.length; i += step) {
+                const v = (samples[i] - 128) / 128;
+                const amplitude = v * Math.min(1, rms * 20) * (drawHeight * 0.4);
+                const y = centerY + amplitude;
+
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+                x += sliceWidth * step;
+              }
+
+              ctx.stroke();
+            } else {
+              // Idle flat line
+              ctx.strokeStyle = "rgba(245, 198, 137, 0.2)";
+              ctx.lineWidth = 1;
+              ctx.beginPath();
+              ctx.moveTo(0, centerY);
+              ctx.lineTo(drawWidth, centerY);
+              ctx.stroke();
+            }
+          }
+        }
+
+        // ─── Silence detection (3s) ───
+        if (silenceWarningRef.current && voiceActivityState === "Listening") {
+          const silenceDuration = Date.now() - lastSoundTimeRef.current;
+          silenceWarningRef.current.style.display = silenceDuration > 3000 ? "block" : "none";
+        } else if (silenceWarningRef.current) {
+          silenceWarningRef.current.style.display = "none";
+        }
+
+        // ─── Update recording timer ───
+        if (recordingTimerRef.current) {
+          const elapsed = Math.floor((Date.now() - (turnStartedAtRef.current || Date.now())) / 1000);
+          const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+          const secs = String(elapsed % 60).padStart(2, '0');
+          recordingTimerRef.current.textContent = mins + ':' + secs;
         }
 
         voiceMonitorFrameRef.current = window.requestAnimationFrame(tick);
@@ -1189,12 +1286,38 @@ export default function InterviewSessionPage() {
               <div className="relative w-full max-w-[1120px]">
                 <div className="pointer-events-none absolute inset-x-0 bottom-[-1.1rem] flex justify-center px-5 md:px-8">
                   <div className="w-full max-w-[760px] rounded-[18px] border border-white/5 bg-[linear-gradient(180deg,rgba(18,11,9,0.3),rgba(8,7,7,0.18))] px-4 py-2 shadow-[0_10px_22px_rgba(0,0,0,0.16)] backdrop-blur-sm md:px-5 md:py-2.5">
-                    <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-[#f5c689]/72">
-                      <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-[#f5c689]/28">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-[#f5c689]/72">
                         <span className={activeVoiceState.dotClassName || "h-1.5 w-1.5 rounded-full bg-[#f5c689]/90"} />
-                      </span>
-                      {phase === 'processing' && isGeneratingReport ? '面试结束 / Interview Complete' : phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
-                    </p>
+                        {phase === 'processing' && isGeneratingReport ? '面试结束 / Interview Complete' : phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
+                      </p>
+                      {isListeningPhase ? (
+                        <span ref={recordingTimerRef} className="font-light tabular-nums text-[0.82rem] tracking-[0.12em] text-[#f5c689]/60">
+                          00:00
+                        </span>
+                      ) : null}
+                    </div>
+                    {isListeningPhase ? (
+                      <div className="mt-1.5">
+                        <canvas
+                          ref={waveformCanvasRef}
+                          className="h-8 w-full rounded-sm"
+                          style={{ height: '32px' }}
+                        />
+                        <div className="flex items-center justify-between mt-0.5">
+                          <p className="text-[0.6rem] tracking-[0.2em] text-[#f5c689]/60">
+                            {voiceActivityState === 'Listening' ? '正在聆听...' : voiceActivityState === 'waiting_answer' ? '等待你的回答' : '—'}
+                          </p>
+                          <p
+                            ref={silenceWarningRef}
+                            className="text-[0.6rem] tracking-[0.1em] text-amber-300/70"
+                            style={{ display: 'none' }}
+                          >
+                            未检测到声音，请确认麦克风是否正常
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
                     <p className="mt-2 text-pretty text-[0.9rem] sm:text-[1rem] leading-[1.42] tracking-[-0.01em] text-white/92 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)] md:text-[1.28rem]">
                       {phase === 'processing' && isGeneratingReport ? '面试结束，正在生成面试报告...' : phase === 'processing' ? '正在分析问题内容...' : currentQuestion}
                     </p>
