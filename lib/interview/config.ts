@@ -109,6 +109,62 @@ export const interviewRoles: InterviewRoleConfig[] = [
       '好的。我们先彼此认识一下。请做一个简短的自我介绍，包括姓名、年龄、学校、专业，以及和航电系统或电子工程相关的经历。',
     coreTopics: ['航电系统', '故障定位', '信号链路', '工程实践'],
   },
+  {
+    value: 'air-marshal' as InterviewRole,
+    label: '客舱安全员',
+    interviewer: '空防安全面试官',
+    firstQuestion: '好的。先请你做一个简短的自我介绍，包括姓名、年龄、学校、专业，以及任何和安保、体育或安全相关的经历。',
+    coreTopics: ['空防安全', '应急处置', '身体素质', '法规意识'],
+  },
+  {
+    value: 'aoc' as InterviewRole,
+    label: '运行控制',
+    interviewer: 'AOC运行控制面试官',
+    firstQuestion: '好的。先请你做一下自我介绍，包括你的姓名、年龄、学校、专业，以及你如何看待运行控制在航空中的作用。',
+    coreTopics: ['运行协调', '信息处理', '应急管理', '多部门协作'],
+  },
+  {
+    value: 'flight-ops' as InterviewRole,
+    label: '机场运行指挥',
+    interviewer: '机场运行面试官',
+    firstQuestion: '好的。请先做一个简短的自我介绍，包括你的姓名、年龄、学校、专业，以及有没有参与过机场运行相关的活动或经历。',
+    coreTopics: ['现场管理', '信息传递', '应急处理', '协调能力'],
+  },
+  {
+    value: 'passenger-service' as InterviewRole,
+    label: '值机员',
+    interviewer: '地服招聘面试官',
+    firstQuestion: '好的。请先做一下自我介绍，包括你的姓名、年龄、学校、专业，以及你是否有过服务行业相关经历。',
+    coreTopics: ['服务意识', '工作效率', '沟通能力', '外语应用'],
+  },
+  {
+    value: 'security-inspector' as InterviewRole,
+    label: '安检员',
+    interviewer: '安检招聘面试官',
+    firstQuestion: '好的。请做一个简短的自我介绍，包括姓名、年龄、学校、专业，以及你如何理解安全检查和责任的关系。',
+    coreTopics: ['规则执行', '责任意识', '细节观察', '安全意识'],
+  },
+  {
+    value: 'terminal-service' as InterviewRole,
+    label: '航站楼服务',
+    interviewer: '航站楼管理面试官',
+    firstQuestion: '好的。先请你做一个简短的自我介绍，包括姓名、年龄、学校、专业，以及你平时是否关注服务行业。',
+    coreTopics: ['旅客引导', '沟通能力', '应急服务', '综合保障'],
+  },
+  {
+    value: 'comm-navigation' as InterviewRole,
+    label: '通信导航',
+    interviewer: '通信导航技术面试官',
+    firstQuestion: '好的。请先做一下自我介绍，包括姓名、年龄、学校、专业，以及你是否有通信或电子技术相关的学习经历。',
+    coreTopics: ['通信系统', '导航设备', '故障处理', '技术保障'],
+  },
+  {
+    value: 'aviation-safety' as InterviewRole,
+    label: '航空安全',
+    interviewer: '安全管理体系面试官',
+    firstQuestion: '好的。请先做一个自我介绍，包括姓名、年龄、学校、专业，以及你如何理解民航安全管理的重要性。',
+    coreTopics: ['风险管理', '安全文化', '数据分析', '体系思维'],
+  },
 ];
 
 export const phaseLabels: Record<InterviewPhase, string> = {

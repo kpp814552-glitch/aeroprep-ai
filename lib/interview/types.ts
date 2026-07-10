@@ -5,7 +5,15 @@ export type InterviewRole =
   | 'cabin-crew'
   | 'maintenance'
   | 'aviation-meteorology'
-  | 'civil-aviation-electronics';
+  | 'civil-aviation-electronics'
+  | 'air-marshal'
+  | 'aoc'
+  | 'flight-ops'
+  | 'passenger-service'
+  | 'security-inspector'
+  | 'terminal-service'
+  | 'comm-navigation'
+  | 'aviation-safety';
 
 export type InterviewStage =
   | 'self-intro'
