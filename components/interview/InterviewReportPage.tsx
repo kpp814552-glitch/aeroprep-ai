@@ -275,10 +275,70 @@ export default function InterviewReportPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
-            <div className="rounded-[32px] border border-white/44 bg-white/56 p-6 shadow-[0_18px_42px_rgba(75,54,31,0.06)]">
-              <p className="text-sm font-medium text-slate-950">综合评价</p>
-              <p className="mt-4 text-base leading-8 text-slate-700">{report.overallEvaluation}</p>
-              {report.highlights.length ? (
+           <div className="rounded-[32px] border border-white/44 bg-white/56 p-6 shadow-[0_18px_42px_rgba(75,54,31,0.06)]">
+             <p className="text-sm font-medium text-slate-950">综合评价</p>
+             <p className="mt-4 text-base leading-8 text-slate-700">{report.overallEvaluation}</p>
+             {report.comprehensiveEvaluation ? (
+               <div className="mt-6 border-t border-white/40 pt-6">
+                 <p className="text-sm font-medium text-slate-950">面试综合评价</p>
+                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
+                   {report.comprehensiveEvaluation}
+                 </div>
+               </div>
+             ) : null}
+             {report.perQuestionAnalysis && report.perQuestionAnalysis.length > 0 ? (
+               <div className="mt-6 border-t border-white/40 pt-6">
+                 <p className="text-sm font-medium text-slate-950">面试问题逐题分析</p>
+                 <div className="mt-3 space-y-4">
+                   {report.perQuestionAnalysis.map((analysis, idx) => (
+                     <div key={idx} className="rounded-[20px] border border-white/46 bg-white/72 px-4 py-4 text-sm leading-7 text-slate-700">
+                       {analysis}
+                     </div>
+                   ))}
+                 </div>
+               </div>
+             ) : null}
+             {report.personalProfile ? (
+               <div className="mt-6 border-t border-white/40 pt-6">
+                 <p className="text-sm font-medium text-slate-950">个人能力画像</p>
+                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
+                   {report.personalProfile}
+                 </div>
+               </div>
+             ) : null}
+             {report.careerMatch ? (
+               <div className="mt-6 border-t border-white/40 pt-6">
+                 <p className="text-sm font-medium text-slate-950">岗位匹配分析</p>
+                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
+                   {report.careerMatch}
+                 </div>
+               </div>
+             ) : null}
+             {report.improvementPlan ? (
+               <div className="mt-6 border-t border-white/40 pt-6">
+                 <p className="text-sm font-medium text-slate-950">未来提升方案</p>
+                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
+                   {report.improvementPlan}
+                 </div>
+               </div>
+             ) : null}
+             {report.nextPrediction ? (
+               <div className="mt-6 border-t border-white/40 pt-6">
+                 <p className="text-sm font-medium text-slate-950">下一次面试预测</p>
+                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
+                   {report.nextPrediction}
+                 </div>
+               </div>
+             ) : null}
+             {report.growthMessage ? (
+               <div className="mt-6 border-t border-slate-200/60 pt-6">
+                 <p className="text-sm font-medium text-cyan-800">成长寄语</p>
+                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-cyan-700">
+                   {report.growthMessage}
+                 </div>
+               </div>
+             ) : null}
+             {report.highlights.length ? (
                 <div className="mt-6 space-y-3">
                   {report.highlights.map((item, index) => (
                     <div

@@ -358,6 +358,27 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     .slice(0, 3)
     .map((turn) => `${stageSummary(turn.stage)}回答信息量较充足，与题目相关性较好。`);
 
+  const interviewEvalLines: string[] = [];
+  interviewEvalLines.push(`本次 ${options.company || "目标航司"} ${options.role} 岗位模拟面试，共进行 ${options.turns.length} 轮问答。`);
+  interviewEvalLines.push(overallEvaluation);
+  if (strengths.length) interviewEvalLines.push(`最大优势：${strengths[0]}`);
+  if (weaknesses.length) interviewEvalLines.push(`最大短板：${weaknesses[0]}`);
+
+  const perQuestionAnalysis = options.turns.map((turn, idx) => {
+    const ansLen = turn.answer.trim().length;
+    const hasStructure = structureSignals.some(s => turn.answer.includes(s));
+    const hasExamples = resultSignals.some(s => turn.answer.includes(s));
+    let comment = `第${idx+1}题回答${ansLen > 50 ? '较充分' : '偏简短'}`;
+    if (hasStructure) comment += '，有层次感';
+    if (hasExamples) comment += '，有具体案例支撑';
+    if (!hasStructure) comment += '，建议补充结构信号词（首先/其次/最后）';
+    return comment;
+  });
+
+  const improvements: string[] = [];
+  improvements.push(`【7天快速提升】第1-2天：熟悉${getRoleConfig(options.role).coreTopics.join("、")} 高频考点；第3-4天：练习STAR结构回答；第5-7天：模拟${options.mode || "校招"}面试3次以上。`);
+  improvements.push(`【30天能力提升】第1周：完成${getRoleConfig(options.role).label}高频题库，每周至少3次模拟面试；第2周：针对性强化弱项维度；第3-4周：完整面试流程训练+报告复盘。`);
+
   return {
     scores,
     totalScore: adjustedScore,
@@ -367,8 +388,15 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     improvementSuggestions,
     recommendedTraining,
     hiringProbability,
-    narrativeSummary: `${overallEvaluation} 从校招面试标准看，你当前的表现已经不只是“能回答”，而是开始接近“有说服力的回答”。后续重点是继续提高问题针对性、岗位贴合度和案例展开质量。`,
+    narrativeSummary: overallEvaluation,
     highlights,
+    comprehensiveEvaluation: interviewEvalLines.join("\n"),
+    perQuestionAnalysis,
+    personalProfile: `优势：${strengths.length ? strengths.join("；") : "具有基础表达能力，有较强的学习意愿。"}\n风险点：${weaknesses.length ? weaknesses.join("；") : "临场表达仍需提升，专业知识体系待完善。"}`,
+    careerMatch: `当前表现较适合${getRoleConfig(options.role).label}岗位。${adjustedScore >= 78 ? "建议优先尝试该方向面试。" : "建议先强化基础知识，再进行正式面试。"}`,
+    improvementPlan: improvements.join("\n\n"),
+    nextPrediction: `保持当前水平：成功概率约${hiringProbability}%。完成30天提升计划后可提升至${Math.min(95, hiringProbability + 15)}%。`,
+    growthMessage: `航空面试不是考验你是否完美，而是考验你是否适合。你在本轮${options.company || ""}模拟面试中展现了${scores.expressionAbility >= 75 ? "良好的表达基础" : "可塑的表达潜力"}，最大的提升空间在于将回答从"泛泛而谈"升级为"结合具体经历、展现岗位思维"。`,
   };
 }
 

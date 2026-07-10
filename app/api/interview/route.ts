@@ -498,7 +498,12 @@ function buildReportPrompt(
   const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
 
   return `
-请担任${company || "航空公司"} ${roleConfig.label}岗位的民航HR面试官，根据以下真实面试记录生成一份专业面试报告。
+你是一名拥有15年经验的民航招聘培训专家，曾参与国内大型航司乘务员、地勤、航空服务岗位招聘与培训。请根据以下面试记录，以"航空公司招聘面试官 + 民航职业培训导师"双重视角，生成一份专业的《民航求职成长报告》。
+
+面试岗位：${roleConfig.label}
+航空公司：${company || "目标航司"}
+面试模式：${mode || "校招"}
+面试官风格：${personaCfg.style}
 
 ${modeInstruction}
 面试官人格：${persona || "专业型HR"}
@@ -517,23 +522,18 @@ ${turns
   )
   .join("\n\n")}
 
-请输出以下维度的真实分析，不要硬编空泛内容：
-- 表达能力
-- 逻辑能力
-- 专业能力
-- 岗位匹配度
+请从民航招聘实际出发进行评价，禁止生成模板化内容。每个评分必须说明具体原因。
 
-评分标准请按中国民航大学在校生、校招候选人、实习生的真实水平来判断：
+评分标准按中国民航大学在校生、校招候选人、实习生的真实水平来判断：
 - 正常水平回答：75 到 85 分
 - 优秀回答：85 到 95 分
-- 不要因为不是社会招成熟候选人而过度压分
 - 必须结合“问题 + 回答内容”的匹配度、结构性、专业相关性、岗位动机来打分
-- 不要只按字数、语气词或回答长短打分
 
 参考基础评分（可调整）：
 ${JSON.stringify(fallbackReport ?? {}, null, 2)}
 
-只返回JSON：
+请输出以下JSON结构，其中 fullReport 字段按【报告结构】要求生成完整Markdown格式报告：
+
 {
   "scores": {
     "expressionAbility": 0,
@@ -545,15 +545,38 @@ ${JSON.stringify(fallbackReport ?? {}, null, 2)}
     "serviceAwareness": 0
   },
   "totalScore": 0,
-  "overallEvaluation": "string",
-  "strengths": ["string"],
-  "weaknesses": ["string"],
-  "improvementSuggestions": ["string"],
-  "recommendedTraining": ["string"],
+  "overallEvaluation": "面试官整体印象（3-5句）",
+  "strengths": ["优势1", "优势2", "优势3"],
+  "weaknesses": ["不足1", "不足2", "不足3"],
+  "improvementSuggestions": ["建议1", "建议2", "建议3"],
+  "recommendedTraining": ["训练1", "训练2", "训练3"],
   "hiringProbability": 0,
-  "narrativeSummary": "string",
-  "highlights": ["string"]
+  "narrativeSummary": "一句话总结",
+  "highlights": ["亮点1", "亮点2"],
+  "comprehensiveEvaluation": "一、面试综合评价：不少于300字，结合用户具体表现，说明整体印象、最大优势和最大短板",
+  "perQuestionAnalysis": ["三、问题1：...（包含问题复述、回答评价、优点、不足、面试官评价、优化示范）", "三、问题2：同上结构"],
+  "personalProfile": "四、个人能力画像（像职业测评报告一样列出优势项和风险点）",
+  "careerMatch": "五、岗位匹配分析（分析适合空中乘务/民航空保/地勤服务/民航管理等哪些方向）",
+  "improvementPlan": "六、未来提升方案（含7天快速提升计划和30天能力提升计划，每天具体可执行任务）",
+  "nextPrediction": "七、下一次面试预测（保持现状的成功概率和风险，完成训练后的预计提升）",
+  "growthMessage": "八、成长寄语（像航空培训老师面对学生说话，专业且有温度）"
 }
+
+【报告结构要求】
+一、面试综合评价（不少于300字，结合具体回答）
+二、综合能力评分（6维评分各附带评价说明）
+三、面试问题逐题分析（每个问题：回答表现、优点、不足、面试官评价、优化示范）
+四、个人能力画像（优势项+风险点）
+五、岗位匹配分析（适合方向+原因+补足能力）
+六、未来提升方案（7天计划+30天计划，具体可执行）
+七、下一次面试预测（概率+风险+预计提升）
+八、成长寄语（专业有温度）
+
+注意：
+- comprehensiveEvaluation 必须结合用户真实回答，不能模板化
+- perQuestionAnalysis 每个元素针对一个面试问题
+- 优化示范不要给标准答案，要根据用户特点优化作答方向
+- 字数控制在1500-2500字
 `;
 }
 
@@ -647,6 +670,34 @@ function normalizeReportPayload(payload: unknown, fallback: InterviewReport) {
       Array.isArray(candidate.highlights) && candidate.highlights.length
         ? candidate.highlights.filter((item): item is string => typeof item === "string")
         : fallback.highlights,
+    comprehensiveEvaluation:
+      typeof candidate.comprehensiveEvaluation === "string" && candidate.comprehensiveEvaluation.trim()
+        ? candidate.comprehensiveEvaluation.trim()
+        : fallback.comprehensiveEvaluation,
+    perQuestionAnalysis:
+      Array.isArray(candidate.perQuestionAnalysis) && candidate.perQuestionAnalysis.length
+        ? candidate.perQuestionAnalysis.filter((item): item is string => typeof item === "string")
+        : fallback.perQuestionAnalysis,
+    personalProfile:
+      typeof candidate.personalProfile === "string" && candidate.personalProfile.trim()
+        ? candidate.personalProfile.trim()
+        : fallback.personalProfile,
+    careerMatch:
+      typeof candidate.careerMatch === "string" && candidate.careerMatch.trim()
+        ? candidate.careerMatch.trim()
+        : fallback.careerMatch,
+    improvementPlan:
+      typeof candidate.improvementPlan === "string" && candidate.improvementPlan.trim()
+        ? candidate.improvementPlan.trim()
+        : fallback.improvementPlan,
+    nextPrediction:
+      typeof candidate.nextPrediction === "string" && candidate.nextPrediction.trim()
+        ? candidate.nextPrediction.trim()
+        : fallback.nextPrediction,
+    growthMessage:
+      typeof candidate.growthMessage === "string" && candidate.growthMessage.trim()
+        ? candidate.growthMessage.trim()
+        : fallback.growthMessage,
   };
 }
 

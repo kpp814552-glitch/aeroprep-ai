@@ -59,6 +59,20 @@ export type InterviewReport = {
   hiringProbability: number;
   narrativeSummary: string;
   highlights: string[];
+  /** 一、面试综合评价 — 至少300字，结合真实回答 */
+  comprehensiveEvaluation: string;
+  /** 三、逐题分析 — 每个问题一条 */
+  perQuestionAnalysis: string[];
+  /** 四、个人能力画像 */
+  personalProfile: string;
+  /** 五、岗位匹配分析 */
+  careerMatch: string;
+  /** 六、未来提升方案（含7天和30天计划） */
+  improvementPlan: string;
+  /** 七、下一次面试预测 */
+  nextPrediction: string;
+  /** 八、成长寄语 */
+  growthMessage: string;
 };
 
 export type InterviewRoleConfig = {
