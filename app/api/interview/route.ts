@@ -9,6 +9,7 @@ import {
 } from "@/lib/interview/config";
 import { analyzeInterviewReport } from "@/lib/interview/report";
 import { getAirlineProfile } from "@/lib/interview/airline-profiles";
+import { getRoleModel } from "@/lib/interview/role-models";
 import type {
   InterviewReport,
   InterviewRole,
@@ -357,7 +358,20 @@ function buildStartQuestionPrompt(
   const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
 
   return `
-你现在是一家真实航空公司的招聘面试官。请根据以下航空公司画像进行面试。
+你现在是一家真实航空公司的招聘面试官。请严格遵循以下【岗位能力模型】的指导，围绕岗位要求展开面试。
+
+【岗位能力模型】（必须严格遵守）
+${(() => { const r = getRoleModel(role); return `
+岗位：${r.label}
+核心能力权重：${r.abilities.map(a => `${a.name}${a.weight}%`).join("、")}
+问题方向示例：${r.abilities.slice(0,4).map(a => `【${a.name}】${a.questionExamples[0]}`).join("\n")}
+`; })()}
+
+【问题生成优先级规则】
+第一优先级（70%）：当前岗位核心能力要求——必须围绕岗位展开
+第二优先级（20%）：航空公司招聘特点和文化
+第三优先级（10%）：用户个人经历——仅作为辅助追问，禁止围绕用户背景展开
+严禁：用户说什么就围绕什么展开。用户回答个人经历后必须回归岗位核心能力。
 
 【航空公司画像】
 ${(() => { const p = getAirlineProfile(company); return `
@@ -439,7 +453,22 @@ function buildNextQuestionPrompt(
   const recentTurns = turns.slice(-5);
 
   return `
-你现在是一家真实航空公司的招聘面试官。请根据以下航空公司画像进行面试。
+你现在是一家真实航空公司的招聘面试官。在追问时请严格遵循【岗位能力模型】。
+
+【岗位能力模型】（追问必须围绕核心能力，不得偏离）
+${(() => { const r = getRoleModel(role); return `
+岗位：${r.label}
+核心能力：${r.abilities.map(a => `${a.name}`).join("、")}
+关键信息采集：${r.keyInfoToCollect.join("、")}
+没有相关经历的候选人：${r.fallbackDirection}
+`; })()}
+
+【动态追问规则】
+1. 用户回答后，必须先判断是否与岗位核心能力相关
+2. 如果用户提到个人经历，先简短肯定，然后追问该经历如何帮助其胜任岗位
+3. 如果用户回答与岗位无关，温和地将话题引回岗位核心能力
+4. 严禁顺着用户个人经历深入追问，除非该经历与岗位直接相关
+5. 岗位能力占追问权重的70%，用户个人信息仅占30%
 
 【航空公司画像】
 ${(() => { const p = getAirlineProfile(company); return `
@@ -548,6 +577,14 @@ ${(() => { const p = getAirlineProfile(company); return `
 `; })()}
 
 撰写报告时请保持与面试官人格一致的观察视角和措辞风格，并以上述航空公司招聘标准为评估依据。
+
+【岗位评价重心】（评价必须围绕岗位核心能力展开）
+${(() => { const r = getRoleModel(role); return `
+岗位：${r.label}
+核心评价维度权重：${r.abilities.map(a => `${a.name}${a.weight}%`).join("、")}
+评价重点：${r.evaluationFocus.join("、")}
+禁止：对非核心能力（如与岗位无关的专业背景）进行过度评价。
+`; })()}
 
 面试记录：
 ${turns
