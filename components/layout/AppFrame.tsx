@@ -115,6 +115,7 @@ export default function AppFrame({
                   <LogOut className="h-4 w-4" />
         </button>
       </div>
+    ) : null}
           </nav>
         </div>
       </header>

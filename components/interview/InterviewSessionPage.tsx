@@ -345,7 +345,7 @@ export default function InterviewSessionPage() {
         recognitionRef.current = null;
         stopVoiceMonitor();
         resolve(finalTranscriptRef.current);
-      }, 5000);
+      }, 1500);
       recognitionRef.current.onend = () => {
         window.clearTimeout(timeout);
         recognitionRef.current = null;
@@ -373,7 +373,7 @@ export default function InterviewSessionPage() {
       clearAnswerTimer();
       setAnswerCountdown(0);
       setVoiceActivityState("Processing");
-      setStatusText("正在整理面试记录并生成报告");
+      setStatusText("正在整理面试记录并生成报告...（1/2 准备报告数据）");
       stopRecognition();
 
       try {
@@ -399,6 +399,8 @@ export default function InterviewSessionPage() {
           throw new Error("报告生成失败");
         }
 
+        setStatusText("正在生成面试报告...（2/2 生成完成）");
+
         const record = buildSessionRecord({
           sessionId: sessionIdRef.current,
           company,
@@ -415,6 +417,9 @@ export default function InterviewSessionPage() {
         });
 
         saveInterviewCompletionGrowth(record);
+        completedSessionIdRef.current = record.sessionId;
+        completedScoreRef.current = payload.report?.totalScore ?? 0;
+        completedTurnsRef.current = finalTurns.length;
         setPhase('completed');
 
         // Save to Supabase if logged in
@@ -815,9 +820,17 @@ export default function InterviewSessionPage() {
   const handleEndAnswer = useCallback(async () => {
     if (phase !== 'listening' || isGeneratingReport) return;
 
+    // Enter processing UI immediately
+    setPhase('processing');
+    setVoiceActivityState('Processing');
+    setStatusText('正在结束本轮回答...');
+    setAnswerCountdown(0);
+
     const completeTranscript = await stopRecognitionAsync();
     clearAnswerTimer();
     setIsAnswering(false);
+    setLiveTranscript('');
+    setInterimTranscript('');
 
     // Build current turn
     const answerText = (completeTranscript || finalTranscriptRef.current.trim() || interimTranscriptRef.current).trim();
@@ -843,13 +856,7 @@ export default function InterviewSessionPage() {
       question: activeQuestionRef.current,
     });
 
-    // Enter processing UI
-    setPhase('processing');
-    setVoiceActivityState('Processing');
     setStatusText('AI 正在分析你的回答...');
-    setAnswerCountdown(0);
-    setLiveTranscript('');
-    setInterimTranscript('');
 
     const nextTurns = [...turns, turn];
     setTurns(nextTurns);
@@ -1014,7 +1021,7 @@ export default function InterviewSessionPage() {
                 >
                   <p>
                     <span className="text-white/56">{interviewerLabel}：</span>
-                    {currentQuestion || "请稍等，面试官正在进入面试室。"}
+                    {phase === 'processing' ? '正在分析问题内容...' : (currentQuestion || '请稍等，面试官正在进入面试室。')}
                   </p>
                   <p className="break-words">
                     <span className="text-white/56">考生：</span>
@@ -1148,7 +1155,7 @@ export default function InterviewSessionPage() {
                       {phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
                     </p>
                     <p className="mt-2 text-pretty text-[0.9rem] sm:text-[1rem] leading-[1.42] tracking-[-0.01em] text-white/92 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)] md:text-[1.28rem]">
-                      {currentQuestion}
+                      {phase === 'processing' ? '正在分析问题内容...' : currentQuestion}
                     </p>
                     <div className="mt-2 flex max-sm:flex-col max-sm:items-stretch items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
