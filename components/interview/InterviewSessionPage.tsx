@@ -15,6 +15,7 @@ import {
   analyzeInterviewReport,
   buildSessionRecord } from "@/lib/interview/report";
 import {
+  readInterviewSession,
   saveInterviewSession } from "@/lib/interview/session-storage";
 import {
   
@@ -507,7 +508,7 @@ export default function InterviewSessionPage() {
         saveInterviewSession(fallbackRecord);
         saveInterviewCompletionGrowth(fallbackRecord);
         completedSessionIdRef.current = fallbackRecord.sessionId;
-        completedScoreRef.current = 0;
+        completedScoreRef.current = fallbackReport.totalScore || 0;
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
         setIsGeneratingReport(false);
@@ -1108,6 +1109,44 @@ export default function InterviewSessionPage() {
     transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
   }, [transcriptPreview, statusText, voiceActivityState]);
 
+  // ── Retry report generation (for network failure recovery) ──
+  const handleRetryReport = useCallback(async () => {
+    const sid = completedSessionIdRef.current;
+    if (!sid || isGeneratingReport) return;
+
+    const savedRecord = readInterviewSession(sid);
+    if (!savedRecord) return;
+
+    setIsGeneratingReport(true);
+    setStatusText('正在重新生成面试报告...');
+
+    try {
+      const resp = await fetch("/api/interview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "report",
+          role: savedRecord.role,
+          company: savedRecord.company,
+          mode: savedRecord.mode,
+          persona: savedRecord.persona,
+          resumeText: resumeTextRef.current,
+          turns: savedRecord.turns,
+        }),
+      });
+      const payload = await resp.json();
+      if (!resp.ok || !payload.report) throw new Error("报告生成失败");
+
+      savedRecord.report = payload.report;
+      saveInterviewSession(savedRecord);
+      router.push('/interview/report?sessionId=' + encodeURIComponent(sid));
+    } catch (err) {
+      console.error('[Retry Report] Failed:', err);
+      setStatusText('网络连接异常，请稍后重试');
+      setIsGeneratingReport(false);
+    }
+  }, [isGeneratingReport, router]);
+
   // ── Auto-navigate to report after completion ──
   useEffect(() => {
     if (phase === 'completed' && completedSessionIdRef.current && !isGeneratingReport) {
@@ -1292,6 +1331,14 @@ export default function InterviewSessionPage() {
                 className="mt-10 inline-flex items-center gap-2 rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
               >
                 查看面试报告
+              </button>
+              <button
+                type="button"
+                onClick={handleRetryReport}
+                disabled={isGeneratingReport}
+                className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-2.5 text-xs uppercase tracking-[0.22em] text-amber-200/80 transition hover:border-amber-400/40 hover:bg-amber-400/16 hover:text-amber-200 disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35"
+              >
+                {isGeneratingReport ? '正在重新生成...' : '重新生成报告（网络恢复后重试）'}
               </button>
               <p className="mt-2 text-[0.6rem] tracking-[0.15em] text-[#f5c689]/50">
                 报告已生成 · 即将自动跳转
