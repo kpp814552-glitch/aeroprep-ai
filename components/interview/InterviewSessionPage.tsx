@@ -269,6 +269,7 @@ export default function InterviewSessionPage() {
   // ── Refs for async-safe data flow ──
   const interviewFinishedRef = useRef(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
+  const successPathRef = useRef(false);
   const pendingSaveDataRef = useRef<Record<string, unknown> | null>(null);
   const pendingQuestionRef = useRef<PendingQuestion | null>(null);
   const activeQuestionRef = useRef("");
@@ -450,6 +451,7 @@ export default function InterviewSessionPage() {
         completedScoreRef.current = payload.report?.totalScore ?? 0;
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
+        successPathRef.current = true;
         setIsGeneratingReport(false);
         setPhase('completed');
 
@@ -480,7 +482,11 @@ export default function InterviewSessionPage() {
 
         // User clicks "查看面试报告" to navigate
       } catch (error) {
-        console.error('[Report] generateReportAndFinish failed, using local analyzeInterviewReport:', error);
+        console.error('[Report] API call FAILED');
+      console.error('[Report] navigator.onLine:', navigator.onLine);
+      console.error('[Report] Error type:', error instanceof TypeError ? 'TypeError (network/abort)' : error instanceof SyntaxError ? 'SyntaxError (JSON parse)' : 'Other');
+      console.error('[Report] Error message:', error instanceof Error ? error.message : String(error));
+      console.error('[Report] Using local analyzeInterviewReport fallback');
         // IMPORTANT: analyzeInterviewReport generates the SAME detailed report as the server fallback
         // This ensures every interview gets a complete report regardless of API availability
         // Use same local analysis engine as server fallback for complete detailed report
@@ -513,6 +519,7 @@ export default function InterviewSessionPage() {
         completedScoreRef.current = fallbackReport.totalScore || 0;
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
+        successPathRef.current = false;
         setIsGeneratingReport(false);
         pendingSaveDataRef.current = {
           version: 1,
@@ -1185,7 +1192,7 @@ export default function InterviewSessionPage() {
 
   // ── Auto-navigate to report after completion ──
   useEffect(() => {
-    if (phase === 'completed' && completedSessionIdRef.current && !isGeneratingReport) {
+    if (phase === 'completed' && completedSessionIdRef.current && !isGeneratingReport && successPathRef.current) {
       const sid = completedSessionIdRef.current;
       const timer = setTimeout(() => {
         router.push('/interview/report?sessionId=' + encodeURIComponent(sid));
@@ -1408,9 +1415,11 @@ export default function InterviewSessionPage() {
               >
                 {isGeneratingReport ? '正在重新生成...' : '重新生成报告（网络恢复后重试）'}
               </button>
-              <p className="mt-2 text-[0.6rem] tracking-[0.15em] text-[#f5c689]/50">
-                报告已生成 · 即将自动跳转
-              </p>
+              {successPathRef.current ? (
+                <p className="mt-2 text-[0.6rem] tracking-[0.15em] text-[#f5c689]/50">
+                  报告已生成 · 即将自动跳转
+                </p>
+              ) : null}
               <button
                 type="button"
                 onClick={() => router.push('/interview')}
