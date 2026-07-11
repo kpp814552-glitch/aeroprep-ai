@@ -612,7 +612,7 @@ ${JSON.stringify(fallbackReport ?? {}, null, 2)}
   "narrativeSummary": "一句话总结",
   "highlights": ["亮点1", "亮点2"],
   "comprehensiveEvaluation": "一、面试综合评价：不少于300字，结合用户具体表现，说明整体印象、最大优势和最大短板",
-  "perQuestionAnalysis": ["三、问题1：...（包含问题复述、回答评价、优点、不足、面试官评价、优化示范）", "三、问题2：同上结构"],
+  "perQuestionAnalysis": ["三、第1题：问题复述+优点+不足+面试官评价+优化示范（每道题独立分析，不得模板化重复）", "三、第2题：与第一题不同的独立分析"],
   "personalProfile": "四、个人能力画像（像职业测评报告一样列出优势项和风险点）",
   "careerMatch": "五、岗位匹配分析（分析适合空中乘务/民航空保/地勤服务/民航管理等哪些方向）",
   "improvementPlan": "六、未来提升方案（含7天快速提升计划和30天能力提升计划，每天具体可执行任务）",

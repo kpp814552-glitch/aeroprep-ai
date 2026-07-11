@@ -147,6 +147,11 @@ export default function InterviewReportPage() {
     };
   }, [sessionId]);
 
+  const [expandedQuestions, setExpandedQuestions] = useState<Record<number, boolean>>({});
+  const toggleQuestion = (idx: number) => setExpandedQuestions(prev => ({ ...prev, [idx]: !prev[idx] }));
+
+  const levelMap: Record<string, string> = { A: '优秀', B: '较强', C: '中等', D: '待提升' };
+
   const radarItems = useMemo(() => {
     const report = sessionRecord?.report;
     if (!report) return [];
@@ -243,10 +248,10 @@ export default function InterviewReportPage() {
                 <div className="rounded-[28px] border border-white/46 bg-white/68 px-5 py-5">
                   <TrendingUp className="h-5 w-5 text-emerald-600" />
                   <p className="mt-4 text-xs uppercase tracking-[0.24em] text-slate-500">
-                    竞争力等级
+                    竞争定位
                   </p>
                   <p className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {report.competitiveLevel || '—'}
+                    {{'A':'优秀','B':'较强','C':'中等','D':'待提升'}[report.competitiveLevel] || '—'}
                   </p>
                   <p className="mt-0.5 text-xs tracking-[0.08em] text-slate-500">
                     参考区间：{report.competitiveRange || '—'}
@@ -279,7 +284,7 @@ export default function InterviewReportPage() {
               </p>
 
               {/* 竞争力分数 + 等级 */}
-              <div className="mt-5 grid gap-4 sm:grid-cols-4">
+              <div className="mt-5 grid gap-4 sm:grid-cols-3">
                 <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">当前等级</p>
                   <p className="mt-1 text-3xl font-bold tracking-[-0.04em] text-slate-950">{report.competitiveLevel}</p>
@@ -292,12 +297,7 @@ export default function InterviewReportPage() {
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">参考区间</p>
                   <p className="mt-1 text-2xl font-bold tracking-[-0.04em] text-slate-950">{report.competitiveRange}</p>
                 </div>
-                <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">判分模型</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-600">
-                    面试表现40% · 岗位匹配20%<br/>专业素养15% · 综合素质15% · 成长潜力10%
-                  </p>
-                </div>
+
               </div>
 
               {/* 优势因素 */}
@@ -380,10 +380,23 @@ export default function InterviewReportPage() {
              {report.perQuestionAnalysis && report.perQuestionAnalysis.length > 0 ? (
                <div className="mt-6 border-t border-white/40 pt-6">
                  <p className="text-sm font-medium text-slate-950">面试问题逐题分析</p>
-                 <div className="mt-3 space-y-4">
+                 <p className="mt-1 text-xs text-slate-500">点击展开查看每题详细评价</p>
+                 <div className="mt-3 space-y-2">
                    {report.perQuestionAnalysis.map((analysis, idx) => (
-                     <div key={idx} className="rounded-[20px] border border-white/46 bg-white/72 px-4 py-4 text-sm leading-7 text-slate-700">
-                       {analysis}
+                     <div key={idx} className="rounded-[16px] border border-white/44 bg-white/60 overflow-hidden">
+                       <button
+                         type="button"
+                         onClick={() => toggleQuestion(idx)}
+                         className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-white/40 transition"
+                       >
+                         <span>第{idx+1}题</span>
+                         <span className="text-xs text-slate-400">{expandedQuestions[idx] ? '收起 ▲' : '展开 ▼'}</span>
+                       </button>
+                       {expandedQuestions[idx] ? (
+                         <div className="border-t border-white/30 px-4 py-3 text-sm leading-7 text-slate-700 whitespace-pre-wrap">
+                           {analysis}
+                         </div>
+                       ) : null}
                      </div>
                    ))}
                  </div>
