@@ -26,11 +26,28 @@ function getModeInstruction(
   const modeUpper = (mode || "校招").trim();
 
   // Resume section (empty if no resume)
+  // Variation seed: changes every minute to ensure different questions each time
+  const now = new Date();
+  const variationSeed = now.getHours() * 60 + now.getMinutes();
+  const focusDirections = [
+    "岗位专业操作与实际经验",
+    "团队配合与情景处置",
+    "安全意识与规章执行",
+    "职业规划与学习能力",
+    "心理素质与抗压能力",
+  ];
+  const focusIndex = variationSeed % focusDirections.length;
+
   const resumeSection = resumeText?.trim()
     ? `
-候选人简历内容（面试官已审阅，提问必须紧扣简历中的具体经历，避免泛泛而问）：
+【📄 简历详细内容（面试官已仔细研读，以下列经历为提问重点，必须基于简历中的具体经历深入追问，每道题必须关联简历中的特定项目/经历/证书/实训）】
 ${resumeText.trim().slice(0, 4000)}
-`
+
+【📌 面试差异化指令】
+面试轮次标识：${now.toISOString().slice(0, 16).replace("T", " ")}
+为确保每次面试不雷同，本次面试请侧重以下方向提问：${focusDirections[focusIndex]}
+请从${focusDirections[focusIndex]}角度切入，结合简历中的具体经历，构建与上次完全不同的面试体验。
+不得使用通用问题，每道题必须紧扣简历内容。`
     : "";
 
   const modeInstructions: Record<string, string> = {
