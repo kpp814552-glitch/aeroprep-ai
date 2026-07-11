@@ -18,7 +18,11 @@ import type {
 
 
 // ===== Mode-Specific Configurations =====
-function getModeInstruction(mode: string, resumeText: string): string {
+function getModeInstruction(
+  mode: string,
+  resumeText: string,
+  resumeQuality?: { score: number; deductions: string[]; comment: string }
+): string {
   const modeUpper = (mode || "校招").trim();
 
   // Resume section (empty if no resume)
@@ -69,7 +73,23 @@ Focus on both professional knowledge AND English communication ability.
 `,
   };
 
-  return (modeInstructions[modeUpper] || modeInstructions["校招"]) + resumeSection;
+  // Resume quality evaluation section
+  const qualitySection = resumeQuality
+    ? `\n【简历质量评估（面试官已完成审阅）】
+简历评分：${resumeQuality.score}/100（60分为及格线）
+${resumeQuality.deductions.length > 0 ? `扣分项：\n${resumeQuality.deductions.map((d: string) => `- ${d}`).join("\n")}` : ""}
+评语：${resumeQuality.comment}
+
+\u26a0\ufe0f 面试官指令：简历质量已计入综合评分。请遵循以下规则：
+1. 如果简历评分低于60分，面试官应在面试中通过追问重点验证候选人的实际能力是否符合简历所述
+2. 对简历中的扣分项（如无实习、无项目、非专业院校等）进行针对性追问
+3. 面试最终总评分应综合简历质量（权重20%）和面试表现（权重80%）
+4. 如果候选人简历优秀（85分以上），可在评分中适当体现
+5. 如果候选人简历较差（50分以下），面试官应更加严格地评审其面试表现
+`
+    : "";
+
+  return (modeInstructions[modeUpper] || modeInstructions["校招"]) + resumeSection + qualitySection;
 }
 
 // ===== Interviewer Persona Configurations =====

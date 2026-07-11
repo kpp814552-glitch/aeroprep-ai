@@ -213,8 +213,13 @@ export default function InterviewSessionPage() {
   const { user, loading } = useAuth();
   const sessionIdRef = useRef(createSessionId());
   const resumeTextRef = useRef(
-    typeof window !== "undefined" ? sessionStorage.getItem("aeroprep_resume_text") || "" : ""
-  );
+  sessionStorage.getItem("aeroprep_resume_text") || ""
+);
+const resumeQualityRef = useRef<any>(
+  typeof window !== "undefined"
+    ? (() => { try { return JSON.parse(sessionStorage.getItem("aeroprep_resume_quality") || "null"); } catch { return null; } })()
+    : null
+);
   const startAtRef = useRef<number | null>(null);
   const elapsedTimerRef = useRef<number | null>(null);
   const answerTimerRef = useRef<number | null>(null);
@@ -416,6 +421,7 @@ export default function InterviewSessionPage() {
             mode,
             persona,
             resumeText: resumeTextRef.current,
+      resumeQuality: resumeQualityRef.current,
             turns: finalTurns,
           }),
         });
@@ -767,6 +773,7 @@ export default function InterviewSessionPage() {
         mode,
         persona,
         resumeText: resumeTextRef.current,
+      resumeQuality: resumeQualityRef.current,
       }),
     });
 
@@ -792,6 +799,7 @@ export default function InterviewSessionPage() {
           mode,
           persona,
           resumeText: resumeTextRef.current,
+      resumeQuality: resumeQualityRef.current,
           turns: nextTurns,
         }),
       });
@@ -1168,6 +1176,7 @@ export default function InterviewSessionPage() {
           mode: savedRecord.mode,
           persona: savedRecord.persona,
           resumeText: resumeTextRef.current,
+      resumeQuality: resumeQualityRef.current,
           turns: savedRecord.turns,
         }),
       });

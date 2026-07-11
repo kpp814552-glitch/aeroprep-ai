@@ -136,8 +136,12 @@ export default function InterviewPrepPage() {
   const handleStartInterview = useCallback(() => {
     if (resume?.text) {
       sessionStorage.setItem("aeroprep_resume_text", resume.text);
+    if ((resume as any).quality) {
+      sessionStorage.setItem("aeroprep_resume_quality", JSON.stringify((resume as any).quality));
+    }
     } else {
       sessionStorage.removeItem("aeroprep_resume_text");
+      sessionStorage.removeItem("aeroprep_resume_quality");
     }
     router.push(`/interview/session?company=${encodeURIComponent(
       selectedCompany
