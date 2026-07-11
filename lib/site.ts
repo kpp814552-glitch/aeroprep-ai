@@ -66,8 +66,8 @@ export const prepRoleOptions: PrepRoleOption[] = [
   },
   {
     value: "atc",
-    label: "机场运行",
-    summary: "运行协同、程序意识、现场处置与时间管理",
+    label: "空管员",
+    summary: "管制意识、冲突调配、特情处置与陆空通话",
   },
   {
     value: "air-marshal",
