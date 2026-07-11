@@ -4,6 +4,7 @@ import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Sparkles, WandSparkles, Loader2, FileText, Target, Briefcase, GraduationCap, ArrowRight, RotateCcw, CheckCircle2, AlertTriangle, Lightbulb, MessageSquare } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
+import AuthGate from "@/components/auth/AuthGate";
 import { GlassButton, GlassPanel } from "@/components/ui/glass";
 
 const contentTypes = [
@@ -206,6 +207,7 @@ ${draft.trim()}`;
 
   return (
     <AppFrame backHref="/" backLabel="返回首页">
+      <AuthGate blurContent={false} blockInteraction={true}>
       <main className="relative z-10 px-5 pb-16 pt-8 md:px-8">
         {/* Decorative blobs */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden">
@@ -492,6 +494,7 @@ ${draft.trim()}`;
           </div>
         </div>
       </main>
+    </AuthGate>
     </AppFrame>
   );
 }

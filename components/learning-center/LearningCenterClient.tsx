@@ -10,6 +10,7 @@ import { learningCategories } from "@/lib/learning-center/data";
 import { getFavorites, toggleFavorite, addHistory } from "@/lib/learning-center/storage";
 import { getUserMaterials, saveUserMaterial, checkQuality, checkViolation, type UserMaterial } from "@/lib/learning-center/user-storage";
 import type { LearningItem } from "@/lib/learning-center/types";
+import AuthGate from "@/components/auth/AuthGate";
 
 const positionLabels: Record<string, { label: string; icon: any; color: string }> = {
   pilot: { label: "飞行员", icon: Plane, color: "text-blue-600 bg-blue-50" },
@@ -312,6 +313,7 @@ export default function LearningCenterClient() {
   ) : null;
 
   return (
+    <AuthGate blurContent={true} blockInteraction={true}>
     <div className="mx-auto max-w-6xl">
       {/* ====== Search Bar + 快捷入口 ====== */}
       <div className="mb-2 flex items-center gap-3">
@@ -648,6 +650,7 @@ export default function LearningCenterClient() {
         title="上传面试经验">
         <Plus className="h-5 w-5" />
       </button>
-    </div>
+        </div>
+  </AuthGate>
   );
 }
