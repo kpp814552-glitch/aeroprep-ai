@@ -1193,7 +1193,7 @@ export default function InterviewSessionPage() {
 
   // ── Auth guard ──
   useEffect(() => {
-    if (!loading && !user) router.replace('/login?redirect=/interview/session');
+    if (!loading && !user) { const t = setTimeout(() => router.replace('/login?redirect=/interview/session'), 300); return () => clearTimeout(t); }
   }, [loading, user, router]);
 
   if (loading) return null;

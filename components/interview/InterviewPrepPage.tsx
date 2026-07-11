@@ -64,7 +64,7 @@ export default function InterviewPrepPage() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/login?redirect=/interview');
+    if (!loading && !user) { const t = setTimeout(() => router.replace('/login?redirect=/interview'), 300); return () => clearTimeout(t); }
   }, [loading, user, router]);
 
   if (loading) return null;
