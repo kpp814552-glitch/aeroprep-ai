@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { BarChart3, Clock3, FileSearch, LineChart, TrendingUp, X } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import {
@@ -21,6 +23,12 @@ function formatMeta(value: string) {
 }
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
+  useEffect(() => { if (!loading && !user) router.replace('/login?redirect=/profile'); }, [loading, user, router]);
+  if (loading) return null;
+  if (!user) return null;
+
   const [sessions, setSessions] = useState(() => readInterviewSessions());
   const [growthEvents, setGrowthEvents] = useState(() => readGrowthEvents());
   const [selectedSession, setSelectedSession] = useState<InterviewSessionRecord | null>(null);

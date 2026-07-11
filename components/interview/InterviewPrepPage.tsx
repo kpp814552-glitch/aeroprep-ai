@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
 import { FileText, Loader2, Mic, MoveRight, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
@@ -61,7 +61,14 @@ function formatFileSize(size: number) {
 
 export default function InterviewPrepPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
+
+  useEffect(() => {
+    if (!loading && !user) router.replace('/login?redirect=/interview');
+  }, [loading, user, router]);
+
+  if (loading) return null;
+  if (!user) return null;
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [resume, setResume] = useState<UploadState>(null);
   const [selectedCompany, setSelectedCompany] = useState<InterviewCompany>("国航");

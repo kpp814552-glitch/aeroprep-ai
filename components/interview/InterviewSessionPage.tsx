@@ -211,6 +211,7 @@ async function getMicrophoneStream() {
 export default function InterviewSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user, loading } = useAuth();
   const sessionIdRef = useRef(createSessionId());
   const resumeTextRef = useRef(
     typeof window !== "undefined" ? sessionStorage.getItem("aeroprep_resume_text") || "" : ""
@@ -283,7 +284,6 @@ export default function InterviewSessionPage() {
   }, [interimTranscript, liveTranscript]);
 
   const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
-  const { user } = useAuth();
   const voiceSession = useMemo<InterviewVoiceSession | null>(() => {
     if (typeof window === "undefined") return null;
 
@@ -1190,6 +1190,14 @@ export default function InterviewSessionPage() {
       setIsGeneratingReport(false);
     }
   }, [isGeneratingReport, router]);
+
+  // ── Auth guard ──
+  useEffect(() => {
+    if (!loading && !user) router.replace('/login?redirect=/interview/session');
+  }, [loading, user, router]);
+
+  if (loading) return null;
+  if (!user) return null;
 
   // ── Auto-navigate to report after completion ──
   useEffect(() => {
