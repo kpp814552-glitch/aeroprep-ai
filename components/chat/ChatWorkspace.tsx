@@ -245,24 +245,24 @@ ${draft.trim()}
 
           {mode === "简历专项优化" && (
             <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[20px] border border-white/40 bg-white/70 px-5 py-3 shadow-[0_4px_20px_rgba(0,0,0,0.04)] backdrop-blur-xl">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">🎯 目标岗位</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">🎯 目标岗位</span>
               <select
                 value={position}
                 onChange={(e) => setPosition(e.target.value)}
-                className="rounded-xl border border-slate-200/60 bg-white/80 px-3 py-1.5 text-xs text-slate-800 outline-none focus:border-sky-300"
+                className="rounded-xl border border-slate-200/60 bg-white/80 px-3 py-1.5 text-sm text-slate-800 outline-none focus:border-sky-300"
               >
                 {positionOptions.map((p) => (
                   <option key={p.value} value={p.value}>{p.label}</option>
                 ))}
               </select>
-              <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400 ml-2">招聘方式</span>
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400 ml-2">招聘方式</span>
               <div className="flex gap-1.5">
                 {["校招", "社招"].map((r) => (
                   <button
                     key={r}
                     type="button"
                     onClick={() => setRecruitType(r)}
-                    className={`rounded-full px-3 py-1 text-[10px] font-medium transition ${
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                       recruitType === r
                         ? r === "校招"
                           ? "bg-violet-100 text-violet-700 shadow-sm"
@@ -378,10 +378,10 @@ ${draft.trim()}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 rows={12}
-                placeholder={mode === "简历专项优化" ? "将简历全文粘贴在这里……\n\n支持PDF、DOCX或纯文本内容" : `将你的${contentType}原始稿粘贴在这里……`}
+                placeholder={mode === "简历专项优化" ? "将简历全文粘贴在这里……\n\n支持纯文本内容" : `将你的${contentType}原始稿粘贴在这里……`}
                 className={`flex-1 w-full resize-none rounded-2xl text-sm leading-7 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100/50 ${
                   mode === "简历专项优化"
-                    ? "border-2 border-slate-200 bg-white px-5 py-4 shadow-inner"
+                    ? "border border-slate-200/60 bg-white/80 px-4 py-3.5"
                     : "border border-slate-200/60 bg-white/80 px-4 py-3.5"
                 }`}
               />
