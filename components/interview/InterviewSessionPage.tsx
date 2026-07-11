@@ -1248,9 +1248,7 @@ const resumeQualityRef = useRef<any>(
           <p className="mt-4 text-base leading-7 text-white/80">
             面试数据未完成上传至服务器，是否将本次面试数据导出到本地电脑备用？
           </p>
-          <p className="mt-2 text-xs leading-6 text-white/50">
-            导出的文件可在网络恢复后手动读取，重新生成完整报告。
-          </p>
+
           <div className="mt-8 flex flex-col gap-3">
             <button
               type="button"
@@ -1418,14 +1416,7 @@ const resumeQualityRef = useRef<any>(
               >
                 查看面试报告
               </button>
-              <button
-                type="button"
-                onClick={handleRetryReport}
-                disabled={isGeneratingReport}
-                className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-400/30 bg-amber-400/10 px-5 py-2.5 text-xs uppercase tracking-[0.22em] text-amber-200/80 transition hover:border-amber-400/40 hover:bg-amber-400/16 hover:text-amber-200 disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35"
-              >
-                {isGeneratingReport ? '正在重新生成...' : '重新生成报告（网络恢复后重试）'}
-              </button>
+
               {successPathRef.current ? (
                 <p className="mt-2 text-[0.6rem] tracking-[0.15em] text-[#f5c689]/50">
                   报告已生成 · 即将自动跳转
