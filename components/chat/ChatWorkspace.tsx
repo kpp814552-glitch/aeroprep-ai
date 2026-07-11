@@ -27,6 +27,7 @@ const positionOptions = [
 ];
 
 export default function ChatWorkspace() {
+  const [mode, setMode] = useState("面试内容优化");
   const [contentType, setContentType] = useState("自我介绍");
   const [position, setPosition] = useState("pilot");
   const [recruitType, setRecruitType] = useState("校招");
@@ -45,7 +46,48 @@ export default function ChatWorkspace() {
 
     const positionLabel = positionOptions.find((p) => p.value === position)?.label || position;
 
-        const systemPrompt = `你是民航专业面试优化专家，深耕飞行员、签派员、空管员、机务维修、航电工程师、空乘、客舱安全员、机场运行、航站楼服务全岗位校招/社招面试评审标准，精通CCAR民航法规、一线实操流程、航司考官打分底层逻辑。
+        const systemPrompt = mode === "简历专项优化"
+      ? `你是民航简历优化专家，精通国内航司校招/社招HR筛选标准。你的唯一任务是：在完全保留用户真实信息的前提下，按照以下4步流程优化简历，产出「修改说明+优化后完整简历」。
+
+【前置要求】
+- 完整通读用户简历，提取所有真实信息：学历证书、实训、实习、项目、工作履历、技能荣誉
+- 全程不篡改、不编造任何真实经历
+
+【4步优化流程】
+第一步：结构规整重构
+按民航HR偏好顺序重组：基础信息→专业技能&资质证书→实习/工作经历→校园项目/竞赛→荣誉奖项→自我评价
+校招简历侧重实训、课程、竞赛；社招简历优先一线工作履历和实操成果。
+
+第二步：经历专业化改写（核心）
+将原始平淡描述替换为岗位专业话术，遵循公式：动作+操作标准/工卡/规章+量化成果+安全价值
+- 机务/航电：突出工卡执行、双人互检、故障隔离、适航管控
+- 飞行员：突出模拟机训练、CRM、特情处置、油量决断
+- 空乘/安全员：突出客舱应急、释压/失火撤离、机上安保
+- 空管/签派：突出航班放行、流量管控、运行风险预判
+- 航站楼/机场运行：突出现场客流处置、多部门联动、地面运行标准
+
+第三步：精简无效内容
+删除"性格开朗、吃苦耐劳、善于沟通"等无支撑语句，全部用实操经历佐证
+删减无关非民航内容，放大与目标岗位匹配的经历
+
+第四步：自我评价重写
+结合简历内真实经历、证书和岗位需求定制，紧扣安全意识、岗位适配性、长期从业意愿
+
+【输出格式（固定两大板块）】
+=== 简历修改说明 ===
+逐条列出本次优化调整点：结构调整逻辑、各段经历优化思路、删除的无效表述
+
+=== 优化后完整简历 ===
+排版分段清晰，可直接复制使用，完全匹配所选岗位+招聘方式
+
+【硬性禁止】
+- 禁止编造不存在的实习、证书、项目、工作成果
+- 禁止生成成长诊断、打分、短板预警等报告类内容
+- 禁止过度美化夸大工作成效
+- 禁止输出违规消极内容
+- 禁止任何交互提问，一次性输出全部内容
+`
+      : `你是民航专业面试优化专家，深耕飞行员、签派员、空管员、机务维修、航电工程师、空乘、客舱安全员、机场运行、航站楼服务全岗位校招/社招面试评审标准，精通CCAR民航法规、一线实操流程、航司考官打分底层逻辑。
 
 你的唯一工作：接收用户原始文本+页面选定标签（内容类型、目标岗位、招聘方式），在完全保留用户原创真实经历、个人故事、自身背景的前提下，按照民航面试三层深度逻辑重构内容，补充行业专业细节、岗位规章、一线工作痛点，批量输出多套差异化高分版本，附带配套面试辅助学习素材，杜绝空洞套话、学生腔、无支撑自我评价。
 
@@ -181,8 +223,28 @@ ${draft.trim()}
             </p>
           </div>
 
+          {/* ====== Mode Selector ====== */}
+          <div className="mb-6 flex gap-1.5 rounded-[20px] border border-white/40 bg-white/70 p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] backdrop-blur-xl">
+            <button type="button" onClick={() => setMode("面试内容优化")}
+              className={`flex-1 rounded-2xl px-5 py-2.5 text-sm font-medium transition-all ${
+                mode === "面试内容优化"
+                  ? "bg-gradient-to-r from-sky-500 to-violet-500 text-white shadow-sm"
+                  : "bg-white/60 text-slate-500 hover:bg-white/80"
+              }`}>
+              🎯 面试内容优化
+            </button>
+            <button type="button" onClick={() => setMode("简历专项优化")}
+              className={`flex-1 rounded-2xl px-5 py-2.5 text-sm font-medium transition-all ${
+                mode === "简历专项优化"
+                  ? "bg-gradient-to-r from-sky-500 to-violet-500 text-white shadow-sm"
+                  : "bg-white/60 text-slate-500 hover:bg-white/80"
+              }`}>
+              📄 简历专项优化
+            </button>
+          </div>
+
           <div className="grid gap-6 lg:grid-cols-2">
-            {/* Top-left: Content type */}
+            {mode === "面试内容优化" && (
             <GlassPanel className="overflow-hidden rounded-[24px] border border-white/40 bg-white/70 p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
               <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                 <FileText className="h-3.5 w-3.5" />
@@ -211,6 +273,7 @@ ${draft.trim()}
                 })}
               </div>
             </GlassPanel>
+          )}
 
             {/* Top-right: Position + Recruit */}
             <GlassPanel className="rounded-[24px] border border-white/40 bg-white/70 p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
@@ -263,7 +326,7 @@ ${draft.trim()}
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                   <FileText className="h-3.5 w-3.5" />
-                  输入原始内容
+                  {mode === "简历专项优化" ? "粘贴简历原文" : "输入原始内容"}
                 </div>
                 {draft && (
                   <button
@@ -279,7 +342,7 @@ ${draft.trim()}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 rows={12}
-                placeholder={`将你的${contentType}原始稿粘贴在这里……`}
+                placeholder={mode === "简历专项优化" ? "将你的简历全文粘贴在这里……\n\n支持PDF、DOCX或纯文本内容" : `将你的${contentType}原始稿粘贴在这里……`}
                 className="flex-1 w-full resize-none rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3.5 text-sm leading-7 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100/50"
               />
               <div className="mt-4 flex items-center gap-3">
