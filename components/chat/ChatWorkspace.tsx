@@ -154,7 +154,7 @@ ${draft.trim()}
 
             {/* Top-right: Position + Recruit */}
             <GlassPanel className="rounded-[24px] border border-white/40 bg-white/70 p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
-              <div className="flex flex-wrap items-end gap-4 h-full">
+              <div className="flex flex-wrap items-center gap-4 h-full">
                 <div className="min-w-0 flex-1">
                   <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                     <Target className="h-3.5 w-3.5" />
