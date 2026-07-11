@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Bookmark, BookmarkCheck, Clock, ChevronDown, ChevronRight, ChevronLeft } from "lucide-react";
+import { Search, Bookmark, BookmarkCheck, Clock, ChevronDown, ChevronRight, ChevronLeft, Plane, Users, Wrench } from "lucide-react";
 import { learningCategories } from "@/lib/learning-center/data";
 import { getFavorites, toggleFavorite, addHistory, getHistory } from "@/lib/learning-center/storage";
-import type { LearningItem, LearningCategory } from "@/lib/learning-center/types";
+import type { LearningItem } from "@/lib/learning-center/types";
+
+const roleLabels: Record<string, { label: string; icon: any; color: string }> = {
+  pilot: { label: "飞行员", icon: Plane, color: "text-blue-600 bg-blue-50" },
+  cabin: { label: "乘务员", icon: Users, color: "text-rose-600 bg-rose-50" },
+  maintenance: { label: "机务维修", icon: Wrench, color: "text-emerald-600 bg-emerald-50" },
+};
 
 export default function LearningCenterClient() {
   const [activeCategory, setActiveCategory] = useState("questions");
@@ -14,14 +20,13 @@ export default function LearningCenterClient() {
   const [history, setHistory] = useState<string[]>([]);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [roleFilter, setRoleFilter] = useState<"all" | "pilot" | "cabin" | "maintenance">("all");
 
-  // Load saved data
   useEffect(() => {
     setFavorites(getFavorites().map((f) => f.itemId));
     setHistory(getHistory().map((h) => h.itemId));
   }, []);
 
-  // Set first subcategory as default
   useEffect(() => {
     const cat = learningCategories.find((c) => c.id === activeCategory);
     if (cat && cat.subcategories.length > 0 && !activeSub) {
@@ -32,7 +37,6 @@ export default function LearningCenterClient() {
   const toggleExpand = (id: string) => {
     setExpandedItems((prev) => {
       const next = { ...prev, [id]: !prev[id] };
-      // Track history when expanding
       if (!prev[id]) {
         const cat = learningCategories.find((c) =>
           c.subcategories.some((s) => s.items.some((i) => i.id === id))
@@ -70,7 +74,6 @@ export default function LearningCenterClient() {
   const cat = learningCategories.find((c) => c.id === activeCategory);
   const sub = cat?.subcategories.find((s) => s.id === activeSub);
 
-  // Search logic
   const searchResults = useMemo(() => {
     if (!search.trim()) return null;
     const q = search.toLowerCase();
@@ -124,9 +127,21 @@ export default function LearningCenterClient() {
 
   const displayItems = favItems || (sub?.items || []);
 
+  const hasRoleItems = useMemo(() => {
+    if (!sub) return false;
+    return sub.items.some((i) => i.role !== undefined);
+  }, [sub]);
+
+  const filteredItems = useMemo(() => {
+    if (roleFilter === "all" || !hasRoleItems) return displayItems;
+    return displayItems.filter((r: any) => {
+      const item = r.item || r;
+      return !item.role || item.role === roleFilter;
+    });
+  }, [displayItems, roleFilter, hasRoleItems]);
+
   return (
     <div className="flex min-h-[calc(100vh-10rem)] gap-0 lg:gap-5">
-      {/* Sidebar Toggle (mobile) */}
       <button
         type="button"
         onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -135,15 +150,14 @@ export default function LearningCenterClient() {
         {sidebarOpen ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
       </button>
 
-      {/* Left Sidebar */}
-      <aside className={`${sidebarOpen ? 'block' : 'hidden'} w-full shrink-0 lg:block lg:w-72`}>
+      <aside className={`${sidebarOpen ? "block" : "hidden"} w-full shrink-0 lg:block lg:w-72`}>
         <div className="sticky top-4 space-y-1 rounded-[24px] border border-white/40 bg-white/70 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.06)] backdrop-blur-xl">
           <p className="px-3 pb-2 pt-1 text-[10px] uppercase tracking-[0.3em] text-slate-400">分类导航</p>
           {learningCategories.map((c) => (
             <div key={c.id}>
               <button
                 type="button"
-                onClick={() => { setActiveCategory(c.id); setActiveSub(""); setSidebarOpen(false); }}
+                onClick={() => { setActiveCategory(c.id); setActiveSub(""); setRoleFilter("all"); setSidebarOpen(false); }}
                 className={`flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm transition ${
                   activeCategory === c.id ? "bg-sky-100/70 text-sky-800 font-medium" : "text-slate-600 hover:bg-white/60"
                 }`}
@@ -157,7 +171,7 @@ export default function LearningCenterClient() {
                     <button
                       key={s.id}
                       type="button"
-                      onClick={() => { setActiveSub(s.id); setSidebarOpen(false); }}
+                      onClick={() => { setActiveSub(s.id); setRoleFilter("all"); setSidebarOpen(false); }}
                       className={`block w-full rounded-xl px-3 py-1.5 text-left text-xs transition ${
                         activeSub === s.id ? "bg-sky-50/80 text-sky-700 font-medium" : "text-slate-500 hover:text-slate-700"
                       }`}
@@ -172,9 +186,7 @@ export default function LearningCenterClient() {
         </div>
       </aside>
 
-      {/* Right Content */}
       <div className="min-w-0 flex-1">
-        {/* Search */}
         <div className="relative mb-5">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
           <input
@@ -186,7 +198,6 @@ export default function LearningCenterClient() {
           />
         </div>
 
-        {/* Breadcrumb */}
         {!search && cat && (
           <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
             <span>{cat.label}</span>
@@ -195,7 +206,42 @@ export default function LearningCenterClient() {
           </div>
         )}
 
-        {/* Results info */}
+        {/* Role filter bar */}
+        {!search && hasRoleItems && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setRoleFilter("all")}
+              className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                roleFilter === "all"
+                  ? "bg-sky-100 text-sky-700 shadow-sm"
+                  : "bg-white/60 text-slate-500 hover:bg-white/80"
+              }`}
+            >
+              全部
+            </button>
+            {(["pilot", "cabin", "maintenance"] as const).map((key) => {
+              const r = roleLabels[key];
+              const Icon = r.icon;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setRoleFilter(key)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                    roleFilter === key
+                      ? `${r.color} shadow-sm`
+                      : "bg-white/60 text-slate-500 hover:bg-white/80"
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {r.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {search && searchResults && (
           <p className="mb-4 text-xs text-slate-500">找到 {searchResults.length} 个结果</p>
         )}
@@ -205,21 +251,21 @@ export default function LearningCenterClient() {
           </div>
         )}
 
-        {/* Items */}
         <div className="space-y-3">
-          {(search ? (searchResults ?? []) : displayItems).map((result: any, idx: number) => {
+          {(search ? (searchResults ?? []) : filteredItems).map((result: any, idx: number) => {
             const item = result.item || result;
             const catLabel = result.catLabel || cat?.label || "";
             const subLabel = result.subLabel || sub?.label || "";
             const isExpanded = expandedItems[item.id] || false;
             const isFav = favorites.includes(item.id);
+            const roleInfo = item.role ? roleLabels[item.role] : null;
+            const RoleIcon = roleInfo?.icon;
 
             return (
               <div
                 key={item.id}
                 className="rounded-[20px] border border-white/40 bg-white/70 shadow-[0_4px_20px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
               >
-                {/* Header - clickable to expand */}
                 <button
                   type="button"
                   onClick={() => toggleExpand(item.id)}
@@ -228,20 +274,27 @@ export default function LearningCenterClient() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-900 truncate">{item.title}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
+                      {roleInfo && (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${roleInfo.color}`}>
+                          {RoleIcon && <RoleIcon className="h-2.5 w-2.5" />}
+                          {roleInfo.label}
+                        </span>
+                      )}
                       {result.catLabel && (
-                        <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] text-sky-600">{result.catLabel}</span>
+                        <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] text-sky-600">{catLabel}</span>
                       )}
                       {item.frequency && (
                         <span className="text-[10px] text-amber-600">
-                          {'★'.repeat(item.frequency)}{'☆'.repeat(5 - item.frequency)}
+                          {"★".repeat(item.frequency)}
+                          {"☆".repeat(5 - item.frequency)}
                         </span>
                       )}
                       {item.difficulty && (
                         <span className={`rounded-full px-2 py-0.5 text-[10px] ${
-                          item?.difficulty === '入门' ? 'bg-emerald-50 text-emerald-600' :
-                          item.difficulty === '中级' ? 'bg-amber-50 text-amber-600' :
-                          item.difficulty === '高级' ? 'bg-rose-50 text-rose-600' :
-                          'bg-slate-50 text-slate-500'
+                          item.difficulty === "入门" ? "bg-emerald-50 text-emerald-600" :
+                          item.difficulty === "中级" ? "bg-amber-50 text-amber-600" :
+                          item.difficulty === "高级" ? "bg-rose-50 text-rose-600" :
+                          "bg-slate-50 text-slate-500"
                         }`}>
                           {item.difficulty}
                         </span>
@@ -249,12 +302,11 @@ export default function LearningCenterClient() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {/* Favorite */}
                     <span
                       role="button"
                       tabIndex={0}
                       onClick={(e) => { e.stopPropagation(); handleToggleFav(item, catLabel, subLabel); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleToggleFav(item, catLabel, subLabel); }}
+                      onKeyDown={(e) => { if (e.key === "Enter") handleToggleFav(item, catLabel, subLabel); }}
                       className="inline-flex"
                     >
                       {isFav ? (
@@ -263,12 +315,10 @@ export default function LearningCenterClient() {
                         <Bookmark className="h-4 w-4 text-slate-300 hover:text-slate-400" />
                       )}
                     </span>
-                    {/* Expand indicator */}
-                    <ChevronDown className={`h-4 w-4 text-slate-300 transition ${isExpanded ? 'rotate-0' : '-rotate-90'}`} />
+                    <ChevronDown className={`h-4 w-4 text-slate-300 transition ${isExpanded ? "rotate-0" : "-rotate-90"}`} />
                   </div>
                 </button>
 
-                {/* Expanded content */}
                 {isExpanded && (
                   <div className="border-t border-white/40 px-5 py-4">
                     <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-7 text-slate-700 [&_strong]:text-slate-900 [&_strong]:font-semibold">
@@ -276,7 +326,7 @@ export default function LearningCenterClient() {
                     </div>
                     {item.tags && item.tags.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
-                        {item.tags?.map((tag: string) => (
+                        {item.tags.map((tag: string) => (
                           <span key={tag} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] text-slate-500">{tag}</span>
                         ))}
                       </div>
