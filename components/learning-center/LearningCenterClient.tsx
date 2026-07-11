@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Bookmark, BookmarkCheck, Clock, ChevronDown, ChevronRight, ChevronLeft, Plane, Users, Wrench } from "lucide-react";
+import { Bookmark, BookmarkCheck, ChevronDown, ChevronRight, ChevronLeft, Plane, Users, Wrench, GraduationCap, Briefcase } from "lucide-react";
 import { learningCategories } from "@/lib/learning-center/data";
 import { getFavorites, toggleFavorite, addHistory, getHistory } from "@/lib/learning-center/storage";
 import type { LearningItem } from "@/lib/learning-center/types";
@@ -15,12 +15,12 @@ const roleLabels: Record<string, { label: string; icon: any; color: string }> = 
 export default function LearningCenterClient() {
   const [activeCategory, setActiveCategory] = useState("questions");
   const [activeSub, setActiveSub] = useState("");
-  const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [roleFilter, setRoleFilter] = useState<"all" | "pilot" | "cabin" | "maintenance">("all");
+  const [recruitFilter, setRecruitFilter] = useState<"all" | "campus" | "experienced">("all");
 
   useEffect(() => {
     setFavorites(getFavorites().map((f) => f.itemId));
@@ -74,26 +74,6 @@ export default function LearningCenterClient() {
   const cat = learningCategories.find((c) => c.id === activeCategory);
   const sub = cat?.subcategories.find((s) => s.id === activeSub);
 
-  const searchResults = useMemo(() => {
-    if (!search.trim()) return null;
-    const q = search.toLowerCase();
-    const results: Array<{ item: LearningItem; catLabel: string; subLabel: string }> = [];
-    for (const c of learningCategories) {
-      for (const s of c.subcategories) {
-        for (const item of s.items) {
-          if (
-            item.title.toLowerCase().includes(q) ||
-            item.content.toLowerCase().includes(q) ||
-            (item.tags && item.tags.some((t) => t.toLowerCase().includes(q)))
-          ) {
-            results.push({ item, catLabel: c.label, subLabel: s.label });
-          }
-        }
-      }
-    }
-    return results.slice(0, 50);
-  }, [search]);
-
   const favItems = useMemo(() => {
     if (activeCategory !== "records") return null;
     if (activeSub === "rec-fav") {
@@ -132,13 +112,21 @@ export default function LearningCenterClient() {
     return sub.items.some((i) => i.role !== undefined);
   }, [sub]);
 
+  // Combined filter: role + recruitment type
   const filteredItems = useMemo(() => {
-    if (roleFilter === "all" || !hasRoleItems) return displayItems;
     return displayItems.filter((r: any) => {
       const item = r.item || r;
-      return !item.role || item.role === roleFilter;
+      // Role filter
+      if (roleFilter !== "all" && item.role && item.role !== roleFilter) return false;
+      // Recruitment type filter (using tags)
+      if (recruitFilter !== "all") {
+        const tags = item.tags || [];
+        const tagMatch = recruitFilter === "campus" ? tags.includes("校招") : tags.includes("社招");
+        if (!tagMatch) return false;
+      }
+      return true;
     });
-  }, [displayItems, roleFilter, hasRoleItems]);
+  }, [displayItems, roleFilter, recruitFilter]);
 
   return (
     <div className="flex min-h-[calc(100vh-10rem)] gap-0 lg:gap-5">
@@ -152,7 +140,7 @@ export default function LearningCenterClient() {
 
       <aside className={`${sidebarOpen ? "block" : "hidden"} w-full shrink-0 lg:block lg:w-72`}>
         <div className="sticky top-4 space-y-1 rounded-[24px] border border-white/40 bg-white/70 p-3 shadow-[0_12px_40px_rgba(0,0,0,0.06)] backdrop-blur-xl">
-          <p className="px-3 pb-2 pt-1 text-[10px] uppercase tracking-[0.3em] text-slate-400">分类导航</p>
+          <p className="px-3 pb-2 pt-1 text-[10px] uppercase tracking-[0.3em] text-slate-400">面试流程导航</p>
           {learningCategories.map((c) => (
             <div key={c.id}>
               <button
@@ -171,7 +159,7 @@ export default function LearningCenterClient() {
                     <button
                       key={s.id}
                       type="button"
-                      onClick={() => { setActiveSub(s.id); setRoleFilter("all"); setSidebarOpen(false); }}
+                      onClick={() => { setActiveSub(s.id); setRoleFilter("all"); setRecruitFilter("all"); setSidebarOpen(false); }}
                       className={`block w-full rounded-xl px-3 py-1.5 text-left text-xs transition ${
                         activeSub === s.id ? "bg-sky-50/80 text-sky-700 font-medium" : "text-slate-500 hover:text-slate-700"
                       }`}
@@ -187,32 +175,58 @@ export default function LearningCenterClient() {
       </aside>
 
       <div className="min-w-0 flex-1">
-        <div className="relative mb-5">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索面试题目、技巧、知识点..."
-            className="w-full rounded-[20px] border border-white/40 bg-white/70 px-4 py-3.5 pl-11 text-sm text-slate-800 outline-none backdrop-blur-md placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-200/50"
-          />
-        </div>
-
-        {!search && cat && (
-          <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
-            <span>{cat.label}</span>
-            {sub && <><span className="text-slate-300">/</span><span className="text-slate-700 font-medium">{sub.label}</span></>
-}
+        {/* Filter bar: recruitment type + position */}
+        <div className="mb-5 flex flex-wrap items-center gap-3 rounded-[20px] border border-white/40 bg-white/70 px-4 py-3 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+          {/* Recruitment type filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="mr-1 text-[10px] font-medium uppercase tracking-wider text-slate-400">招聘</span>
+            <button
+              type="button"
+              onClick={() => setRecruitFilter("all")}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
+                recruitFilter === "all"
+                  ? "bg-sky-100 text-sky-700 shadow-sm"
+                  : "bg-white/60 text-slate-500 hover:bg-white/80"
+              }`}
+            >
+              全部
+            </button>
+            <button
+              type="button"
+              onClick={() => setRecruitFilter("campus")}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition ${
+                recruitFilter === "campus"
+                  ? "bg-violet-100 text-violet-700 shadow-sm"
+                  : "bg-white/60 text-slate-500 hover:bg-white/80"
+              }`}
+            >
+              <GraduationCap className="h-3 w-3" />
+              校招
+            </button>
+            <button
+              type="button"
+              onClick={() => setRecruitFilter("experienced")}
+              className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition ${
+                recruitFilter === "experienced"
+                  ? "bg-amber-100 text-amber-700 shadow-sm"
+                  : "bg-white/60 text-slate-500 hover:bg-white/80"
+              }`}
+            >
+              <Briefcase className="h-3 w-3" />
+              社招
+            </button>
           </div>
-        )}
 
-        {/* Role filter bar */}
-        {!search && hasRoleItems && (
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          {/* Divider */}
+          <div className="hidden h-5 w-px bg-slate-200/60 sm:block" />
+
+          {/* Position filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="mr-1 text-[10px] font-medium uppercase tracking-wider text-slate-400">岗位</span>
             <button
               type="button"
               onClick={() => setRoleFilter("all")}
-              className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+              className={`rounded-full px-3 py-1 text-xs font-medium transition ${
                 roleFilter === "all"
                   ? "bg-sky-100 text-sky-700 shadow-sm"
                   : "bg-white/60 text-slate-500 hover:bg-white/80"
@@ -228,7 +242,7 @@ export default function LearningCenterClient() {
                   key={key}
                   type="button"
                   onClick={() => setRoleFilter(key)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                  className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition ${
                     roleFilter === key
                       ? `${r.color} shadow-sm`
                       : "bg-white/60 text-slate-500 hover:bg-white/80"
@@ -240,19 +254,18 @@ export default function LearningCenterClient() {
               );
             })}
           </div>
-        )}
+        </div>
 
-        {search && searchResults && (
-          <p className="mb-4 text-xs text-slate-500">找到 {searchResults.length} 个结果</p>
-        )}
-        {search && searchResults?.length === 0 && (
-          <div className="rounded-[20px] border border-white/40 bg-white/60 px-6 py-10 text-center text-sm text-slate-500">
-            未找到相关内容，请尝试其他关键词
+        {cat && (
+          <div className="mb-4 flex items-center gap-2 text-xs text-slate-500">
+            <span>{cat.label}</span>
+            {sub && <><span className="text-slate-300">/</span><span className="text-slate-700 font-medium">{sub.label}</span></>
+}
           </div>
         )}
 
         <div className="space-y-3">
-          {(search ? (searchResults ?? []) : filteredItems).map((result: any, idx: number) => {
+          {filteredItems.map((result: any, idx: number) => {
             const item = result.item || result;
             const catLabel = result.catLabel || cat?.label || "";
             const subLabel = result.subLabel || sub?.label || "";
@@ -260,6 +273,8 @@ export default function LearningCenterClient() {
             const isFav = favorites.includes(item.id);
             const roleInfo = item.role ? roleLabels[item.role] : null;
             const RoleIcon = roleInfo?.icon;
+            const tags = item.tags || [];
+            const hasRecruitTag = tags.includes("校招") || tags.includes("社招");
 
             return (
               <div
@@ -280,7 +295,15 @@ export default function LearningCenterClient() {
                           {roleInfo.label}
                         </span>
                       )}
-                      {result.catLabel && (
+                      {hasRecruitTag && (
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
+                          tags.includes("校招") ? "bg-violet-50 text-violet-600" : "bg-amber-50 text-amber-600"
+                        }`}>
+                          {tags.includes("校招") ? <GraduationCap className="h-2.5 w-2.5" /> : <Briefcase className="h-2.5 w-2.5" />}
+                          {tags.includes("校招") ? "校招" : "社招"}
+                        </span>
+                      )}
+                      {catLabel && (
                         <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] text-sky-600">{catLabel}</span>
                       )}
                       {item.frequency && (
@@ -337,6 +360,14 @@ export default function LearningCenterClient() {
             );
           })}
         </div>
+
+        {filteredItems.length === 0 && !favItems && (
+          <div className="rounded-[20px] border border-white/40 bg-white/60 px-6 py-10 text-center text-sm text-slate-500">
+            {recruitFilter !== "all" || roleFilter !== "all"
+              ? "当前筛选条件下没有内容，试试调整筛选条件"
+              : "该分类暂无内容"}
+          </div>
+        )}
       </div>
     </div>
   );
