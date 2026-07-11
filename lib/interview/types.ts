@@ -7,13 +7,7 @@ export type InterviewRole =
   | 'aviation-meteorology'
   | 'civil-aviation-electronics'
   | 'air-marshal'
-  | 'aoc'
-  | 'flight-ops'
-  | 'passenger-service'
-  | 'security-inspector'
-  | 'terminal-service'
-  | 'comm-navigation'
-  | 'aviation-safety';
+  | 'terminal-service';
 
 export type InterviewStage =
   | 'self-intro'

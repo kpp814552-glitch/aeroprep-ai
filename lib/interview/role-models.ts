@@ -172,21 +172,89 @@ const ROLE_MODELS: Record<string, RoleModel> = {
     value: "atc",
     label: "空管员",
     abilities: [
-      { name: "管制意识", weight: 25, questionExamples: ["你如何理解空中交通管制中的安全间隔？", "流量大时如何调配冲突？"] },
-      { name: "应急处置", weight: 20, questionExamples: ["遇到无线电通讯中断时，你的处置程序是什么？", "特殊航班（紧急状况）如何优先处置？"] },
-      { name: "抗压能力", weight: 20, questionExamples: ["高峰时段同时指挥多架飞机时，你如何保持冷静？", "管制员面临最大的压力源是什么？"] },
-      { name: "英语能力", weight: 20, questionExamples: ["请用英语进行基本的陆空通话。", "如何准备ICAO英语考试？"] },
-      { name: "团队协作", weight: 15, questionExamples: ["如何与相邻扇区协调移交？", "团队中如何处理好与机组的关系？"] },
+      {
+        name: "安全间隔意识",
+        weight: 25,
+        questionExamples: [
+          "你如何理解空中交通管制中的安全间隔标准？雷达管制的水平间隔和垂直间隔分别如何把控？",
+          "进近管制和区域管制在间隔标准上有哪些不同？",
+          "流量大时如何同时管理冲突调配和正常航班运行次序？",
+          "请描述你在模拟管制训练或理论实践中遇到的冲突调配场景。"
+        ]
+      },
+      {
+        name: "冲突调配与决策",
+        weight: 20,
+        questionExamples: [
+          "两架飞机在同一高度相向飞行，你的调配思路是什么？优先调整哪一架？",
+          "一架紧急状况航班需要优先降落，周围有4架正常进近航班，你如何调整次序？",
+          "多个飞行冲突同时出现时，你的决策优先级是什么？",
+          "你是否了解雷达引导、等待程序和速度调整这几种调配手段各自的使用场景？"
+        ]
+      },
+      {
+        name: "特情应急处置",
+        weight: 20,
+        questionExamples: [
+          "遇到无线电通讯中断时，你的标准处置程序是什么？盲降信号丢失后如何引导飞机？",
+          "航班宣布Mayday或Pan-pan后，管制员的首要行动是什么？",
+          "雷达信号丢失时，如何通过程序管制和间隔标准来维持运行？",
+          "特殊天气（风切变、雷暴、积冰）下如何引导飞机避开危险区域？"
+        ]
+      },
+      {
+        name: "陆空通话与英语能力",
+        weight: 15,
+        questionExamples: [
+          "请用标准陆空通话术语引导一架飞机从进近到落地，包含高度指令和航向指令。",
+          "外籍机组对你的指令表示不确定时，你如何做澄清性通讯？",
+          "紧急情况下如何用英语做高效、清晰、无歧义的通讯？",
+          "你如何看待ICAO英语四级/五级对管制员职业发展的影响？"
+        ]
+      },
+      {
+        name: "抗压与注意力分配",
+        weight: 10,
+        questionExamples: [
+          "高峰时段同时管理12架以上飞机时，你的注意力如何分配？",
+          "管制员面临的最大职业压力是什么？你如何应对？",
+          "当你在雷达屏幕上发现一个自己之前没注意到的潜在冲突时，你的心理反应和处置步骤是什么？"
+        ]
+      },
+      {
+        name: "扇区配合与团队协作",
+        weight: 10,
+        questionExamples: [
+          "如何与相邻扇区（进近→区域）进行航班移交？移交的要素有哪些？",
+          "管制席与协调席如何配合？各自职责是什么？",
+          "机组对你的指令理解有偏差时，你如何纠偏同时不造成恐慌？"
+        ]
+      },
     ],
     scoringModel: [
-      { name: "安全意识", weight: 35, questionExamples: [] },
-      { name: "决策能力", weight: 30, questionExamples: [] },
-      { name: "规则意识", weight: 20, questionExamples: [] },
-      { name: "抗压能力", weight: 15, questionExamples: [] },
+      { name: "安全间隔意识", weight: 30, questionExamples: [] },
+      { name: "冲突调配能力", weight: 25, questionExamples: [] },
+      { name: "特情处置规范性", weight: 20, questionExamples: [] },
+      { name: "陆空通话专业度", weight: 15, questionExamples: [] },
+      { name: "抗压与注意力分配", weight: 10, questionExamples: [] },
     ],
-    keyInfoToCollect: ["专业背景", "是否学习空管相关课程", "ICAO英语等级", "是否参加管制基础培训", "心理素质"],
-    evaluationFocus: ["管制意识", "应急处置", "抗压能力", "英语能力", "团队协作"],
-    fallbackDirection: "虽然没有管制背景，你为什么想从事空管工作？你对管制员的工作内容和要求了解多少？",
+    keyInfoToCollect: [
+      "专业背景（空管/民航/气象相关优先）",
+      "是否学习过空中交通管理或航空气象等核心课程",
+      "ICAO英语等级（四级/五级/六级）或英语水平自评",
+      "是否参加过管制基础培训、模拟管制训练或管制实习",
+      "是否了解雷达管制与程序管制的基本区别",
+      "对空管工作环境的了解（倒班制度、夜班频率、高压环境）",
+      "心理素质评估方向和抗压能力自评"
+    ],
+    evaluationFocus: [
+      "安全间隔意识与规章敬畏",
+      "冲突调配与决策效率",
+      "特情处置规范性与应急反应",
+      "陆空通话专业度与英语水平",
+      "抗压能力与多任务注意力分配"
+    ],
+    fallbackDirection: "空管是一个专业性很强、准入门槛很高的职业——但这不是说没有相关背景就不能考。请谈谈你为什么想从事空中交通管制工作？你如何理解管制员在民航运行安全中的核心作用？你对管制员的日常工作要求、倒班制度和职业压力了解多少？有没有做过相关的求职准备或自学过空管基础知识？",
   },
 
   "civil-aviation-electronics": {
@@ -249,78 +317,7 @@ const ROLE_MODELS: Record<string, RoleModel> = {
     evaluationFocus: ["安全意识", "应急能力", "身体素质", "法规意识"],
     fallbackDirection: "虽然没有安保相关经验，你为什么想从事客舱安全工作？你认为什么样的性格适合安全员岗位？",
   },
-  "aoc": {
-    value: "aoc", label: "运行控制",
-    abilities: [
-      { name: "运行协调", weight: 30, questionExamples: ["航班大面积延误时，你如何协调各部门？", "多个部门出现信息冲突时怎么办？"] },
-      { name: "信息处理", weight: 25, questionExamples: ["多个信息源同时反馈问题时，你的处理优先级是什么？", "如何确保运行信息准确传递？"] },
-      { name: "应急管理", weight: 25, questionExamples: ["突发状况下，AOC如何快速做出决策？", "应急响应启动后，AOC的指挥流程是什么？"] },
-      { name: "压力管理", weight: 20, questionExamples: ["高压力环境下如何保持判断力？", "AOC岗位最大的挑战是什么？"] },
-    ],
-    scoringModel: [
-      { name: "协调能力", weight: 35, questionExamples: [] },
-      { name: "应急能力", weight: 30, questionExamples: [] },
-      { name: "信息处理", weight: 20, questionExamples: [] },
-      { name: "压力管理", weight: 15, questionExamples: [] },
-    ],
-    keyInfoToCollect: ["运行管理专业", "实习经历", "沟通能力", "英语水平"],
-    evaluationFocus: ["运行安全", "协调能力", "应急能力", "抗压能力"],
-    fallbackDirection: "虽然没有运行相关背景，你为什么对运行控制感兴趣？你平时是否关注航班运行相关资讯？",
-  },
-  "flight-ops": {
-    value: "flight-ops", label: "机场运行指挥",
-    abilities: [
-      { name: "现场管理", weight: 30, questionExamples: ["航班延误时如何协调各部门？", "机场运行高峰时，你的调度思路是什么？"] },
-      { name: "信息传递", weight: 25, questionExamples: ["如何确保运行指令准确传达到每个岗位？", "信息传递中最重要的要素是什么？"] },
-      { name: "应急处理", weight: 25, questionExamples: ["机场突发事件如何处理？", "遇到不正常航班时，你的处置流程是什么？"] },
-      { name: "协调能力", weight: 20, questionExamples: ["如何与航司、空管、地服等多方沟通？", "意见不一致时如何达成共识？"] },
-    ],
-    scoringModel: [
-      { name: "现场能力", weight: 35, questionExamples: [] },
-      { name: "协调能力", weight: 30, questionExamples: [] },
-      { name: "应急处理", weight: 25, questionExamples: [] },
-      { name: "表达能力", weight: 10, questionExamples: [] },
-    ],
-    keyInfoToCollect: ["运行管理专业", "实习经历", "英语水平", "沟通能力"],
-    evaluationFocus: ["现场管理", "信息能力", "应急处理", "协调能力"],
-    fallbackDirection: "虽然没有机场运行经验，你为什么对这个岗位感兴趣？你如何理解机场运行指挥在民航中的作用？",
-  },
-  "passenger-service": {
-    value: "passenger-service", label: "值机员",
-    abilities: [
-      { name: "服务意识", weight: 30, questionExamples: ["旅客错过值机怎么办？", "如何面对高峰客流？", "遇到情绪激动的旅客，你怎么处理？"] },
-      { name: "工作效率", weight: 25, questionExamples: ["在高峰时段如何保持高效服务？", "多窗口排队时，如何优化旅客等待时间？"] },
-      { name: "沟通能力", weight: 25, questionExamples: ["如何向旅客解释航班超售？", "语言不通的外籍旅客如何沟通？"] },
-      { name: "外语能力", weight: 20, questionExamples: ["请用英语为外籍旅客办理值机。", "如何准备民航英语日常会话？"] },
-    ],
-    scoringModel: [
-      { name: "服务意识", weight: 35, questionExamples: [] },
-      { name: "沟通能力", weight: 30, questionExamples: [] },
-      { name: "工作效率", weight: 20, questionExamples: [] },
-      { name: "外语能力", weight: 15, questionExamples: [] },
-    ],
-    keyInfoToCollect: ["服务经历", "外语能力", "计算机操作", "沟通能力"],
-    evaluationFocus: ["服务意识", "工作效率", "沟通能力", "外语水平"],
-    fallbackDirection: "虽然没有值机经验，你为什么对旅客服务感兴趣？你觉得自己在服务方面最大的优势是什么？",
-  },
-  "security-inspector": {
-    value: "security-inspector", label: "安检员",
-    abilities: [
-      { name: "规则执行", weight: 30, questionExamples: ["旅客拒绝安检怎么办？", "如何在严格执规的同时保持服务态度？"] },
-      { name: "细节观察", weight: 25, questionExamples: ["发现违禁物品如何处理？", "安检中最容易被忽视的风险点是什么？"] },
-      { name: "责任意识", weight: 25, questionExamples: ["安检工作的最大责任是什么？", "发现漏检后的处置流程是什么？"] },
-      { name: "安全意识", weight: 20, questionExamples: ["安检中的安全底线是什么？", "如何判断需要升级处置的异常情况？"] },
-    ],
-    scoringModel: [
-      { name: "规则执行", weight: 35, questionExamples: [] },
-      { name: "细节观察", weight: 25, questionExamples: [] },
-      { name: "责任意识", weight: 25, questionExamples: [] },
-      { name: "安全意识", weight: 15, questionExamples: [] },
-    ],
-    keyInfoToCollect: ["安检培训", "安全意识", "责任心", "沟通能力"],
-    evaluationFocus: ["规则执行", "责任意识", "细节观察", "安全意识"],
-    fallbackDirection: "虽然没有安检经验，你为什么想从事安检工作？你如何理解安全检查和公共安全的关系？",
-  },
+
   "terminal-service": {
     value: "terminal-service", label: "航站楼服务",
     abilities: [
@@ -338,42 +335,6 @@ const ROLE_MODELS: Record<string, RoleModel> = {
     keyInfoToCollect: ["服务经历", "沟通能力", "志愿经历", "外语能力"],
     evaluationFocus: ["沟通能力", "应急服务", "服务意识", "综合保障"],
     fallbackDirection: "虽然没有航站楼服务经验，你为什么对民航地面服务感兴趣？你平时是否关注服务行业？",
-  },
-  "comm-navigation": {
-    value: "comm-navigation", label: "通信导航",
-    abilities: [
-      { name: "通信系统知识", weight: 30, questionExamples: ["导航设备异常如何处理？", "通信系统在飞行安全中的作用是什么？"] },
-      { name: "故障处理", weight: 25, questionExamples: ["间歇性设备故障如何排查？", "设备维护中最重要的安全准则是什么？"] },
-      { name: "技术保障", weight: 25, questionExamples: ["如何确保导航信号持续稳定？", "新设备安装后的调试流程是什么？"] },
-      { name: "安全意识", weight: 20, questionExamples: ["通信中断可能对飞行造成什么影响？", "设备故障时的应急备份方案是什么？"] },
-    ],
-    scoringModel: [
-      { name: "技术能力", weight: 40, questionExamples: [] },
-      { name: "故障分析", weight: 30, questionExamples: [] },
-      { name: "安全意识", weight: 20, questionExamples: [] },
-      { name: "责任意识", weight: 10, questionExamples: [] },
-    ],
-    keyInfoToCollect: ["通信电子专业", "技术课程", "故障排查经历", "网络知识"],
-    evaluationFocus: ["技术能力", "故障处理", "安全保障", "学习能力"],
-    fallbackDirection: "虽然没有通信导航工作经验，你为什么对这个技术岗位感兴趣？你平时是否关注通信技术发展？",
-  },
-  "aviation-safety": {
-    value: "aviation-safety", label: "航空安全",
-    abilities: [
-      { name: "风险管理", weight: 30, questionExamples: ["如何理解民航安全管理？", "风险评估的基本方法有哪些？"] },
-      { name: "安全文化", weight: 25, questionExamples: ["如何推动组织建立安全文化？", "安全报告制度的目的是什么？"] },
-      { name: "数据分析", weight: 25, questionExamples: ["如何通过安全数据分析预防事故？", "事故调查的基本流程是什么？"] },
-      { name: "体系思维", weight: 20, questionExamples: ["安全管理体系（SMS）的核心要素是什么？", "如何将安全理念融入日常运营？"] },
-    ],
-    scoringModel: [
-      { name: "风险管理", weight: 35, questionExamples: [] },
-      { name: "安全文化", weight: 25, questionExamples: [] },
-      { name: "数据分析", weight: 25, questionExamples: [] },
-      { name: "体系思维", weight: 15, questionExamples: [] },
-    ],
-    keyInfoToCollect: ["安全管理课程", "安全相关经历", "数据分析能力", "系统思维"],
-    evaluationFocus: ["风险管理", "安全文化", "数据分析", "体系思维"],
-    fallbackDirection: "虽然没有安全管理经验，你为什么对民航安全感兴趣？你如何理解安全在民航中的核心地位？",
   },
 };
 

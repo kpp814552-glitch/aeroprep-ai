@@ -191,8 +191,7 @@ function normalizeRole(value: string | null): InterviewRole {
   const candidates: InterviewRole[] = [
     "pilot", "dispatcher", "maintenance", "civil-aviation-electronics",
     "cabin-crew", "atc", "aviation-meteorology",
-    "air-marshal", "aoc", "flight-ops", "passenger-service",
-    "security-inspector", "terminal-service", "comm-navigation", "aviation-safety",
+    "air-marshal", "terminal-service",
   ];
 
   return candidates.includes(value as InterviewRole) ? (value as InterviewRole) : "pilot";

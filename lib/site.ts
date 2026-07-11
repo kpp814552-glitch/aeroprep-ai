@@ -74,41 +74,17 @@ export const prepRoleOptions: PrepRoleOption[] = [
     label: "客舱安全员",
     summary: "空防安全、应急处置、身体素质与法规意识",
   },
-  {
-    value: "aoc",
-    label: "运行控制",
-    summary: "运行协调、应急管理、信息处理与多部门协作",
-  },
-  {
-    value: "flight-ops",
-    label: "机场运行指挥",
-    summary: "现场管理、信息传递、应急处理与协调能力",
-  },
-  {
-    value: "passenger-service",
-    label: "值机员",
-    summary: "服务意识、工作效率、沟通能力与外语应用",
-  },
-  {
-    value: "security-inspector",
-    label: "安检员",
-    summary: "规则执行、细节观察、责任意识与安全意识",
-  },
+
+
+
+
   {
     value: "terminal-service",
     label: "航站楼服务",
     summary: "旅客引导、沟通能力、应急服务与综合保障",
   },
-  {
-    value: "comm-navigation",
-    label: "通信导航",
-    summary: "通信系统、导航设备、故障处理与技术保障",
-  },
-  {
-    value: "aviation-safety",
-    label: "航空安全",
-    summary: "风险管理、安全文化、数据分析与体系思维",
-  },
+
+
 ];
 
 export const interviewHighlights = [
