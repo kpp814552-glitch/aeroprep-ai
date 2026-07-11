@@ -326,7 +326,7 @@ ${draft.trim()}
               <div className="mb-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                   <FileText className="h-3.5 w-3.5" />
-                  {mode === "简历专项优化" ? "粘贴简历原文" : "输入原始内容"}
+                  {mode === "简历专项优化" ? "📄 简历原文" : "输入原始内容"}
                 </div>
                 {draft && (
                   <button
@@ -342,8 +342,12 @@ ${draft.trim()}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 rows={12}
-                placeholder={mode === "简历专项优化" ? "将你的简历全文粘贴在这里……\n\n支持PDF、DOCX或纯文本内容" : `将你的${contentType}原始稿粘贴在这里……`}
-                className="flex-1 w-full resize-none rounded-2xl border border-slate-200/60 bg-white/80 px-4 py-3.5 text-sm leading-7 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100/50"
+                placeholder={mode === "简历专项优化" ? "将简历全文粘贴在这里……\n\n支持PDF、DOCX或纯文本内容" : `将你的${contentType}原始稿粘贴在这里……`}
+                className={`flex-1 w-full resize-none rounded-2xl text-sm leading-7 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-100/50 ${
+                  mode === "简历专项优化"
+                    ? "border-2 border-slate-200 bg-white px-5 py-4 shadow-inner"
+                    : "border border-slate-200/60 bg-white/80 px-4 py-3.5"
+                }`}
               />
               <div className="mt-4 flex items-center gap-3">
                 <button
@@ -359,7 +363,7 @@ ${draft.trim()}
                   {loading ? (
                     <><Loader2 className="h-4 w-4 animate-spin" />优化中...</>
                   ) : (
-                    <><Sparkles className="h-4 w-4" />AI 优化</>
+                    <><Sparkles className="h-4 w-4" />{mode === "简历专项优化" ? "优化简历" : "AI 优化"}</>
                   )}
                 </button>
                 {draft && <span className="text-xs text-slate-400">{draft.length} 字</span>}
@@ -372,13 +376,17 @@ ${draft.trim()}
             </GlassPanel>
 
             {/* Bottom-right: Result */}
-            <GlassPanel className="flex flex-col rounded-[24px] border border-white/40 bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
+            <GlassPanel className={`flex flex-col rounded-[24px] border backdrop-blur-xl ${
+              mode === "简历专项优化"
+                ? "border-slate-200 bg-white shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
+                : "border-white/40 bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.04)]"
+            }`}>
               {/* Result header */}
               <div className="border-b border-white/30 px-6 py-3.5">
                 <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
                   <WandSparkles className="h-3.5 w-3.5 text-violet-500" />
                   优化结果
-                  {result && <span className="ml-auto text-[10px] font-normal text-slate-400">生成完毕</span>}
+                  {result && <span className="ml-auto text-[10px] font-normal text-slate-400">{mode === "简历专项优化" ? "简历优化完成" : "生成完毕"}</span>}
                 </div>
               </div>
               {/* Result body */}
@@ -391,7 +399,9 @@ ${draft.trim()}
                     </div>
                     <div className="text-center">
                       <p className="text-sm font-medium text-slate-700">正在优化内容</p>
-                      <p className="mt-1 text-xs text-slate-400">AI 正在分析并重构你的回答...</p>
+                      <p className="mt-1 text-xs text-slate-400">
+                            {mode === "简历专项优化" ? "AI 正在优化简历结构和措辞..." : "AI 正在分析并重构你的回答..."}
+                          </p>
                     </div>
                   </div>
                 ) : result ? (
@@ -430,7 +440,9 @@ ${draft.trim()}
                     </div>
                     <p className="text-sm font-medium text-slate-500">等待优化</p>
                     <p className="mt-2 max-w-xs text-center text-xs text-slate-400">
-                      左侧输入内容，选择好岗位和招聘方式后点击「AI 优化」
+                      {mode === "简历专项优化"
+                        ? "粘贴或上传简历后点击「优化简历」"
+                        : "左侧输入内容，选择好岗位和招聘方式后点击「AI 优化」"}
                     </p>
                   </div>
                 )}
