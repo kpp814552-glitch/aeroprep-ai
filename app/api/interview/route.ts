@@ -40,14 +40,16 @@ function getModeInstruction(
 
   const resumeSection = resumeText?.trim()
     ? `
-【📄 简历详细内容（面试官已仔细研读，以下列经历为提问重点，必须基于简历中的具体经历深入追问，每道题必须关联简历中的特定项目/经历/证书/实训）】
+【📄 简历详细内容（面试官已仔细研读，以下列经历为提问参考）】
 ${resumeText.trim().slice(0, 4000)}
 
 【📌 面试差异化指令】
 面试轮次标识：${now.toISOString().slice(0, 16).replace("T", " ")}
-为确保每次面试不雷同，本次面试请侧重以下方向提问：${focusDirections[focusIndex]}
-请从${focusDirections[focusIndex]}角度切入，结合简历中的具体经历，构建与上次完全不同的面试体验。
-不得使用通用问题，每道题必须紧扣简历内容。`
+为确保每次面试不雷同，本次面试请侧重以下方向：${focusDirections[focusIndex]}
+面试问题类型分配建议：
+- 约 4-5 题基于简历中的具体经历深入展开
+- 约 2-3 题为独立情景模拟/专业知识/通识类问题（面试官自由发挥，不依赖简历）
+请合理安排两种类型，确保面试全面覆盖候选人能力。`
     : "";
 
   const modeInstructions: Record<string, string> = {
