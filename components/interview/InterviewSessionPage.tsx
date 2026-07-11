@@ -1352,7 +1352,7 @@ const resumeQualityRef = useRef<any>(
               <p className="text-xl font-light tracking-wider text-white/90">
                 面试内容已准备完成
               </p>
-              <p className="mt-2 text-sm text-white/50">
+              <p className="mt-2 text-sm text-white/85">
                 已准备好 {roleLabel} 岗位的模拟面试
               </p>
               <button
@@ -1363,7 +1363,7 @@ const resumeQualityRef = useRef<any>(
                 点击开始面试
               </button>
               <div className="mt-12 max-w-md rounded-xl border border-white/8 bg-white/5 px-5 py-4 text-center">
-                <p className="text-xs leading-relaxed text-white/50">
+                <p className="text-xs leading-relaxed text-white/80">
                   为保证语音识别效果，建议佩戴耳机并使用收音清晰的麦克风，以确保您的回答被完整记录。
                 </p>
               </div>
