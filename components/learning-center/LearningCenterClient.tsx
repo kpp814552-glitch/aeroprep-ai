@@ -313,38 +313,38 @@ export default function LearningCenterClient() {
 
   return (
     <div className="mx-auto max-w-6xl">
-      {/* ====== Search Bar ====== */}
-      <div className="relative mb-4">
-        <svg className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.34-4.34"/></svg>
-        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-          placeholder="搜索面试题、技巧、知识点..."
-          className="w-full rounded-[20px] border border-white/40 bg-white/70 px-4 py-3 pl-11 text-sm text-slate-800 outline-none backdrop-blur-md placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-200/50" />
-      </div>
-
-      {/* 快捷入口 */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => { setContentFilter("my-uploads"); setSearch(""); }}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition ${
-            contentFilter === "my-uploads"
-              ? "bg-sky-100 text-sky-700 shadow-sm"
-              : "bg-white/70 text-slate-500 hover:bg-white/90 border border-white/40"
-          }`}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-          我的上传
-        </button>
-        <button type="button" onClick={() => { setContentFilter("records"); setSearch(""); }}
-          className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition ${
-            contentFilter === "records"
-              ? "bg-amber-100 text-amber-700 shadow-sm"
-              : "bg-white/70 text-slate-500 hover:bg-white/90 border border-white/40"
-          }`}>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
-          收藏
-        </button>
+      {/* ====== Search Bar + 快捷入口 ====== */}
+      <div className="mb-2 flex items-center gap-3">
+        <div className="relative flex-1">
+          <svg className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.34-4.34"/></svg>
+          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+            placeholder="搜索面试题、技巧、知识点..."
+            className="w-full rounded-[20px] border border-white/40 bg-white/70 px-4 py-3 pl-11 text-sm text-slate-800 outline-none backdrop-blur-md placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-200/50" />
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button type="button" onClick={() => { setContentFilter("my-uploads"); setSearch(""); }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-medium transition ${
+              contentFilter === "my-uploads"
+                ? "bg-sky-100 text-sky-700 shadow-sm"
+                : "bg-white/70 text-slate-500 hover:bg-white/90 border border-white/40"
+            }`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            我的上传
+          </button>
+          <button type="button" onClick={() => { setContentFilter("records"); setSearch(""); }}
+            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-medium transition ${
+              contentFilter === "records"
+                ? "bg-amber-100 text-amber-700 shadow-sm"
+                : "bg-white/70 text-slate-500 hover:bg-white/90 border border-white/40"
+            }`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
+            收藏
+          </button>
+        </div>
       </div>
 
       {/* ====== Row 1: 招聘方式 ====== */}
-      <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-[20px] border border-white/40 bg-white/70 px-4 py-2.5 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-[20px] border border-white/40 bg-white/70 px-4 py-2.5 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
         <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">招聘方式</span>
         <FilterBtn active={recruitFilter === "all"} onClick={() => setRecruitFilter("all")}>全部</FilterBtn>
         <FilterBtn active={recruitFilter === "campus"} onClick={() => setRecruitFilter("campus")}>
@@ -356,7 +356,7 @@ export default function LearningCenterClient() {
       </div>
 
       {/* ====== Row 2: 岗位 ====== */}
-      <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-[20px] border border-white/40 bg-white/70 px-4 py-2.5 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
+      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-[20px] border border-white/40 bg-white/70 px-4 py-2.5 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
         <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">岗位</span>
         <FilterBtn active={positionFilter === "all"} onClick={() => setPositionFilter("all")}>全部</FilterBtn>
         {Object.entries(positionLabels).map(([key, p]) => {
