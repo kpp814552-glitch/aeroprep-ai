@@ -121,7 +121,7 @@ ${draft.trim()}
             </p>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+          <div className="grid gap-6 lg:grid-cols-2">
             {/* ====== Left: Input ====== */}
             <div className="space-y-5">
               {/* Content type selector */}
