@@ -53,7 +53,7 @@ export default function LoginModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <GlassCard className="relative mx-4 w-full max-w-sm p-6 shadow-[0_24px_64px_rgba(0,0,0,0.2)]">
+      <GlassCard className="relative mx-4 w-full max-w-sm overflow-hidden rounded-[24px] border border-white/40 bg-white/70 p-6 shadow-[0_24px_64px_rgba(0,0,0,0.12)] backdrop-blur-xl">
         <button
           type="button"
           onClick={onClose}
@@ -64,7 +64,7 @@ export default function LoginModal({
         </button>
 
         <div className="mt-2">
-          <h2 className="text-lg font-semibold text-slate-950">登录</h2>
+          <h2 className="text-lg font-semibold">登录<span className="ml-1 bg-gradient-to-r from-sky-500 to-violet-500 bg-clip-text text-transparent"> AeroPrep</span></h2>
           <p className="mt-1 text-sm text-slate-500">{message}</p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -98,7 +98,7 @@ export default function LoginModal({
             <GlassButton
               type="submit"
               disabled={loading}
-              className="w-full justify-center py-2.5 text-sm"
+              className="w-full justify-center py-2.5 text-sm bg-gradient-to-r from-sky-500 to-violet-500 text-white border-0 shadow-lg hover:from-sky-600 hover:to-violet-600 transition-all"
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -114,7 +114,7 @@ export default function LoginModal({
             <Link
               href="/register"
               onClick={onClose}
-              className="font-medium text-blue-600 hover:text-blue-700"
+              className="font-medium text-sky-600 hover:text-sky-700 transition-colors"
             >
               立即注册
             </Link>
