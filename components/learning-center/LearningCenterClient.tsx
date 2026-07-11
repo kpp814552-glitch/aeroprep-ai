@@ -4,10 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Bookmark, BookmarkCheck, ChevronDown,
   Plane, Users, Wrench, GraduationCap, Briefcase,
-  ClipboardList, Radar, Cpu, Building2, Shield, Ticket
+  ClipboardList, Radar, Cpu, Building2, Shield, Ticket, Plus, Trash2
 } from "lucide-react";
 import { learningCategories } from "@/lib/learning-center/data";
 import { getFavorites, toggleFavorite, addHistory } from "@/lib/learning-center/storage";
+import { getUserNotes, saveUserNote, deleteUserNote, type UserNote } from "@/lib/learning-center/user-storage";
 import type { LearningItem } from "@/lib/learning-center/types";
 
 const positionLabels: Record<string, { label: string; icon: any; color: string }> = {
@@ -33,10 +34,15 @@ export default function LearningCenterClient() {
   const [recruitFilter, setRecruitFilter] = useState("all");
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [showNoteModal, setShowNoteModal] = useState(false);
+  const [noteForm, setNoteForm] = useState({ title: "", content: "", role: "all" as string, tags: [] as string[] });
+  const [userNotes, setUserNotes] = useState<UserNote[]>([]);
+  const [noteRefreshKey, setNoteRefreshKey] = useState(0);
 
   useEffect(() => {
     setFavorites(getFavorites().map((f) => f.itemId));
-  }, []);
+    setUserNotes(getUserNotes());
+  }, [noteRefreshKey]);
 
   const allItems = useMemo(() => {
     const items: Array<{ item: LearningItem; catLabel: string; subLabel: string }> = [];
@@ -48,7 +54,24 @@ export default function LearningCenterClient() {
       }
     }
     return items;
-  }, []);
+  }, [noteRefreshKey]);
+
+  // After allItems, push user notes
+  const allItemsWithNotes = useMemo(() => {
+    const notes = getUserNotes();
+    const noteItems = notes.map((n) => ({
+      item: {
+        id: n.id,
+        title: n.title,
+        content: n.content,
+        role: n.role && n.role !== "all" ? (n.role as any) : undefined,
+        tags: [...(n.tags || []), "我的笔记"],
+      } as LearningItem,
+      catLabel: "我的笔记",
+      subLabel: "",
+    }));
+    return [...allItems, ...noteItems];
+  }, [allItems, noteRefreshKey]);
 
   const filteredItems = useMemo(() => {
     // Content filter: flatten from category
@@ -76,7 +99,7 @@ export default function LearningCenterClient() {
     }
 
     return source;
-  }, [allItems, contentFilter, positionFilter, recruitFilter]);
+  }, [allItemsWithNotes, contentFilter, positionFilter, recruitFilter]);
 
   const favoriteItems = useMemo(() => {
     if (contentFilter !== "records") return null;
@@ -117,6 +140,25 @@ export default function LearningCenterClient() {
     });
   };
 
+  const handleCreateNote = () => {
+    if (!noteForm.title.trim() || !noteForm.content.trim()) return;
+    saveUserNote({
+      title: noteForm.title.trim(),
+      content: noteForm.content.trim(),
+      role: noteForm.role === "all" ? undefined : noteForm.role,
+      tags: noteForm.tags,
+      category: undefined,
+    });
+    setNoteForm({ title: "", content: "", role: "all", tags: [] });
+    setShowNoteModal(false);
+    setNoteRefreshKey((k) => k + 1);
+  };
+
+  const handleDeleteNote = (id: string) => {
+    deleteUserNote(id);
+    setNoteRefreshKey((k) => k + 1);
+  };
+
   const handleToggleFav = (item: LearningItem, catLabel: string, subLabel: string) => {
     const newFavs = toggleFavorite({
       itemId: item.id,
@@ -154,6 +196,104 @@ export default function LearningCenterClient() {
     </button>
   );
 
+  // Modal: create note
+  const NoteModal = showNoteModal ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => setShowNoteModal(false)}>
+      <div className="w-full max-w-lg rounded-[24px] border border-white/40 bg-white p-6 shadow-xl backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">添加学习笔记</h2>
+        <p className="mb-5 text-xs text-slate-400">记录你的面试练习、重点整理或个性化答题思路</p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">标题 *</label>
+            <input
+              type="text" value={noteForm.title}
+              onChange={(e) => setNoteForm((p) => ({ ...p, title: e.target.value }))}
+              placeholder="给笔记起个标题"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">内容 *</label>
+            <textarea
+              value={noteForm.content}
+              onChange={(e) => setNoteForm((p) => ({ ...p, content: e.target.value }))}
+              rows={8}
+              placeholder="写下你的笔记内容……"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300 resize-y"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">岗位标签（可选，用于筛选）</label>
+            <select
+              value={noteForm.role}
+              onChange={(e) => setNoteForm((p) => ({ ...p, role: e.target.value }))}
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300"
+            >
+              <option value="all">全部岗位</option>
+              <option value="pilot">飞行员</option>
+              <option value="dispatcher">签派员</option>
+              <option value="atc">空管员</option>
+              <option value="maintenance">机务维修</option>
+              <option value="avionics">航电工程师</option>
+              <option value="cabin">空乘</option>
+              <option value="airport-ops">机场运行</option>
+              <option value="cabin-safety">客舱安全员</option>
+              <option value="terminal-service">航站楼服务</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">招聘方式（可选）</label>
+            <div className="flex gap-2">
+              {["校招", "社招"].map((t) => (
+                <button
+                  key={t} type="button"
+                  onClick={() =>
+                    setNoteForm((p) => ({
+                      ...p,
+                      tags: p.tags.includes(t)
+                        ? p.tags.filter((x) => x !== t)
+                        : [...p.tags, t],
+                    }))
+                  }
+                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                    noteForm.tags.includes(t)
+                      ? t === "校招"
+                        ? "bg-violet-100 text-violet-700 shadow-sm"
+                        : "bg-amber-100 text-amber-700 shadow-sm"
+                      : "bg-white/60 text-slate-500 hover:bg-white/80"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            onClick={() => { setShowNoteModal(false); setNoteForm({ title: "", content: "", role: "all", tags: [] }); }}
+            className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleCreateNote}
+            className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600"
+          >
+            保存笔记
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="mx-auto max-w-6xl">
       {/* ====== Row 1: 招聘方式 ====== */}
@@ -174,7 +314,105 @@ export default function LearningCenterClient() {
         <FilterBtn active={positionFilter === "all"} onClick={() => setPositionFilter("all")}>全部</FilterBtn>
         {Object.entries(positionLabels).map(([key, p]) => {
           const Icon = p.icon;
-          return (
+          // Modal: create note
+  const NoteModal = showNoteModal ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => setShowNoteModal(false)}>
+      <div className="w-full max-w-lg rounded-[24px] border border-white/40 bg-white p-6 shadow-xl backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">添加学习笔记</h2>
+        <p className="mb-5 text-xs text-slate-400">记录你的面试练习、重点整理或个性化答题思路</p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">标题 *</label>
+            <input
+              type="text" value={noteForm.title}
+              onChange={(e) => setNoteForm((p) => ({ ...p, title: e.target.value }))}
+              placeholder="给笔记起个标题"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">内容 *</label>
+            <textarea
+              value={noteForm.content}
+              onChange={(e) => setNoteForm((p) => ({ ...p, content: e.target.value }))}
+              rows={8}
+              placeholder="写下你的笔记内容……"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300 resize-y"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">岗位标签（可选，用于筛选）</label>
+            <select
+              value={noteForm.role}
+              onChange={(e) => setNoteForm((p) => ({ ...p, role: e.target.value }))}
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300"
+            >
+              <option value="all">全部岗位</option>
+              <option value="pilot">飞行员</option>
+              <option value="dispatcher">签派员</option>
+              <option value="atc">空管员</option>
+              <option value="maintenance">机务维修</option>
+              <option value="avionics">航电工程师</option>
+              <option value="cabin">空乘</option>
+              <option value="airport-ops">机场运行</option>
+              <option value="cabin-safety">客舱安全员</option>
+              <option value="terminal-service">航站楼服务</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">招聘方式（可选）</label>
+            <div className="flex gap-2">
+              {["校招", "社招"].map((t) => (
+                <button
+                  key={t} type="button"
+                  onClick={() =>
+                    setNoteForm((p) => ({
+                      ...p,
+                      tags: p.tags.includes(t)
+                        ? p.tags.filter((x) => x !== t)
+                        : [...p.tags, t],
+                    }))
+                  }
+                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                    noteForm.tags.includes(t)
+                      ? t === "校招"
+                        ? "bg-violet-100 text-violet-700 shadow-sm"
+                        : "bg-amber-100 text-amber-700 shadow-sm"
+                      : "bg-white/60 text-slate-500 hover:bg-white/80"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            onClick={() => { setShowNoteModal(false); setNoteForm({ title: "", content: "", role: "all", tags: [] }); }}
+            className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleCreateNote}
+            className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600"
+          >
+            保存笔记
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return (
             <FilterBtn key={key} active={positionFilter === key} onClick={() => setPositionFilter(key)}>
               <Icon className="-ml-0.5 mr-0.5 inline h-3 w-3" />{p.label}
             </FilterBtn>
@@ -211,7 +449,10 @@ export default function LearningCenterClient() {
       ) : (
         <div className="space-y-3">
           <p className="text-xs text-slate-500">
-            共 {displayItems.length} 项
+            {(() => {
+              const noteCount = userNotes.length;
+              return `共 ${displayItems.length} 项${noteCount > 0 ? `（笔记 ${noteCount}）` : ""}`;
+            })()}
             {filterLabels.length > 0 && <span>（{filterLabels.join(" · ")})</span>}
           </p>
 
@@ -223,7 +464,105 @@ export default function LearningCenterClient() {
             const tags = item.tags || [];
             const hasRecruitTag = tags.includes("校招") || tags.includes("社招");
 
-            return (
+            // Modal: create note
+  const NoteModal = showNoteModal ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => setShowNoteModal(false)}>
+      <div className="w-full max-w-lg rounded-[24px] border border-white/40 bg-white p-6 shadow-xl backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-1 text-lg font-semibold text-slate-900">添加学习笔记</h2>
+        <p className="mb-5 text-xs text-slate-400">记录你的面试练习、重点整理或个性化答题思路</p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">标题 *</label>
+            <input
+              type="text" value={noteForm.title}
+              onChange={(e) => setNoteForm((p) => ({ ...p, title: e.target.value }))}
+              placeholder="给笔记起个标题"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">内容 *</label>
+            <textarea
+              value={noteForm.content}
+              onChange={(e) => setNoteForm((p) => ({ ...p, content: e.target.value }))}
+              rows={8}
+              placeholder="写下你的笔记内容……"
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300 resize-y"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">岗位标签（可选，用于筛选）</label>
+            <select
+              value={noteForm.role}
+              onChange={(e) => setNoteForm((p) => ({ ...p, role: e.target.value }))}
+              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300"
+            >
+              <option value="all">全部岗位</option>
+              <option value="pilot">飞行员</option>
+              <option value="dispatcher">签派员</option>
+              <option value="atc">空管员</option>
+              <option value="maintenance">机务维修</option>
+              <option value="avionics">航电工程师</option>
+              <option value="cabin">空乘</option>
+              <option value="airport-ops">机场运行</option>
+              <option value="cabin-safety">客舱安全员</option>
+              <option value="terminal-service">航站楼服务</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500">招聘方式（可选）</label>
+            <div className="flex gap-2">
+              {["校招", "社招"].map((t) => (
+                <button
+                  key={t} type="button"
+                  onClick={() =>
+                    setNoteForm((p) => ({
+                      ...p,
+                      tags: p.tags.includes(t)
+                        ? p.tags.filter((x) => x !== t)
+                        : [...p.tags, t],
+                    }))
+                  }
+                  className={`rounded-full px-4 py-1.5 text-xs font-medium transition ${
+                    noteForm.tags.includes(t)
+                      ? t === "校招"
+                        ? "bg-violet-100 text-violet-700 shadow-sm"
+                        : "bg-amber-100 text-amber-700 shadow-sm"
+                      : "bg-white/60 text-slate-500 hover:bg-white/80"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+          <button
+            type="button"
+            onClick={() => { setShowNoteModal(false); setNoteForm({ title: "", content: "", role: "all", tags: [] }); }}
+            className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80"
+          >
+            取消
+          </button>
+          <button
+            type="button"
+            onClick={handleCreateNote}
+            className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600"
+          >
+            保存笔记
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  return (
               <div
                 key={item.id}
                 className="rounded-[20px] border border-white/40 bg-white/70 shadow-[0_4px_20px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
@@ -283,6 +622,18 @@ export default function LearningCenterClient() {
                     <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-7 text-slate-700 [&_strong]:text-slate-900 [&_strong]:font-semibold">
                       {item.content}
                     </div>
+                    {item.id && item.id.startsWith("user-") && (
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteNote(item.id); }}
+                          className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-[10px] text-rose-500 transition hover:bg-rose-100"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          删除笔记
+                        </button>
+                      </div>
+                    )}
                     {tags.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1.5">
                         {tags.map((tag: string) => (
@@ -297,6 +648,17 @@ export default function LearningCenterClient() {
           })}
         </div>
       )}
+          {NoteModal}
+
+      {/* 添加笔记浮动按钮 */}
+      <button
+        type="button"
+        onClick={() => setShowNoteModal(true)}
+        className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-white shadow-lg transition hover:bg-sky-600 active:scale-95"
+        title="添加学习笔记"
+      >
+        <Plus className="h-5 w-5" />
+      </button>
     </div>
   );
 }
