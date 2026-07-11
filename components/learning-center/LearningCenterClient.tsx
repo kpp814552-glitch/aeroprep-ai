@@ -291,7 +291,7 @@ export default function LearningCenterClient() {
             <button type="button" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}
               className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
             <button type="button" onClick={handleUpload}
-              className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600">提交素材</button>
+              className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600">上传文本</button>
           </div>
         </div>
       </div>
@@ -389,7 +389,7 @@ export default function LearningCenterClient() {
             <button type="button" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}
               className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
             <button type="button" onClick={handleUpload}
-              className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600">提交素材</button>
+              className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600">上传文本</button>
           </div>
         </div>
       </div>
@@ -516,7 +516,7 @@ export default function LearningCenterClient() {
             <button type="button" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}
               className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
             <button type="button" onClick={handleUpload}
-              className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600">提交素材</button>
+              className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600">上传文本</button>
           </div>
         </div>
       </div>
