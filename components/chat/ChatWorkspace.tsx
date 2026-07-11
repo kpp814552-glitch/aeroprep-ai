@@ -168,14 +168,19 @@ export default function ChatWorkspace() {
 5. 禁止输出鸡汤、过度美化民航，需客观提及倒班、高压、低容错等行业现实
 6. 禁止编造虚假案例`;
 
-    const userPrompt = `内容类型：${contentType}
+    const userPrompt = mode === "简历专项优化"
+      ? `目标岗位：${positionLabel}
+招聘方式：${recruitType}
+
+请按照简历优化规则，优化以下简历：
+${draft.trim()}`
+      : `内容类型：${contentType}
 目标岗位：${positionLabel}
 招聘方式：${recruitType}
 
-我的原始内容：
-${draft.trim()}
+请按照优化规则帮我优化以上内容：
 
-请按照优化规则帮我优化以上内容。`;
+${draft.trim()}`;
 
     try {
       const response = await fetch("/api/chat", {
