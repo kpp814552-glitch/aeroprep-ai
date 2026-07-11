@@ -27,7 +27,7 @@ const categoryButtons = learningCategories
   .filter((c) => c.id !== "records")
   .map((c) => ({ id: c.id, label: c.label }));
 categoryButtons.push({ id: "records", label: "⭐ 收藏" });
-categoryButtons.push({ id: "my-uploads", label: "📤 我的上传" });
+
 
 export default function LearningCenterClient() {
   const [contentFilter, setContentFilter] = useState("all");
@@ -41,6 +41,7 @@ export default function LearningCenterClient() {
   const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
   const [userMaterials, setUserMaterials] = useState<UserMaterial[]>([]);
   const [umKey, setUmKey] = useState(0);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     setFavorites(getFavorites().map((f) => f.itemId));
@@ -143,6 +144,18 @@ export default function LearningCenterClient() {
 
     return source;
   }, [allItemsWithUploads, contentFilter, positionFilter, recruitFilter]);
+
+  // Apply search filter
+  const searchedItems = useMemo(() => {
+    if (!search.trim()) return filteredItems;
+    const q = search.toLowerCase();
+    return filteredItems.filter(({ item, catLabel }) =>
+      item.title.toLowerCase().includes(q) ||
+      item.content.toLowerCase().includes(q) ||
+      (item.tags && item.tags.some((t) => t.toLowerCase().includes(q))) ||
+      catLabel.toLowerCase().includes(q)
+    );
+  }, [filteredItems, search]);
 
   const favoriteItems = useMemo(() => {
     if (contentFilter !== "records") return null;
@@ -300,6 +313,25 @@ export default function LearningCenterClient() {
 
   return (
     <div className="mx-auto max-w-6xl">
+      {/* ====== Search Bar ====== */}
+      <div className="relative mb-4">
+        <svg className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.34-4.34"/></svg>
+        <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
+          placeholder="搜索面试题、技巧、知识点..."
+          className="w-full rounded-[20px] border border-white/40 bg-white/70 px-4 py-3 pl-11 text-sm text-slate-800 outline-none backdrop-blur-md placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-200/50" />
+      </div>
+
+      {/* 我的上传快捷入口 */}
+      <button type="button" onClick={() => { setContentFilter("my-uploads"); setSearch(""); }}
+        className={`mb-4 inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-medium transition ${
+          contentFilter === "my-uploads"
+            ? "bg-sky-100 text-sky-700 shadow-sm"
+            : "bg-white/70 text-slate-500 hover:bg-white/90 border border-white/40"
+        }`}>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+        我的上传
+      </button>
+
       {/* ====== Row 1: 招聘方式 ====== */}
       <div className="mb-2.5 flex flex-wrap items-center gap-2 rounded-[20px] border border-white/40 bg-white/70 px-4 py-2.5 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
         <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">招聘方式</span>
@@ -416,10 +448,10 @@ export default function LearningCenterClient() {
       </div>
 
       {/* ====== Content ====== */}
-      {displayItems.length === 0 ? (
+      {searchedItems.length === 0 ? (
         <div className="rounded-[20px] border border-white/40 bg-white/60 px-6 py-10 text-center">
           <p className="text-sm text-slate-500">
-            当前筛选条件下没有内容
+            {search.trim() ? "没有找到匹配的内容，试试其他关键词" : "当前筛选条件下没有内容"}
             {filterLabels.length > 0 && <span>（{filterLabels.join(" · ")})</span>}
           </p>
           <button
@@ -433,11 +465,11 @@ export default function LearningCenterClient() {
       ) : (
         <div className="space-y-3">
           <p className="text-xs text-slate-500">
-            共 {displayItems.length} 项
+            共 {searchedItems.length} 项
             {filterLabels.length > 0 && <span>（{filterLabels.join(" · ")})</span>}
           </p>
 
-          {displayItems.map(({ item, catLabel, subLabel }) => {
+          {searchedItems.map(({ item, catLabel, subLabel }) => {
             const isExpanded = expandedItems[item.id] || false;
             const isFav = favorites.includes(item.id);
             const roleInfo = item.role ? positionLabels[item.role] : null;
