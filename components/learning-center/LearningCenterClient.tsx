@@ -286,10 +286,7 @@ export default function LearningCenterClient() {
         </div>
 
         <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-          <button type="button" onClick={() => { /* AI optimize placeholder */ }}
-            className="rounded-full bg-violet-50 px-4 py-2 text-xs font-medium text-violet-600 transition hover:bg-violet-100">
-            🤖 AI 深度优化
-          </button>
+
           <div className="flex gap-2">
             <button type="button" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}
               className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
@@ -387,10 +384,7 @@ export default function LearningCenterClient() {
         </div>
 
         <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-          <button type="button" onClick={() => { /* AI optimize placeholder */ }}
-            className="rounded-full bg-violet-50 px-4 py-2 text-xs font-medium text-violet-600 transition hover:bg-violet-100">
-            🤖 AI 深度优化
-          </button>
+
           <div className="flex gap-2">
             <button type="button" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}
               className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
@@ -517,10 +511,7 @@ export default function LearningCenterClient() {
         </div>
 
         <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-          <button type="button" onClick={() => { /* AI optimize placeholder */ }}
-            className="rounded-full bg-violet-50 px-4 py-2 text-xs font-medium text-violet-600 transition hover:bg-violet-100">
-            🤖 AI 深度优化
-          </button>
+
           <div className="flex gap-2">
             <button type="button" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}
               className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
