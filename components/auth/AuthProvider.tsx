@@ -33,26 +33,36 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [user, fetchProfile]);
 
   useEffect(() => {
+    let cancelled = false;
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setUser(session.user);
-        await fetchProfile(session.user.id);
+      // Safety timeout: force loading false after 8 seconds
+      const safetyTimeout = setTimeout(() => { if (!cancelled) setLoading(false); }, 8000);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && !cancelled) {
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+        }
+      } catch (err) {
+        console.error('[Auth] init error:', err);
+      } finally {
+        clearTimeout(safetyTimeout);
+        if (!cancelled) setLoading(false);
       }
-      setLoading(false);
     };
 
     init();
+    return () => { cancelled = true; };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        setUser(session?.user ?? null);
+          setUser(session?.user ?? null);
         if (session?.user) {
-          await fetchProfile(session.user.id);
-     } else {
-       setProfile(null);
-        setIsAdmin(false);
-     }
+          try { await fetchProfile(session.user.id); } catch (e) { console.error('[Auth] onAuthStateChange fetchProfile error:', e); }
+        } else {
+          setProfile(null);
+          setIsAdmin(false);
+        }
       }
     );
 
@@ -60,27 +70,37 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [supabase, fetchProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error?.message ? translateAuthError(error.message) : null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error: error?.message ? translateAuthError(error.message) : null };
+    } catch (err) {
+      console.error('[Auth] signIn error:', err);
+      return { error: '网络连接异常，请检查网络后重试。' };
+    }
   }, [supabase]);
 
   const signUp = useCallback(async (email: string, password: string, username: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { username },
-      },
-    });
-    if (!error) {
-      // After signup, the trigger creates the profile.
-      // Give it a moment, then fetch it.
-      const { data: { user: newUser } } = await supabase.auth.getUser();
-      if (newUser) {
-        await fetchProfile(newUser.id);
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username },
+        },
+      });
+      if (!error) {
+        // After signup, the trigger creates the profile.
+        // Give it a moment, then fetch it.
+        const { data: { user: newUser } } = await supabase.auth.getUser();
+        if (newUser) {
+          await fetchProfile(newUser.id);
+        }
       }
+      return { error: error?.message ? translateAuthError(error.message) : null };
+    } catch (err) {
+      console.error('[Auth] signUp error:', err);
+      return { error: '注册服务暂时不可用，请稍后重试。' };
     }
-    return { error: error?.message ? translateAuthError(error.message) : null };
   }, [supabase, fetchProfile]);
 
   const signOut = useCallback(async () => {
