@@ -131,8 +131,7 @@ export default function LearningCenterClient() {
   const displayItems = contentFilter === "records" ? (favoriteItems || []) : filteredItems;
 
   const isFilterActive = contentFilter !== "all" || positionFilter !== "all" || recruitFilter !== "all";
-  const showEmptyDefault = filteredItems.length === allItems.length && contentFilter === "all" && positionFilter === "all" && recruitFilter === "all";
-
+  
   // Active filter labels for display
   const filterLabels: string[] = [];
   if (recruitFilter !== "all") filterLabels.push(recruitFilter === "campus" ? "校招" : "社招");
@@ -195,19 +194,7 @@ export default function LearningCenterClient() {
       </div>
 
       {/* ====== Content ====== */}
-      {showEmptyDefault ? (
-        <div className="rounded-[20px] border border-white/40 bg-white/60 px-6 py-16 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-sky-50">
-            <Bookmark className="h-7 w-7 text-sky-400" />
-          </div>
-          <p className="text-base font-medium text-slate-700">选择筛选条件开始学习</p>
-          <p className="mt-2 text-sm text-slate-400 max-w-md mx-auto">
-            在上方选择招聘方式、岗位或内容分类，系统将展示匹配的学习资料。<br />
-            已收录 <span className="font-semibold text-slate-600">{allItems.length}</span> 项内容，
-            覆盖 {learningCategories.length - 1} 大模块
-          </p>
-        </div>
-      ) : displayItems.length === 0 ? (
+      {displayItems.length === 0 ? (
         <div className="rounded-[20px] border border-white/40 bg-white/60 px-6 py-10 text-center">
           <p className="text-sm text-slate-500">
             当前筛选条件下没有内容
