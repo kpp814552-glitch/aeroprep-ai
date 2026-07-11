@@ -219,6 +219,7 @@ export default function InterviewSessionPage() {
   const startAtRef = useRef<number | null>(null);
   const elapsedTimerRef = useRef<number | null>(null);
   const answerTimerRef = useRef<number | null>(null);
+  const endAnswerRef = useRef<() => void>(() => {});
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const finalTranscriptRef = useRef("");
   const interimTranscriptRef = useRef("");
@@ -521,17 +522,8 @@ export default function InterviewSessionPage() {
         interviewFinishedRef.current = true;
         successPathRef.current = false;
         setIsGeneratingReport(false);
-        pendingSaveDataRef.current = {
-          version: 1,
-          sessionId: fallbackRecord.sessionId,
-          timestamp: new Date().toISOString(),
-          role, company, mode, persona,
-          turns: finalTurns,
-          elapsedSeconds: totalElapsedSeconds,
-          report: fallbackReport,
-        };
-        setStatusText('面试数据未完成上传');
-        setShowSaveDialog(true);
+        setPhase('completed');
+        setStatusText('面试已完成');
       }
     },
     [
@@ -825,6 +817,7 @@ export default function InterviewSessionPage() {
 
       if (remaining <= 0) {
         clearAnswerTimer();
+        endAnswerRef.current();
       }
     }, 1000);
   }, [clearAnswerTimer]);
@@ -1087,6 +1080,7 @@ export default function InterviewSessionPage() {
     turns,
     voiceSession,
   ]);
+  endAnswerRef.current = handleEndAnswer;
 
   // ── Handle autoplay-blocked resume ──
   const handleResumeAudioPlayback = useCallback(async () => {
