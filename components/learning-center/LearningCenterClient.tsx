@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Bookmark, BookmarkCheck, Clock, ChevronDown, ChevronRight, ChevronLeft, Loader2 } from "lucide-react";
+import { Search, Bookmark, BookmarkCheck, Clock, ChevronDown, ChevronRight, ChevronLeft } from "lucide-react";
 import { learningCategories } from "@/lib/learning-center/data";
 import { getFavorites, toggleFavorite, addHistory, getHistory } from "@/lib/learning-center/storage";
 import type { LearningItem, LearningCategory } from "@/lib/learning-center/types";
