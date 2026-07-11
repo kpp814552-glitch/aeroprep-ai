@@ -23,7 +23,7 @@ const modules = [
   },
   {
     href: "/chat",
-    title: "AI问答",
+    title: "AI优化",
     description: "围绕民航专业知识、岗位认知与复习难点随时发问。",
     icon: MessageSquareText,
     tone: "from-cyan-200/80 to-white/10",
@@ -65,7 +65,7 @@ export default function HomePage() {
                   variant="secondary"
                   className="px-6 py-3.5 text-base"
                 >
-                  进入AI问答
+                  进入AI优化
                 </GlassLinkButton>
               </div>
 
@@ -120,7 +120,7 @@ export default function HomePage() {
                       Session
                     </p>
                     <p className="mt-3 text-2xl font-semibold text-slate-950">{moduleCount}模块</p>
-                    <p className="mt-2 text-sm text-slate-600">AI面试与AI问答</p>
+                    <p className="mt-2 text-sm text-slate-600">AI面试与AI优化</p>
                   </div>
                 </div>
               </div>

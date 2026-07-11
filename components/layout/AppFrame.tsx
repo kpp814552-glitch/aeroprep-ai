@@ -54,7 +54,7 @@ export default function AppFrame({
             {[
               { href: "/", label: "首页" },
               { href: "/interview", label: "AI面试" },
-              { href: "/chat", label: "AI问答" },
+              { href: "/chat", label: "AI优化" },
               { href: "/learning", label: "资料中心" },
               { href: "/profile", label: "成长中心" },
             ].map((item) => (
