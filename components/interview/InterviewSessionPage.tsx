@@ -1203,7 +1203,7 @@ const resumeQualityRef = useRef<any>(
 
   // ── Auto-navigate to report after completion ──
   useEffect(() => {
-    if (phase === 'completed' && completedSessionIdRef.current && !isGeneratingReport && successPathRef.current) {
+    if (phase === 'completed' && completedSessionIdRef.current && !isGeneratingReport) {
       const sid = completedSessionIdRef.current;
       const timer = setTimeout(() => {
         router.push('/interview/report?sessionId=' + encodeURIComponent(sid));
