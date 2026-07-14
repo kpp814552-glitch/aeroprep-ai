@@ -213,7 +213,7 @@ export default function InterviewSessionPage() {
   const { user, loading } = useAuth();
   const sessionIdRef = useRef(createSessionId());
   const resumeTextRef = useRef(
-  sessionStorage.getItem("aeroprep_resume_text") || ""
+  typeof window !== "undefined" ? sessionStorage.getItem("aeroprep_resume_text") || "" : ""
 );
 const resumeQualityRef = useRef<any>(
   typeof window !== "undefined"
