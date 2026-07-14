@@ -449,10 +449,10 @@ const resumeQualityRef = useRef<any>(
           report: payload.report,
         });
 
-        console.log('[Report Save] sessionId=' + record.sessionId + ' score=' + payload.report?.totalScore);
+        // console.log('[Report Save] sessionId=' + record.sessionId + ' score=' + payload.report?.totalScore);
         saveInterviewSession(record);
         saveInterviewCompletionGrowth(record);
-        console.log('[Interview Finish] turns=' + finalTurns.length + ' elapsed=' + totalElapsedSeconds + 's score=' + payload.report?.totalScore);
+        // console.log('[Interview Finish] turns=' + finalTurns.length + ' elapsed=' + totalElapsedSeconds + 's score=' + payload.report?.totalScore);
         completedSessionIdRef.current = record.sessionId;
         completedScoreRef.current = payload.report?.totalScore ?? 0;
         completedTurnsRef.current = finalTurns.length;
@@ -518,7 +518,7 @@ const resumeQualityRef = useRef<any>(
           createdAt: new Date().toISOString(),
           report: fallbackReport,
         });
-        console.log('[Report Save] Saving fallback record (no report)', fallbackRecord.sessionId);
+        // console.log('[Report Save] Saving fallback record (no report)', fallbackRecord.sessionId);
         saveInterviewSession(fallbackRecord);
         saveInterviewCompletionGrowth(fallbackRecord);
         completedSessionIdRef.current = fallbackRecord.sessionId;
@@ -718,10 +718,10 @@ const resumeQualityRef = useRef<any>(
         const text = result[0]?.transcript ?? "";
 
         if (result.isFinal) {
-          console.log('[ASR Final] text=' + text + ' len=' + text.length);
+          // console.log('[ASR Final] text=' + text + ' len=' + text.length);
           appendedFinal += text;
         } else {
-          console.log('[ASR Partial] interim len=' + text.length);
+          // console.log('[ASR Partial] interim len=' + text.length);
           nextInterim += text;
         }
       }
@@ -977,7 +977,7 @@ const resumeQualityRef = useRef<any>(
   const handleEndAnswer = useCallback(async () => {
     if (phase !== 'listening' || isGeneratingReport) return;
     if (interviewFinishedRef.current) {
-      console.log('[Interview] interviewFinishedRef=true, rejecting answer');
+      // console.log('[Interview] interviewFinishedRef=true, rejecting answer');
       return;
     }
 
@@ -1003,7 +1003,7 @@ const resumeQualityRef = useRef<any>(
       ? transcriptAfterStop
       : transcriptSnapshot;
     const answerText = (completeTranscript || bestTranscript || interimTranscriptRef.current).trim();
-    console.log('[ASR] Final transcript length=' + answerText.length + ' snapshot=' + transcriptSnapshot.length);
+    // console.log('[ASR] Final transcript length=' + answerText.length + ' snapshot=' + transcriptSnapshot.length);
     const answerDurationSeconds = turnStartedAtRef.current
       ? Math.max(1, Math.round((Date.now() - turnStartedAtRef.current) / 1000))
       : 0;

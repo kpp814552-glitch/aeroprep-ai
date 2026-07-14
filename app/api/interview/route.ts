@@ -268,7 +268,7 @@ function parseJsonResponse(text: string) {
 }
 
 async function callDeepSeek(apiKey: string, prompt: string) {
-  console.log('[LLM Request] action=' + (prompt.includes('"action":"report"') ? 'report' : prompt.includes('"action":"next"') ? 'next' : 'start') + ' prompt_length=' + prompt.length);
+  // // console.log('[LLM Request] action=' + (prompt.includes('"action":"report"') ? 'report' : prompt.includes('"action":"next"') ? 'next' : 'start') + ' prompt_length=' + prompt.length);
   const startTime = Date.now();
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30000);
@@ -327,7 +327,7 @@ async function callDeepSeek(apiKey: string, prompt: string) {
     data?.choices?.[0]?.text ||
     "";
   const elapsed = Date.now() - startTime;
-  console.log('[LLM Response] elapsed=' + elapsed + 'ms content_length=' + content.length);
+  // // console.log('[LLM Response] elapsed=' + elapsed + 'ms content_length=' + content.length);
 
   return parseJsonResponse(content);
 }
@@ -936,7 +936,7 @@ export async function POST(request: Request) {
   }
 
   if (body.action === "report") {
-    console.log('[Report Generate] turns=' + turns.length + ' role=' + body.role);
+    // // console.log('[Report Generate] turns=' + turns.length + ' role=' + body.role);
     try {
       const fallbackReport = analyzeInterviewReport({
       role: body.role,

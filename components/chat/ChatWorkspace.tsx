@@ -72,26 +72,28 @@ export default function ChatWorkspace() {
     if (!loading) return;
     setAnalysisProgress(0);
     setAnalysisStep(0);
-    const interval = setInterval(() => {
+    const progressInt = setInterval(() => {
       setAnalysisProgress((p) => {
-        const next = p + Math.random() * 18 + 5;
-        if (next >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return Math.min(next, 100);
+        const next = p + Math.random() * 15 + 3;
+        return Math.min(next, 92);
       });
+    }, 600);
+    const stepInt = setInterval(() => {
       setAnalysisStep((s) => Math.min(s + 1, analysisSteps.length - 1));
     }, 800);
-    return () => clearInterval(interval);
+    return () => { clearInterval(progressInt); clearInterval(stepInt); };
+    return () => { clearInterval(progressInt); clearInterval(stepInt); };
   }, [loading]);
 
   // ---- Auto advance after analysis ----
   useEffect(() => {
-    if (analysisProgress >= 100 && result) {
-      setStage(3);
+    if (result && !loading) {
+      setAnalysisProgress(100);
+      setAnalysisStep(analysisSteps.length - 1);
+      const t = setTimeout(() => setStage(3), 600);
+      return () => clearTimeout(t);
     }
-  }, [analysisProgress, result]);
+  }, [result, loading]);
 
   const positionLabel = positionOptions.find((p) => p.value === position)?.label || position;
 

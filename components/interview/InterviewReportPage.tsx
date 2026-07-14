@@ -155,7 +155,7 @@ export default function InterviewReportPage() {
   const radarItems = useMemo(() => {
     const report = sessionRecord?.report;
     if (!report) return [];
-    console.log('[Report Render] sessionId=' + (sessionRecord?.sessionId || 'none') + ' scores=', report.scores);
+    // console.log('[Report Render] sessionId=' + (sessionRecord?.sessionId || 'none') + ' scores=', report.scores);
 
     return [
       { label: "表达能力", value: report.scores.expressionAbility },
