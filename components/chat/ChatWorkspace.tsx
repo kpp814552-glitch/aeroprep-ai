@@ -232,7 +232,7 @@ ${draft.trim()}`;
 
           {/* ====== Mode Selector ====== */}
           <div className="mb-6 flex gap-1.5 rounded-[20px] border border-white/40 bg-white/70 p-1.5 shadow-[0_4px_20px_rgba(0,0,0,0.04)] backdrop-blur-xl">
-            <button type="button" onClick={() => setMode("面试内容优化")}
+            <button type="button" onClick={() => { setDraft(""); setResult(""); setMode("面试内容优化"); }}
               className={`flex-1 rounded-2xl px-5 py-2.5 text-sm font-medium transition-all ${
                 mode === "面试内容优化"
                   ? "bg-gradient-to-r from-sky-500 to-violet-500 text-white shadow-sm"
@@ -240,7 +240,7 @@ ${draft.trim()}`;
               }`}>
               🎯 面试内容优化
             </button>
-            <button type="button" onClick={() => setMode("简历专项优化")}
+            <button type="button" onClick={() => { setDraft(""); setResult(""); setMode("简历专项优化"); }}
               className={`flex-1 rounded-2xl px-5 py-2.5 text-sm font-medium transition-all ${
                 mode === "简历专项优化"
                   ? "bg-gradient-to-r from-sky-500 to-violet-500 text-white shadow-sm"
