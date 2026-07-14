@@ -463,3 +463,79 @@ textarea {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ===== Premium Animation Keyframes ===== */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Glass card shimmer */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.glass-shimmer::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.35) 48%, rgba(255,255,255,0.5) 50%, rgba(255,255,255,0.35) 52%, transparent 60%);
+  background-size: 200% 100%;
+  animation: shimmer 10s ease-in-out infinite;
+  border-radius: inherit;
+}
+
+/* Floating gradient blobs */
+@keyframes blob1 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  25%      { transform: translate(60px,-40px) scale(1.12); }
+  50%      { transform: translate(-30px,50px) scale(0.92); }
+  75%      { transform: translate(40px,20px) scale(1.06); }
+}
+@keyframes blob2 {
+  0%,100% { transform: translate(0,0) scale(1) rotate(0deg); }
+  33%     { transform: translate(-50px,-30px) scale(1.15) rotate(8deg); }
+  66%     { transform: translate(30px,40px) scale(0.9) rotate(-5deg); }
+}
+@keyframes blob3 {
+  0%,100% { transform: translate(0,0) scale(1) rotate(0); }
+  20%     { transform: translate(40px,-20px) scale(1.08) rotate(3deg); }
+  40%     { transform: translate(-20px,30px) scale(0.95) rotate(-2deg); }
+  60%     { transform: translate(50px,10px) scale(1.05); }
+  80%     { transform: translate(-40px,-20px) scale(0.98); }
+}
+
+/* Waveform bars for AI interview demo */
+@keyframes waveBar {
+  0%,100% { transform: scaleY(0.3); }
+  50%      { transform: scaleY(1); }
+}
+.wave-bar:nth-child(1)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0s; }
+.wave-bar:nth-child(2)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0.08s; }
+.wave-bar:nth-child(3)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0.16s; }
+.wave-bar:nth-child(4)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0.24s; }
+.wave-bar:nth-child(5)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0.32s; }
+.wave-bar:nth-child(6)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0.4s; }
+.wave-bar:nth-child(7)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0.48s; }
+.wave-bar:nth-child(8)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0.56s; }
+
+/* Stagger entrance helper */
+.stagger-section > * {
+  opacity: 0; animation: fadeUp 0.7s cubic-bezier(0.25,0.1,0.25,1) forwards;
+}
+.stagger-section > *:nth-child(1) { animation-delay: 0.1s; }
+.stagger-section > *:nth-child(2) { animation-delay: 0.2s; }
+.stagger-section > *:nth-child(3) { animation-delay: 0.3s; }
+.stagger-section > *:nth-child(4) { animation-delay: 0.4s; }
+.stagger-section > *:nth-child(5) { animation-delay: 0.5s; }
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .glass-shimmer::after { animation: none; }
+  .stagger-section > * { animation: none; opacity: 1; }
+  [style*="animation"] { animation: none !important; }
+}
