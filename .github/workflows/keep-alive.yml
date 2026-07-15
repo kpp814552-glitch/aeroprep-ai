@@ -1,0 +1,10 @@
+name: Keep Alive
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -s --max-time 10 https://www.aeroprep.top -o /dev/null
+      - run: curl -s --max-time 10 https://aeroprepaiajay.vercel.app -o /dev/null
