@@ -4,27 +4,24 @@ import { useState, useEffect } from "react";
 import { GlassPanel } from "@/components/ui/glass";
 import { getPayments } from "@/lib/payment/payment-storage";
 import {
-  getAdminEmails, isAdminEmail, addAdminEmail, removeAdminEmail,
   getMemberRecords, addMemberDays, removeMemberRecord,
 } from "@/lib/admin/admin-storage";
 import { useAuth } from "@/hooks/useAuth";
-import { Crown, Search, Trash2, Plus, Clock, Mail, Shield } from "lucide-react";
+import { Crown, Search, Trash2, Plus, Clock } from "lucide-react";
 
-type TabType = "orders" | "members" | "admin";
+type TabType = "orders" | "members";
 
 export default function AdminOrders() {
   const { user } = useAuth();
   const [tab, setTab] = useState<TabType>("orders");
   const [orders, setOrders] = useState(getPayments());
   const [members, setMembers] = useState(getMemberRecords());
-  const [adminEmails, setAdminEmails] = useState(getAdminEmails());
   const [addEmail, setAddEmail] = useState("");
-  const [newEmail, setNewEmail] = useState("");
   const [addDays, setAddDays] = useState("");
   const [days, setDays] = useState(30);
   const [msg, setMsg] = useState("");
 
-  const refresh = () => { setOrders(getPayments()); setMembers(getMemberRecords()); setAdminEmails(getAdminEmails()); };
+  const refresh = () => { setOrders(getPayments()); setMembers(getMemberRecords()); };
   useEffect(() => { refresh(); }, []);
 
   const handleAddDays = () => {
@@ -41,24 +38,9 @@ export default function AdminOrders() {
     refresh();
   };
 
-  const handleAddAdmin = () => {
-    if (!newEmail || !newEmail.includes("@")) { setMsg("请输入有效邮箱"); return; }
-    addAdminEmail(newEmail);
-    setMsg(`✅ 已添加管理员: ${newEmail}`);
-    setNewEmail("");
-    refresh();
-  };
-
-  const handleRemoveAdmin = (email: string) => {
-    removeAdminEmail(email);
-    setMsg(`已移除管理员: ${email}`);
-    refresh();
-  };
-
   const tabs: { key: TabType; label: string }[] = [
     { key: "orders", label: "订单记录" },
     { key: "members", label: "会员管理" },
-    { key: "admin", label: "管理员设置" },
   ];
 
   return (
@@ -155,38 +137,6 @@ export default function AdminOrders() {
             )}
           </GlassPanel>
         </div>
-      )}
-
-      {/* Admin Settings Tab */}
-      {tab === "admin" && (
-        <GlassPanel className="px-5 py-4">
-          <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-800"><Shield className="h-4 w-4 text-sky-500" />管理员管理</p>
-          <div className="flex flex-wrap items-end gap-3 mb-6">
-            <div>
-              <p className="mb-1 text-[10px] text-slate-400">添加管理员邮箱</p>
-              <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="admin@example.com"
-                className="w-56 rounded-xl border border-slate-200/60 bg-white/80 px-3 py-2 text-xs text-slate-800 outline-none focus:border-sky-300" />
-            </div>
-            <button type="button" onClick={handleAddAdmin}
-              className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-400 to-violet-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:brightness-110">
-              <Plus className="h-3.5 w-3.5" />添加管理员
-            </button>
-          </div>
-
-          <p className="mb-3 text-xs font-medium text-slate-600">当前管理员列表</p>
-          {adminEmails.map((email) => (
-            <div key={email} className="flex items-center justify-between rounded-xl border border-white/40 bg-white/60 px-4 py-2.5 mb-2">
-              <div className="flex items-center gap-2.5">
-                <Shield className="h-4 w-4 text-sky-500" />
-                <span className="text-xs text-slate-700">{email}</span>
-                {email === user?.email?.toLowerCase() && <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] text-sky-600">当前账号</span>}
-              </div>
-              {adminEmails.length > 1 && (
-                <button type="button" onClick={() => handleRemoveAdmin(email)} className="rounded-full bg-rose-50 px-3 py-1 text-[10px] text-rose-500 hover:bg-rose-100"><Trash2 className="mr-0.5 inline h-3 w-3" />移除</button>
-              )}
-            </div>
-          ))}
-        </GlassPanel>
       )}
     </div>
   );

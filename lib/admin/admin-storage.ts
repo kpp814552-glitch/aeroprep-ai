@@ -1,33 +1,6 @@
 import type { PlanId } from "@/lib/member/member-storage";
 
-const ADMIN_KEY = "aeroprep_admin_emails";
 const MEMBER_RECORDS_KEY = "aeroprep_member_records";
-
-export function getAdminEmails(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(ADMIN_KEY);
-    return raw ? JSON.parse(raw) : ["admin@aeroprep.top"];
-  } catch { return ["admin@aeroprep.top"]; }
-}
-
-export function isAdminEmail(email?: string | null): boolean {
-  if (!email) return false;
-  return getAdminEmails().includes(email.toLowerCase());
-}
-
-export function addAdminEmail(email: string): void {
-  const list = getAdminEmails();
-  const e = email.toLowerCase().trim();
-  if (!e) return;
-  if (!list.includes(e)) localStorage.setItem(ADMIN_KEY, JSON.stringify([...list, e]));
-}
-
-export function removeAdminEmail(email: string): void {
-  const list = getAdminEmails().filter((x) => x !== email.toLowerCase().trim());
-  localStorage.setItem(ADMIN_KEY, JSON.stringify(list));
-}
-
 export interface AdminMemberRecord {
   email: string; plan: string; activatedAt: string; expiresAt: string; addedBy: string;
 }

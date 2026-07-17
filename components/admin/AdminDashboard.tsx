@@ -150,12 +150,12 @@ function TokenUsageSection({ data, title }: { data: TokenSummary; title: string 
 }
 
 export default function AdminDashboard() {
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const [stats, setStats] = useState<StatsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [activeTab, setActiveTab] = useState("控制台");
+
   const fetchStats = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -176,10 +176,50 @@ export default function AdminDashboard() {
 
   useEffect(() => { const t = setTimeout(() => fetchStats(), 0); return () => clearTimeout(t); }, [fetchStats]);
 
+  const [settingUp, setSettingUp] = useState(false);
+  const [setupMsg, setSetupMsg] = useState("");
+
   if (!user) {
     return (
       <div className="flex min-h-64 items-center justify-center">
-        <p className="text-sm text-slate-500">请先登录</p>
+        <p className="text-sm text-slate-500">请先登录后查看管理后台</p>
+      </div>
+    );
+  }
+
+  if (!isAdmin && !setupMsg) {
+    return (
+      <div className="mx-auto mt-16 max-w-md text-center">
+        <h2 className="text-xl font-semibold text-slate-900">管理员权限验证</h2>
+        <p className="mt-2 text-sm text-slate-500">
+          当前账号 {user.email} 尚未设置为管理员。
+        </p>
+        <button
+          type="button"
+          disabled={settingUp}
+          onClick={async () => {
+            setSettingUp(true);
+            setSetupMsg("");
+            try {
+              const res = await fetch("/api/admin/setup", { method: "POST" });
+              const data = await res.json();
+              if (res.ok) {
+                setSetupMsg("✅ 设置成功！请刷新页面。");
+                setTimeout(() => location.reload(), 2000);
+              } else {
+                setSetupMsg("❌ " + (data.error || "设置失败"));
+              }
+            } catch {
+              setSetupMsg("❌ 网络错误，请重试");
+            } finally {
+              setSettingUp(false);
+            }
+          }}
+          className="mt-6 rounded-full bg-gradient-to-r from-[#5BA8FF] to-[#8B5CF6] px-8 py-3 text-sm font-medium text-white shadow-lg transition hover:brightness-110 disabled:opacity-50"
+        >
+          {settingUp ? "设置中..." : "点击设置为管理员"}
+        </button>
+        {setupMsg && <p className="mt-4 text-sm">{setupMsg}</p>}
       </div>
     );
   }
@@ -216,6 +256,16 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      <div className="flex gap-1.5 rounded-2xl border border-white/40 bg-white/60 p-1.5 mb-4">
+        <button type="button" onClick={() => setActiveTab("控制台")}
+          className={"flex-1 rounded-xl px-4 py-2 text-xs font-medium transition " + (activeTab === "控制台" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>控制台</button>
+        <button type="button" onClick={() => setActiveTab("公告管理")}
+          className={"flex-1 rounded-xl px-4 py-2 text-xs font-medium transition " + (activeTab === "公告管理" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>公告管理</button>
+        <button type="button" onClick={() => setActiveTab("订单管理")}
+          className={"flex-1 rounded-xl px-4 py-2 text-xs font-medium transition " + (activeTab === "订单管理" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>订单管理</button>
+      </div>
+
+      {activeTab === "控制台" && (<>
       {/* 头部 */}
       <div className="flex items-center justify-between">
         <div>
@@ -301,8 +351,13 @@ export default function AdminDashboard() {
 
       
       {/* Announcements Tab */}
-      <AdminAnnouncements />
-          {activeTab === "订单管理" && <AdminOrders />}
+      </>)}
+      {activeTab === "公告管理" && (
+        <AdminAnnouncements />
+      )}
+      {activeTab === "订单管理" && (
+        <AdminOrders />
+      )}
     </div>
   );
 }
