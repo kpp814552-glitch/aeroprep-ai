@@ -196,6 +196,10 @@ ${draft.trim()}`;
   return (
     <AppFrame>
       <main className="relative z-10 min-h-screen px-5 pb-24 pt-12 md:px-8 md:pt-16">
+        <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+          <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-sky-100/20 blur-3xl" />
+          <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-violet-100/15 blur-3xl" />
+        </div>
         {/* Background blobs - change with mode */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
           <div className={`absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full blur-3xl transition-all duration-700 ${
@@ -240,7 +244,7 @@ ${draft.trim()}`;
                   key={card.id}
                   type="button"
                   onClick={() => switchType(card.id)}
-                  className={`group relative h-[170px] w-full overflow-hidden rounded-2xl border px-6 py-6 text-left transition-all duration-300 ${
+                  className={`group relative h-[170px] w-full overflow-hidden rounded-2xl border px-6 py-6 text-left transition-all duration-300 active:scale-[0.98] ${
                     isActive
                       ? "border-white/80 bg-white shadow-lg"
                       : isOtherActive

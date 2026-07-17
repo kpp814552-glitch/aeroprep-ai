@@ -226,7 +226,7 @@ export default function LearningCenterClient() {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition ${
+      className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition active:scale-[0.95] ${
         active ? "bg-sky-100 text-sky-700 shadow-sm" : "bg-white/60 text-slate-500 hover:bg-white/80"
       }`}
     >
@@ -565,7 +565,7 @@ export default function LearningCenterClient() {
                 <button
                   type="button"
                   onClick={() => toggleExpand(item, catLabel)}
-                  className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+                  className="glass-shimmer flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-900 truncate">{item.title}</p>
