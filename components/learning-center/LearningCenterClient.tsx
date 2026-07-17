@@ -449,17 +449,6 @@ export default function LearningCenterClient() {
         })}
       </div>
 
-      {/* ====== Row 3: 内容分类 ====== */}
-      <div className="mb-6 flex flex-wrap items-center gap-2 rounded-[20px] border border-white/40 bg-white/70 px-4 py-2.5 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
-        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">内容分类</span>
-        <FilterBtn active={contentFilter === "all"} onClick={() => setContentFilter("all")}>全部</FilterBtn>
-        {categoryButtons.map((c) => (
-          <FilterBtn key={c.id} active={contentFilter === c.id} onClick={() => setContentFilter(c.id)}>
-            {c.label}
-          </FilterBtn>
-        ))}
-      </div>
-
       {/* ====== Content ====== */}
       {searchedItems.length === 0 ? (
         <div className="rounded-[20px] border border-white/40 bg-white/60 px-6 py-10 text-center">
