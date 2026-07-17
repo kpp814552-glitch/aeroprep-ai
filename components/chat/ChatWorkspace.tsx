@@ -210,7 +210,7 @@ ${draft.trim()}`;
           }`} />
         </div>
 
-        <div className="relative mx-auto max-w-5xl">
+        <div className="relative mx-auto max-w-5xl stagger-section">
           {/* ====== Hero ====== */}
           <div className="mx-auto max-w-[560px] text-center" >
             <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500 shadow-sm backdrop-blur-md">

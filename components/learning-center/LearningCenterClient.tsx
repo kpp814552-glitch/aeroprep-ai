@@ -567,7 +567,7 @@ export default function LearningCenterClient() {
                   onClick={() => toggleExpand(item, catLabel)}
                   className="glass-shimmer flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
                 >
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 stagger-section">
                     <p className="text-sm font-medium text-slate-900 truncate">{item.title}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-2">
                       {roleInfo && (
