@@ -92,21 +92,17 @@ export default function ChatWorkspace() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showResult, setShowResult] = useState(false);
-  const [transitioning, setTransitioning] = useState(false);
+  
   const resultRef = useRef<HTMLDivElement>(null);
   const cfg = type ? modeConfig[type] : null;
 
   // Mode switch transition
   const switchType = (newType: "resume" | "interview") => {
     if (newType === type) return;
-    setTransitioning(true);
-    setTimeout(() => {
-      setType(newType);
-      setResult("");
-      setShowResult(false);
-      setError("");
-      setTimeout(() => setTransitioning(false), 50);
-    }, 200);
+    setType(newType);
+    setResult("");
+    setShowResult(false);
+    setError("");
   };
 
   useEffect(() => {
@@ -212,7 +208,7 @@ ${draft.trim()}`;
 
         <div className="relative mx-auto max-w-5xl">
           {/* ====== Hero ====== */}
-          <div className="mx-auto max-w-[560px] text-center" style={{ opacity: transitioning ? 0 : 1, transition: "opacity 0.3s ease" }}>
+          <div className="mx-auto max-w-[560px] text-center" >
             <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500 shadow-sm backdrop-blur-md">
               <WandSparkles className="h-3 w-3 text-violet-500" />AI 优化
             </div>
