@@ -18,6 +18,7 @@ import {
   type InterviewMode,
   type InterviewerPersona,
 } from "@/lib/site";
+import { getRemainingFreeInterviews, isMember } from "@/lib/member/member-storage";
 import { cn } from "@/lib/utils";
 
 type UploadState = {
@@ -367,6 +368,11 @@ export default function InterviewPrepPage() {
                   </div>
 
                   <div className="mt-8 flex flex-col gap-3">
+                  {!isMember() && (
+                    <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-2.5 text-center text-xs text-amber-700">
+                      免费用户剩余 <strong>{getRemainingFreeInterviews()}</strong> 次面试机会
+                    </div>
+                  )}
                     {user ? (
                       <button
                         type="button"
