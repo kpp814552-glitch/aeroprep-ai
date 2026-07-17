@@ -11,22 +11,52 @@ export default function MembershipPage() {
   const [selected, setSelected] = useState<PlanId | null>(null);
   const [showPayment, setShowPayment] = useState(false);
   const [paid, setPaid] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState("");
+  const [confirming, setConfirming] = useState(false);
+  const [payError, setPayError] = useState("");
   const router = useRouter();
 
-  const handlePay = () => {
+  const handlePay = async () => {
     if (!selected) return;
     setShowPayment(true);
     setPaid(false);
+    setPayError("");
+    setConfirming(false);
+    try {
+      const plan = PLANS.find((p) => p.id === selected);
+      const res = await fetch("/api/payment/create", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId: selected, amount: plan?.priceNum }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "创建订单失败");
+      setCurrentOrderId(data.orderId);
+    } catch (e) {
+      setPayError(e instanceof Error ? e.message : "创建订单失败");
+    }
   };
 
-  const handleConfirmPayment = () => {
-    if (!selected) return;
-    activateMember(selected);
-    setPaid(true);
-    setTimeout(() => {
-      setShowPayment(false);
-      router.push("/");
-    }, 1500);
+  const handleConfirmPayment = async () => {
+    if (!selected || !currentOrderId) return;
+    setConfirming(true);
+    setPayError("");
+    try {
+      const plan = PLANS.find((p) => p.id === selected);
+      const res = await fetch("/api/payment/confirm", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: currentOrderId, planId: selected, amount: plan?.priceNum }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "支付确认失败");
+      // Only activate after server confirms and signs the response
+      activateMember(selected);
+      setPaid(true);
+      setTimeout(() => { setShowPayment(false); router.push("/"); }, 1500);
+    } catch (e) {
+      setPayError(e instanceof Error ? e.message : "支付确认失败，请重试");
+    } finally {
+      setConfirming(false);
+    }
   };
 
   const selectedPlan = PLANS.find((p) => p.id === selected);
@@ -156,8 +186,10 @@ export default function MembershipPage() {
                 </p>
               </div>
 
-              <p className="mt-4 text-center text-xs text-slate-400">付款完成后点击下方按钮自动解锁会员权限</p>
+              {currentOrderId && <p className="text-center text-[10px] text-slate-400">订单号: {currentOrderId}</p>}
+              <p className="mt-2 text-center text-xs text-slate-400">付款完成后点击下方按钮，系统校验通过后自动解锁</p>
 
+              {payError && <div className="mb-3 rounded-xl bg-rose-50 px-4 py-2.5 text-center text-xs text-rose-600">{payError}</div>}
               <div className="mt-4 flex gap-3">
                 {!paid && (
                   <button type="button" onClick={() => setShowPayment(false)}
@@ -168,14 +200,16 @@ export default function MembershipPage() {
                 <button
                   type="button"
                   onClick={handleConfirmPayment}
-                  disabled={paid}
+                  disabled={paid || confirming}
                   className={`flex-1 rounded-full px-4 py-2.5 text-xs font-medium text-white shadow-sm transition ${
                     paid
                       ? "bg-emerald-500 cursor-default"
+                      : confirming
+                      ? "bg-slate-300 cursor-wait"
                       : "bg-gradient-to-r from-amber-500 to-orange-500 hover:brightness-110"
                   }`}
                 >
-                  {paid ? "✅ 开通成功！" : "我已完成付款"}
+                  {paid ? "✅ 开通成功！" : confirming ? "校验中..." : "我已完成付款"}
                 </button>
               </div>
             </div>
