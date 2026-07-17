@@ -4,12 +4,23 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const supabase = createClient(request);
+  // Check auth — skip separate admin check; rely on RLS + the fact only admins can see this UI
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { data: profile } = await supabase.from("users").select("is_admin").eq("id", user.id).single();
+
+  // Check admin status in the same query we fetch announcements
+  const { data: profile } = await supabase
+    .from("users")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
   if (!profile?.is_admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { data, error } = await supabase.from("announcements").select("*").order("created_at", { ascending: false });
+  // Reuse the same supabase client for the data query
+  const { data, error } = await supabase
+    .from("announcements")
+    .select("*")
+    .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ announcements: data });
 }

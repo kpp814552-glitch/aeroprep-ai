@@ -113,7 +113,30 @@ export default function AdminAnnouncements() {
     }
   }
 
-  if (loading) return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-blue-500" /></div>;
+  if (loading) return (
+    <div className="space-y-3">
+      {[1,2,3].map((i) => (
+        <div key={i} className="rounded-2xl border border-white/40 bg-white/60 px-5 py-4 animate-pulse">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-14 rounded-full bg-slate-200" />
+                <div className="h-5 w-12 rounded-full bg-slate-200" />
+              </div>
+              <div className="h-4 w-3/5 rounded bg-slate-200" />
+              <div className="h-3 w-full rounded bg-slate-100" />
+              <div className="h-3 w-4/5 rounded bg-slate-100" />
+            </div>
+            <div className="flex gap-1">
+              <div className="h-7 w-7 rounded-full bg-slate-200" />
+              <div className="h-7 w-7 rounded-full bg-slate-200" />
+              <div className="h-7 w-7 rounded-full bg-slate-200" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-5">
