@@ -15,6 +15,7 @@ import {
 import { GlassPanel, GlassCard } from "@/components/ui/glass";
 import { useAuth } from "@/hooks/useAuth";
 import AdminAnnouncements from "./AdminAnnouncements";
+import AdminOrders from "./AdminOrders";
 
 type StatsData = {
   users: {
@@ -154,6 +155,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const [activeTab, setActiveTab] = useState("控制台");
   const fetchStats = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -300,6 +302,7 @@ export default function AdminDashboard() {
       
       {/* Announcements Tab */}
       <AdminAnnouncements />
+          {activeTab === "订单管理" && <AdminOrders />}
     </div>
   );
 }
