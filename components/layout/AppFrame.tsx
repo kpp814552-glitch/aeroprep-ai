@@ -50,7 +50,7 @@ export default function AppFrame({
             </Link>
           </div>
 
-          <nav className="flex items-center gap-1 sm:gap-2 rounded-full bg-white/28 p-1 overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-none md:overflow-visible">
+          <nav className="flex items-center gap-1 sm:gap-2 rounded-full bg-white/30 p-1 overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-none md:overflow-visible">
             {[
               { href: "/", label: "首页" },
               { href: "/interview", label: "AI面试" },
@@ -64,7 +64,7 @@ export default function AppFrame({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "shrink-0 rounded-full px-2 sm:px-3 py-2 text-xs transition md:px-4 md:text-sm",
+                  "shrink-0 rounded-full px-3 sm:px-3.5 py-1.5 text-sm font-medium tracking-[-0.01em] transition md:px-5 md:text-[15px]",
                   pathname === item.href
                     ? "bg-white/60 text-slate-900"
                     : "text-slate-600 hover:bg-white/52 hover:text-slate-900"
@@ -80,13 +80,13 @@ export default function AppFrame({
       <div className="flex items-center gap-1 shrink-0">
         <Link
           href="/login"
-          className="rounded-full px-3 py-1.5 text-xs text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
+          className="rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
         >
           登录
         </Link>
         <Link
           href="/register"
-          className="rounded-full px-3 py-1.5 text-xs text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
+          className="rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-white/50 hover:text-slate-900"
         >
           注册
         </Link>
@@ -96,14 +96,14 @@ export default function AppFrame({
         {isAdmin ? (
           <Link
                     href="/admin"
-                    className="rounded-full bg-white/30 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-white/50"
+                    className="rounded-full bg-white/30 px-3.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-white/50"
                   >
                     管理后台
                   </Link>
                 ) : null}
                <Link
                   href="/profile"
-                  className="flex items-center gap-1.5 rounded-full bg-white/30 px-3 py-1.5 text-xs text-slate-700 transition hover:bg-white/50"
+                  className="flex items-center gap-1.5 rounded-full bg-white/30 px-3.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-white/50"
                 >
                   <UserCircle className="h-4 w-4" />
                   <span className="max-w-[80px] truncate">{profile?.username || user.email?.split("@")[0]}</span>
