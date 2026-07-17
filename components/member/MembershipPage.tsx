@@ -187,61 +187,6 @@ export default function MembershipPage() {
             })}
           </div>
 
-          {/* ===== DIVIDER ===== */}
-          <div className="mx-auto mt-20 max-w-xs border-t border-slate-200/60" />
-
-          {/* ===== WHY UPGRADE ===== */}
-          <section className="mx-auto mt-16 max-w-4xl">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-slate-900">为什么选择会员？</h2>
-            </div>
-            <div className="mt-10 grid gap-x-8 gap-y-10 md:grid-cols-4">
-              {[
-                { icon: Brain, title: "AI模拟面试", desc: "无限次岗位定向模拟面试，题目动态生成" },
-                { icon: BarChart3, title: "专业评分报告", desc: "面试后自动生成完整评分，含逐题分析" },
-                { icon: BookOpen, title: "全岗位题库", desc: "飞行、机务、空乘、空管等9大岗位" },
-                { icon: Star, title: "优先新功能", desc: "优先体验新功能，持续提升求职竞争力" },
-              ].map((b, i) => (
-                <div key={i} className="text-center">
-                  <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm">
-                    <b.icon className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <p className="mt-3 text-sm font-semibold text-slate-800">{b.title}</p>
-                  <p className="mt-1.5 text-xs leading-5 text-slate-500">{b.desc}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* ===== DIVIDER ===== */}
-          <div className="mx-auto mt-20 max-w-xs border-t border-slate-200/60" />
-
-          {/* ===== FAQ ===== */}
-          <section className="mx-auto mt-16 max-w-2xl">
-            <div className="text-center">
-              <h2 className="text-xl font-semibold text-slate-900">常见问题</h2>
-            </div>
-            <div className="mt-8 space-y-0">
-              {FAQS.map((faq, i) => (
-                <div key={i} className="border-b border-slate-100 last:border-b-0">
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="flex w-full items-center justify-between py-4 text-left"
-                  >
-                    <span className="text-sm font-medium text-slate-800">{faq.q}</span>
-                    <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition duration-200 ${openFaq === i ? "rotate-180" : ""}`} />
-                  </button>
-                  {openFaq === i && (
-                    <div className="pb-4">
-                      <p className="text-xs leading-6 text-slate-500">{faq.a}</p>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-
           {/* ===== FOOTER ===== */}
           <div className="mx-auto mt-20 max-w-lg text-center">
             <Crown className="mx-auto h-7 w-7 text-amber-400" />
