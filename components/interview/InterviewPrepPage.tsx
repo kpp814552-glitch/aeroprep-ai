@@ -19,6 +19,7 @@ import {
   type InterviewerPersona,
 } from "@/lib/site";
 import { getRemainingFreeInterviews, isMember } from "@/lib/member/member-storage";
+import { canStartInterview } from "@/lib/member/member-storage";
 import { cn } from "@/lib/utils";
 
 type UploadState = {
@@ -135,6 +136,10 @@ export default function InterviewPrepPage() {
   }
 
   const handleStartInterview = useCallback(() => {
+    if (!isMember() && !canStartInterview()) {
+      router.push("/member");
+      return;
+    }
     if (resume?.text) {
       sessionStorage.setItem("aeroprep_resume_text", resume.text);
     if ((resume as any).quality) {

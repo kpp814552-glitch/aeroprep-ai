@@ -19,7 +19,6 @@ export async function POST(request: Request) {
     hmac.update(payload);
     const token = hmac.digest("hex");
 
-    console.log(`[Payment] 支付确认: ${orderId} ${planId} ¥${amount}`);
 
     return NextResponse.json({ success: true, orderId, token });
   } catch (e) {

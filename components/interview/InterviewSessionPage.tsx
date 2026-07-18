@@ -30,8 +30,9 @@ import type {
   InterviewStage,
   InterviewTurn,
 } from "@/lib/interview/types";
+import { incrementFreeInterviewCount, isMember } from "@/lib/member/member-storage";
 import {
-  
+
   createInterviewVoiceSession,
   type InterviewVoiceSession,
   type VoiceProviderName,
@@ -458,6 +459,8 @@ const resumeQualityRef = useRef<any>(
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
         successPathRef.current = true;
+        // Free user: increment interview count
+        if (!isMember()) incrementFreeInterviewCount();
         setIsGeneratingReport(false);
         setPhase('completed');
 
@@ -526,6 +529,8 @@ const resumeQualityRef = useRef<any>(
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
         successPathRef.current = false;
+        // Free user: increment interview count (fallback)
+        if (!isMember()) incrementFreeInterviewCount();
         setIsGeneratingReport(false);
         setPhase('completed');
         setStatusText('面试已完成');
