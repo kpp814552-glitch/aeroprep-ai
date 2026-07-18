@@ -34,6 +34,21 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
+
+    // Set up auth state change listener FIRST (was broken — never reached due to early return)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (_event, session) => {
+        if (cancelled) return;
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          try { await fetchProfile(session.user.id); } catch (e) { console.error('[Auth] onAuthStateChange fetchProfile error:', e); }
+        } else {
+          setProfile(null);
+          setIsAdmin(false);
+        }
+      }
+    );
+
     const init = async () => {
       // Safety timeout: force loading false after 8 seconds
       const safetyTimeout = setTimeout(() => { if (!cancelled) setLoading(false); }, 8000);
@@ -52,21 +67,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     init();
-    return () => { cancelled = true; };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-          setUser(session?.user ?? null);
-        if (session?.user) {
-          try { await fetchProfile(session.user.id); } catch (e) { console.error('[Auth] onAuthStateChange fetchProfile error:', e); }
-        } else {
-          setProfile(null);
-          setIsAdmin(false);
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
   }, [supabase, fetchProfile]);
 
   const signIn = useCallback(async (email: string, password: string) => {
