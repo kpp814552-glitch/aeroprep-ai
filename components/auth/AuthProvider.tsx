@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { AuthContext } from "@/hooks/useAuth";
 import type { UserProfile } from "@/lib/supabase/types";
 import { translateAuthError } from "@/lib/supabase/auth-errors";
+import { syncServerMember } from "@/lib/member/member-storage";
 
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -41,7 +42,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setUser(session?.user ?? null);
         if (session?.user) {
-          try { await fetchProfile(session.user.id); } catch (e) { console.error('[Auth] onAuthStateChange fetchProfile error:', e); }
+          try {
+            await fetchProfile(session.user.id);
+            // Check if server-side membership was approved
+            syncServerMember().catch(() => {});
+          } catch (e) { console.error('[Auth] onAuthStateChange fetchProfile error:', e); }
         } else {
           setProfile(null);
           setIsAdmin(false);

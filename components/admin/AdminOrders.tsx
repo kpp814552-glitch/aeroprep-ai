@@ -10,13 +10,15 @@ import type { PlanId } from "@/lib/member/member-storage";
 import { useAuth } from "@/hooks/useAuth";
 import { Crown, Search, Trash2, Plus, Clock, Loader2 } from "lucide-react";
 
-type TabType = "orders" | "members";
+type TabType = "orders" | "members" | "applications";
 
 export default function AdminOrders() {
   const { user } = useAuth();
   const [tab, setTab] = useState<TabType>("orders");
   const [orders, setOrders] = useState(getPayments());
   const [members, setMembers] = useState(getMemberRecords());
+  const [applications, setApplications] = useState<any[]>([]);
+  const [appLoading, setAppLoading] = useState(false);
   const [addEmail, setAddEmail] = useState("");
   const [addDays, setAddDays] = useState("");
   const [days, setDays] = useState(30);
@@ -28,6 +30,16 @@ export default function AdminOrders() {
 
   const refresh = () => { setOrders(getPayments()); setMembers(getMemberRecords()); };
   useEffect(() => { refresh(); }, []);
+  
+  // Fetch pending applications
+  const fetchApplications = async () => {
+    setAppLoading(true);
+    try {
+      const res = await fetch("/api/member/pending");
+      if (res.ok) { const data = await res.json(); setApplications(data.applicants || []); }
+    } catch {} finally { setAppLoading(false); }
+  };
+  useEffect(() => { fetchApplications(); }, []);
 
   const handleAddDays = () => {
     if (!addEmail || !days) return;
@@ -46,6 +58,7 @@ export default function AdminOrders() {
   const tabs: { key: TabType; label: string }[] = [
     { key: "orders", label: "订单记录" },
     { key: "members", label: "会员管理" },
+    { key: "applications", label: "待审核申请" },
   ];
 
   return (
@@ -195,6 +208,58 @@ export default function AdminOrders() {
           </GlassPanel>
         </div>
       )}
+
+      {/* Applications Tab */}
+      {tab === "applications" && (
+        <div className="space-y-4">
+          <GlassPanel className="px-5 py-4">
+            <div className="flex items-center justify-between mb-4">
+              <p className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Crown className="h-4 w-4 text-amber-500" />待审核的会员申请</p>
+              <button type="button" onClick={fetchApplications} disabled={appLoading}
+                className="rounded-full bg-white/60 px-3 py-1.5 text-[10px] text-slate-500 transition hover:bg-white">
+                {appLoading ? "加载中..." : "刷新"}
+              </button>
+            </div>
+            {applications.length === 0 ? (
+              <p className="py-6 text-center text-xs text-slate-400">暂无待审核的申请</p>
+            ) : (
+              <div className="space-y-3">
+                {applications.map((app: any) => (
+                  <div key={app.id} className="flex items-center justify-between rounded-xl border border-white/40 bg-white/60 px-4 py-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-slate-800">{app.email || app.username || app.id}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        申请套餐：{app.pending_plan === "1day" ? "1天" : app.pending_plan === "3day" ? "3天" : "30天"}会员
+                        {app.created_at ? ` · ${new Date(app.created_at).toLocaleDateString("zh-CN")}` : ""}
+                      </p>
+                    </div>
+                    <button type="button" onClick={async () => {
+                      if (!confirm("确认通过此申请？会员将从此刻开始生效。")) return;
+                      try {
+                        const res = await fetch("/api/member/approve", {
+                          method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ userId: app.id }),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                          setMsg("✅ 已通过 " + (data.email || app.email || "") + " 的会员申请");
+                          fetchApplications();
+                        } else {
+                          setMsg("❌ " + (data.error || "操作失败"));
+                        }
+                      } catch { setMsg("❌ 网络错误"); }
+                    }}
+                      className="shrink-0 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-1.5 text-[10px] font-medium text-white shadow-sm transition hover:brightness-110">
+                      通过
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassPanel>
+        </div>
+      )}
+
     </div>
   );
 }

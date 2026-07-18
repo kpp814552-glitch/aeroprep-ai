@@ -81,3 +81,30 @@ export function canStartInterview(): boolean {
   if (isMember()) return true;
   return getFreeInterviewCount() < 3;
 }
+
+/**
+ * Sync membership from server (Supabase users.member_until)
+ * Call this on page load or after login to check if admin has approved membership.
+ */
+export async function syncServerMember(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/member/status");
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data.isMember && data.memberUntil) {
+      const existing = getMember();
+      // Only activate if local is expired or missing
+      if (!existing || new Date(existing.expiresAt) < new Date()) {
+        // Find matching plan
+        const plan = PLANS.find((p) => p.id === data.planId);
+        if (plan) {
+          activateMember(data.planId);
+          return true;
+        }
+      }
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}

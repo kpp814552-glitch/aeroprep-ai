@@ -16,10 +16,9 @@ const FAQS = [
 export default function MembershipPage() {
   const [selected, setSelected] = useState<PlanId | null>(null);
   const [showPayment, setShowPayment] = useState(false);
-  const [paid, setPaid] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [step, setStep] = useState<"pay"|"result">("pay");
   const [currentOrderId, setCurrentOrderId] = useState("");
-  const [confirming, setConfirming] = useState(false);
   const [payError, setPayError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const router = useRouter();
@@ -27,9 +26,7 @@ export default function MembershipPage() {
   const handlePay = async (planId: PlanId) => {
     setSelected(planId);
     setShowPayment(true);
-    setPaid(false);
     setPayError("");
-    setConfirming(false);
     try {
       const plan = PLANS.find((p) => p.id === planId);
       const res = await fetch("/api/payment/create", {
@@ -44,34 +41,9 @@ export default function MembershipPage() {
     }
   };
 
-  const handleConfirmPayment = async () => {
-    if (!selected || !currentOrderId) return;
-    setConfirming(true);
-    setPayError("");
-    try {
-      const plan = PLANS.find((p) => p.id === selected);
-      const res = await fetch("/api/payment/confirm", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: currentOrderId, planId: selected, amount: plan?.priceNum }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || "支付确认失败");
-      activateMember(selected);
-      setPaid(true);
-      setTimeout(() => { setShowPayment(false); router.push("/"); }, 1500);
-    } catch (e) {
-      setPayError(e instanceof Error ? e.message : "支付确认失败，请重试");
-    } finally {
-      setConfirming(false);
-    }
-  };
+;
 
   const selectedPlan = PLANS.find((p) => p.id === selected);
-  const expiresAt = selectedPlan
-    ? new Date(Date.now() + selectedPlan.days * 86400000)
-        .toLocaleString("zh-CN", { hour12: false })
-        .replace(/\//g, "-")
-    : "";
 
   return (
     <AppFrame>
@@ -184,8 +156,15 @@ export default function MembershipPage() {
             })}
           </div>
 
+          {/* ===== Review Notice ===== */}
+          <div className="mx-auto mt-8 max-w-md text-center">
+            <p className="text-[11px] leading-5 text-slate-400">
+              💳 付款后人工审核预计 5 分钟 ~ 2 小时 · 审核人员在线时间 8:00 – 23:00
+            </p>
+          </div>
+
           {/* ===== FOOTER ===== */}
-          <div className="mx-auto mt-20 max-w-lg text-center">
+          <div className="mx-auto mt-16 max-w-lg text-center">
             <Crown className="mx-auto h-7 w-7 text-amber-400" />
             <p className="mt-3 text-sm text-slate-500">选择上方套餐，立即解锁全部功能</p>
           </div>
@@ -193,20 +172,21 @@ export default function MembershipPage() {
 
         {/* ===== PAYMENT MODAL ===== */}
         {showPayment && selectedPlan && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => { if (!submitted) setShowPayment(false); }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => setShowPayment(false)}>
             <div className="w-full max-w-sm rounded-[24px] border border-white/40 bg-white p-6 shadow-xl backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-900">
-                  <Crown className="mr-1.5 inline h-4 w-4 text-amber-500" />开通会员
-                </h2>
-                {!submitted && (
-                  <button type="button" onClick={() => setShowPayment(false)} className="rounded-full p-1 text-slate-400 hover:text-slate-600">
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-              {!submitted ? (
+              
+              {/* Step 1: Pay instruction */}
+              {step === "pay" && (
                 <>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-slate-900">
+                      <Crown className="mr-1.5 inline h-4 w-4 text-amber-500" />扫码支付
+                    </h2>
+                    <button type="button" onClick={() => { setShowPayment(false); setStep("pay"); }} className="rounded-full p-1 text-slate-400 hover:text-slate-600">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
                   <div className="mt-5 rounded-2xl bg-gradient-to-b from-amber-50 to-white px-4 py-4 text-center">
                     <p className="text-xs text-slate-400">当前套餐</p>
                     <p className="mt-1 text-lg font-semibold text-slate-900">{selectedPlan.label}</p>
@@ -214,67 +194,89 @@ export default function MembershipPage() {
                   </div>
 
                   {/* QR Code placeholder */}
-                  <div className="mx-auto mt-5 flex h-48 w-48 items-center justify-center rounded-2xl border-2 border-dashed border-amber-200 bg-white">
+                  <div className="mx-auto mt-5 flex h-44 w-44 items-center justify-center rounded-2xl border-2 border-dashed border-amber-200 bg-white">
                     <div className="text-center">
                       <CreditCard className="mx-auto h-10 w-10 text-amber-400" />
                       <p className="mt-2 text-xs font-medium text-slate-600">支付宝收款码</p>
                       <p className="mt-1 text-[10px] text-slate-400">扫码支付 ¥{selectedPlan.price.replace("元", "")}</p>
                     </div>
                   </div>
-                  <p className="mt-3 text-center text-[10px] text-slate-400">请使用支付宝扫描上方二维码完成支付</p>
 
-                  {currentOrderId && (
-                    <div className="mt-4 rounded-xl bg-sky-50 px-4 py-3 text-center">
-                      <p className="text-xs text-slate-500">你的订单号</p>
-                      <p className="mt-1 text-sm font-mono font-medium text-sky-700">{currentOrderId}</p>
-                    </div>
-                  )}
-
+                  {/* Order number + note */}
                   <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center">
-                    <Clock className="mr-1 inline h-3.5 w-3.5 text-amber-500" />
-                    <span className="text-xs text-amber-700">支付完成后截图保存，联系管理员激活</span>
+                    <p className="text-[10px] text-amber-600 mb-1">⚠️ 支付时请备注以下订单号</p>
+                    <p className="text-sm font-mono font-bold text-amber-800 tracking-wider">{currentOrderId}</p>
                   </div>
 
-                  {payError && <div className="mt-3 rounded-xl bg-rose-50 px-4 py-2.5 text-center text-xs text-rose-600">{payError}</div>}
+                  <button type="button" onClick={() => setStep("result")}
+                    className="mt-4 w-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110">
+                    我已知晓
+                  </button>
+                </>
+              )}
 
-                  <div className="mt-4 flex gap-3">
-                    <button type="button" onClick={() => setShowPayment(false)}
-                      className="flex-1 rounded-full border border-white/40 bg-white/60 px-4 py-2.5 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
-                    <button type="button" onClick={async () => {
-                      if (!currentOrderId) { handlePay(selected!); return; }
-                      setSubmitted(true);
-                      // Save order record locally
-                      const records = JSON.parse(localStorage.getItem("aeroprep_payments") || "[]");
-                      records.unshift({
-                        orderId: currentOrderId,
-                        planId: selected,
-                        amount: selectedPlan.priceNum,
-                        status: "pending",
-                        createdAt: new Date().toISOString(),
-                      });
-                      localStorage.setItem("aeroprep_payments", JSON.stringify(records));
-                    }}
-                      className="flex-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110">
-                      我已付款
+              {/* Step 2: Result */}
+              {step === "result" && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-semibold text-slate-900">支付确认</h2>
+                    <button type="button" onClick={() => { setShowPayment(false); setStep("pay"); }} className="rounded-full p-1 text-slate-400 hover:text-slate-600">
+                      <X className="h-4 w-4" />
                     </button>
                   </div>
+
+                  <div className="mt-6 text-center">
+                    <p className="text-sm text-slate-600">请确认是否已完成支付？</p>
+                    <p className="mt-1 text-xs text-slate-400">订单号：{currentOrderId}</p>
+                  </div>
+
+                  {payError && <div className="mt-4 rounded-xl bg-rose-50 px-4 py-2.5 text-center text-xs text-rose-600">{payError}</div>}
+
+                  <div className="mt-6 flex gap-3">
+                    <button type="button" onClick={async () => {
+                      setShowPayment(false); setStep("pay");
+                      // Save failed order
+                      const records = JSON.parse(localStorage.getItem("aeroprep_payments") || "[]");
+                      records.unshift({ orderId: currentOrderId, planId: selected, amount: selectedPlan.priceNum, status: "failed", createdAt: new Date().toISOString() });
+                      localStorage.setItem("aeroprep_payments", JSON.stringify(records));
+                    }}
+                      className="flex-1 rounded-full border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-medium text-rose-600 transition hover:bg-rose-100">
+                      支付失败
+                    </button>
+                    <button type="button" onClick={async () => {
+                      setSubmitted(true);
+                      // Save pending order + submit application
+                      const records = JSON.parse(localStorage.getItem("aeroprep_payments") || "[]");
+                      records.unshift({ orderId: currentOrderId, planId: selected, amount: selectedPlan.priceNum, status: "pending", createdAt: new Date().toISOString() });
+                      localStorage.setItem("aeroprep_payments", JSON.stringify(records));
+                      // Also submit to server
+                      try {
+                        await fetch("/api/member/apply", {
+                          method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ orderId: currentOrderId, planId: selected }),
+                        });
+                      } catch {}
+                    }}
+                      className="flex-1 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110">
+                      支付成功
+                    </button>
+                  </div>
+
+                  {submitted && (
+                    <div className="mt-4 text-center py-2">
+                      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
+                        <CheckCircleIcon className="h-6 w-6 text-emerald-500" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-slate-900">申请已提交</h3>
+                      <p className="mt-1 text-xs text-slate-500">管理员审核通过后，会员自动生效</p>
+                      <p className="mt-1 text-[10px] text-slate-400">订单号：{currentOrderId}</p>
+                      <button type="button" onClick={() => { setShowPayment(false); setStep("pay"); setSubmitted(false); }}
+                        className="mt-4 inline-flex rounded-full bg-slate-100 px-6 py-2 text-xs text-slate-600 transition hover:bg-slate-200">
+                        完成
+                      </button>
+                    </div>
+                  )}
                 </>
-              ) : (
-                <div className="text-center py-6">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50">
-                    <CheckCircleIcon className="h-7 w-7 text-emerald-500" />
-                  </div>
-                  <h3 className="text-base font-semibold text-slate-900">提交成功</h3>
-                  <p className="mt-2 text-xs text-slate-500">请联系管理员确认付款后，获取激活链接开通会员</p>
-                  <div className="mt-5 rounded-xl bg-sky-50 px-4 py-3 text-left">
-                    <p className="text-[10px] text-slate-500 mb-1">你的订单号</p>
-                    <p className="text-xs font-mono font-medium text-sky-700">{currentOrderId}</p>
-                  </div>
-                  <button type="button" onClick={() => setShowPayment(false)}
-                    className="mt-5 w-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110">
-                    完成
-                  </button>
-                </div>
               )}
             </div>
           </div>
