@@ -204,7 +204,7 @@ export default function MembershipPage() {
 
                   {/* Order number + note */}
                   <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center">
-                    <p className="text-[10px] text-amber-600 mb-1">⚠️ 支付时请备注以下订单号</p>
+                    <p className="text-sm font-semibold text-amber-700 mb-1">⚠️ 支付时请备注以下订单号</p>
                     <p className="text-sm font-mono font-bold text-amber-800 tracking-wider">{currentOrderId}</p>
                   </div>
 
