@@ -6,8 +6,9 @@ import { getPayments } from "@/lib/payment/payment-storage";
 import {
   getMemberRecords, addMemberDays, removeMemberRecord,
 } from "@/lib/admin/admin-storage";
+import type { PlanId } from "@/lib/member/member-storage";
 import { useAuth } from "@/hooks/useAuth";
-import { Crown, Search, Trash2, Plus, Clock } from "lucide-react";
+import { Crown, Search, Trash2, Plus, Clock, Loader2 } from "lucide-react";
 
 type TabType = "orders" | "members";
 
@@ -20,6 +21,10 @@ export default function AdminOrders() {
   const [addDays, setAddDays] = useState("");
   const [days, setDays] = useState(30);
   const [msg, setMsg] = useState("");
+  const [genEmail, setGenEmail] = useState("");
+  const [genPlan, setGenPlan] = useState<PlanId>("30day");
+  const [genUrl, setGenUrl] = useState("");
+  const [genLoading, setGenLoading] = useState(false);
 
   const refresh = () => { setOrders(getPayments()); setMembers(getMemberRecords()); };
   useEffect(() => { refresh(); }, []);
@@ -107,6 +112,58 @@ export default function AdminOrders() {
                 <Plus className="h-3.5 w-3.5" />添加会员天数
               </button>
             </div>
+          </GlassPanel>
+
+          {/* Generate Activation Link */}
+          <GlassPanel className="px-5 py-4">
+            <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-800"><Crown className="h-4 w-4 text-amber-500" />生成激活链接</p>
+            <p className="mb-3 text-[10px] text-slate-400">输入用户邮箱和套餐，生成激活链接发给用户，用户点击后自动激活</p>
+            <div className="flex flex-wrap items-end gap-3 mb-4">
+              <div>
+                <p className="mb-1 text-[10px] text-slate-400">用户邮箱</p>
+                <input type="email" value={genEmail} onChange={(e) => setGenEmail(e.target.value)} placeholder="user@example.com"
+                  className="w-56 rounded-xl border border-slate-200/60 bg-white/80 px-3 py-2 text-xs text-slate-800 outline-none focus:border-amber-300" />
+              </div>
+              <div>
+                <p className="mb-1 text-[10px] text-slate-400">套餐</p>
+                <select value={genPlan} onChange={(e) => setGenPlan(e.target.value as PlanId)}
+                  className="rounded-xl border border-slate-200/60 bg-white/80 px-3 py-2 text-xs text-slate-800 outline-none focus:border-amber-300">
+                  <option value="1day">1天 ¥3.99</option>
+                  <option value="3day">3天 ¥5.99</option>
+                  <option value="30day">30天 ¥9.99</option>
+                </select>
+              </div>
+              <button type="button" onClick={async () => {
+                if (!genEmail || !genEmail.includes("@")) { setMsg("请输入有效邮箱"); return; }
+                setGenLoading(true);
+                setGenUrl("");
+                try {
+                  const res = await fetch("/api/admin/generate-activation", {
+                    method: "POST", headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: genEmail, planId: genPlan }),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    setGenUrl(data.url);
+                    setMsg("✅ 激活链接已生成，复制发给用户");
+                  } else {
+                    setMsg("❌ " + (data.error || "生成失败"));
+                  }
+                } catch { setMsg("❌ 网络错误"); }
+                finally { setGenLoading(false); }
+              }} disabled={genLoading}
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-50">
+                {genLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Crown className="h-3.5 w-3.5" />}
+                {genLoading ? "生成中..." : "生成激活链接"}
+              </button>
+            </div>
+            {genUrl && (
+              <div className="rounded-xl bg-amber-50 px-4 py-3">
+                <p className="text-[10px] font-medium text-amber-700 mb-1">激活链接（复制后发送给用户）</p>
+                <input type="text" readOnly value={genUrl} onClick={(e) => e.currentTarget.select()}
+                  className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-[10px] text-slate-700 font-mono outline-none" />
+              </div>
+            )}
           </GlassPanel>
 
           <GlassPanel className="px-5 py-4">
