@@ -8,7 +8,7 @@ import {
 } from "@/lib/admin/admin-storage";
 import type { PlanId } from "@/lib/member/member-storage";
 import { useAuth } from "@/hooks/useAuth";
-import { Crown, Search, Trash2, Plus, Clock, Loader2 } from "lucide-react";
+import { Crown, Search, Trash2, Plus, Clock, Loader2, CreditCard, Upload } from "lucide-react";
 
 type TabType = "orders" | "members" | "applications";
 
@@ -19,6 +19,7 @@ export default function AdminOrders() {
   const [members, setMembers] = useState(getMemberRecords());
   const [applications, setApplications] = useState<any[]>([]);
   const [appLoading, setAppLoading] = useState(false);
+  const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [addEmail, setAddEmail] = useState("");
   const [addDays, setAddDays] = useState("");
   const [days, setDays] = useState(30);
@@ -40,6 +41,10 @@ export default function AdminOrders() {
     } catch {} finally { setAppLoading(false); }
   };
   useEffect(() => { fetchApplications(); }, []);
+  useEffect(() => {
+    const saved = localStorage.getItem("aeroprep_qr_code");
+    if (saved) setQrCodeData(saved);
+  }, []);
 
   const handleAddDays = () => {
     if (!addEmail || !days) return;
@@ -127,56 +132,51 @@ export default function AdminOrders() {
             </div>
           </GlassPanel>
 
-          {/* Generate Activation Link */}
           <GlassPanel className="px-5 py-4">
-            <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-800"><Crown className="h-4 w-4 text-amber-500" />生成激活链接</p>
-            <p className="mb-3 text-[10px] text-slate-400">输入用户邮箱和套餐，生成激活链接发给用户，用户点击后自动激活</p>
-            <div className="flex flex-wrap items-end gap-3 mb-4">
-              <div>
-                <p className="mb-1 text-[10px] text-slate-400">用户邮箱</p>
-                <input type="email" value={genEmail} onChange={(e) => setGenEmail(e.target.value)} placeholder="user@example.com"
-                  className="w-56 rounded-xl border border-slate-200/60 bg-white/80 px-3 py-2 text-xs text-slate-800 outline-none focus:border-amber-300" />
+            {/* QR Code Setting */}
+            <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-800"><CreditCard className="h-4 w-4 text-sky-500" />上传支付宝收款码</p>
+            <p className="mb-3 text-[10px] text-slate-400">上传你的支付宝收款码图片，用户支付时将显示此图片</p>
+            <div className="flex items-start gap-4">
+              <div className="w-40 shrink-0">
+                {qrCodeData ? (
+                  <img src={qrCodeData} alt="收款码" className="w-full rounded-xl border border-slate-200" />
+                ) : (
+                  <div className="flex h-40 w-40 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white">
+                    <CreditCard className="h-8 w-8 text-slate-300" />
+                  </div>
+                )}
               </div>
-              <div>
-                <p className="mb-1 text-[10px] text-slate-400">套餐</p>
-                <select value={genPlan} onChange={(e) => setGenPlan(e.target.value as PlanId)}
-                  className="rounded-xl border border-slate-200/60 bg-white/80 px-3 py-2 text-xs text-slate-800 outline-none focus:border-amber-300">
-                  <option value="1day">1天 ¥3.99</option>
-                  <option value="3day">3天 ¥5.99</option>
-                  <option value="30day">30天 ¥9.99</option>
-                </select>
+              <div className="flex-1 pt-2">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-gradient-to-r from-sky-400 to-violet-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:brightness-110">
+                  <Upload className="h-3.5 w-3.5" />
+                  选择图片
+                  <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    if (file.size > 2 * 1024 * 1024) { setMsg("图片不能超过2MB"); return; }
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const data = reader.result as string;
+                      localStorage.setItem("aeroprep_qr_code", data);
+                      setQrCodeData(data);
+                      setMsg("✅ 收款码已更新");
+                    };
+                    reader.readAsDataURL(file);
+                  }} />
+                </label>
+                {qrCodeData && (
+                  <button type="button" onClick={() => {
+                    localStorage.removeItem("aeroprep_qr_code");
+                    setQrCodeData(null);
+                    setMsg("已清除收款码");
+                  }}
+                    className="mt-2 inline-flex items-center gap-1 rounded-full bg-rose-50 px-4 py-1.5 text-[10px] text-rose-500 transition hover:bg-rose-100">
+                    <Trash2 className="h-3 w-3" />清除图片
+                  </button>
+                )}
+                <p className="mt-2 text-[10px] text-slate-400">建议尺寸：300x300px · 不超过2MB</p>
               </div>
-              <button type="button" onClick={async () => {
-                if (!genEmail || !genEmail.includes("@")) { setMsg("请输入有效邮箱"); return; }
-                setGenLoading(true);
-                setGenUrl("");
-                try {
-                  const res = await fetch("/api/admin/generate-activation", {
-                    method: "POST", headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: genEmail, planId: genPlan }),
-                  });
-                  const data = await res.json();
-                  if (data.success) {
-                    setGenUrl(data.url);
-                    setMsg("✅ 激活链接已生成，复制发给用户");
-                  } else {
-                    setMsg("❌ " + (data.error || "生成失败"));
-                  }
-                } catch { setMsg("❌ 网络错误"); }
-                finally { setGenLoading(false); }
-              }} disabled={genLoading}
-                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-50">
-                {genLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Crown className="h-3.5 w-3.5" />}
-                {genLoading ? "生成中..." : "生成激活链接"}
-              </button>
             </div>
-            {genUrl && (
-              <div className="rounded-xl bg-amber-50 px-4 py-3">
-                <p className="text-[10px] font-medium text-amber-700 mb-1">激活链接（复制后发送给用户）</p>
-                <input type="text" readOnly value={genUrl} onClick={(e) => e.currentTarget.select()}
-                  className="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-[10px] text-slate-700 font-mono outline-none" />
-              </div>
-            )}
           </GlassPanel>
 
           <GlassPanel className="px-5 py-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Crown, Sparkles, Clock, CreditCard, X, CheckCircle as CheckCircleIcon, Brain, BookOpen, BarChart3, Infinity, Star, Zap, ChevronDown, Shield } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
@@ -18,10 +18,12 @@ export default function MembershipPage() {
   const [showPayment, setShowPayment] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [step, setStep] = useState<"pay"|"result">("pay");
+  const [qrSrc, setQrSrc] = useState<string | null>(null);
   const [currentOrderId, setCurrentOrderId] = useState("");
   const [payError, setPayError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const router = useRouter();
+  useEffect(() => { const saved = localStorage.getItem("aeroprep_qr_code"); if (saved) setQrSrc(saved); }, []);
 
   const handlePay = async (planId: PlanId) => {
     setSelected(planId);
@@ -193,13 +195,17 @@ export default function MembershipPage() {
                     <p className="mt-1 text-3xl font-bold text-amber-600">¥{selectedPlan.price.replace("元", "")}</p>
                   </div>
 
-                  {/* QR Code placeholder */}
-                  <div className="mx-auto mt-5 flex h-44 w-44 items-center justify-center rounded-2xl border-2 border-dashed border-amber-200 bg-white">
-                    <div className="text-center">
-                      <CreditCard className="mx-auto h-10 w-10 text-amber-400" />
-                      <p className="mt-2 text-xs font-medium text-slate-600">支付宝收款码</p>
-                      <p className="mt-1 text-[10px] text-slate-400">扫码支付 ¥{selectedPlan.price.replace("元", "")}</p>
-                    </div>
+                  {/* QR Code */}
+                  <div className="mx-auto mt-5 flex h-44 w-44 items-center justify-center rounded-2xl border-2 border-dashed border-amber-200 bg-white overflow-hidden">
+                    {qrSrc ? (
+                      <img src={qrSrc} alt="支付宝收款码" className="h-full w-full object-contain" />
+                    ) : (
+                      <div className="text-center">
+                        <CreditCard className="mx-auto h-10 w-10 text-amber-400" />
+                        <p className="mt-2 text-xs font-medium text-slate-600">支付宝收款码</p>
+                        <p className="mt-1 text-[10px] text-slate-400">扫码支付 ¥{selectedPlan.price.replace("元", "")}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Order number + note */}
