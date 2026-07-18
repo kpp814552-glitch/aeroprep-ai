@@ -161,7 +161,7 @@ const modules = [
   {
     href: "/chat",
     title: "AI优化",
-    description: "围绕民航专业知识、岗位认知与复习难点随时发问。",
+    description: "优化简历、自我介绍和面试回答，AI帮你提升民航岗位匹配度。",
     icon: MessageSquareText,
     tone: "from-cyan-200/80 to-white/10",
   },
