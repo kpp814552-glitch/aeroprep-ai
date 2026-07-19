@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { Crown, Sparkles, Clock, CreditCard, X, CheckCircle as CheckCircleIcon, Brain, BookOpen, BarChart3, Infinity, Star, Zap, ChevronDown, Shield } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import { PLANS, activateMember, type PlanId } from "@/lib/member/member-storage";
@@ -25,10 +26,14 @@ export default function MembershipPage() {
   const router = useRouter();
   // Load QR code from Supabase (cross-device)
   useEffect(() => {
-    fetch("/api/admin/qr-code")
-      .then(r => r.json())
-      .then(data => { if (data.qrCode) setQrSrc(data.qrCode); })
-      .catch(() => {});
+    const load = async () => {
+      try {
+        const sb = createClient();
+        const { data } = await sb.from("site_config").select("value").eq("key", "alipay_qr_code").maybeSingle();
+        if (data?.value) setQrSrc(data.value);
+      } catch {}
+    };
+    load();
   }, []);
 
   const handlePay = async (planId: PlanId) => {

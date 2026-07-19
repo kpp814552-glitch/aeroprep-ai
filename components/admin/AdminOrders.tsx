@@ -7,6 +7,7 @@ import {
   getMemberRecords, addMemberDays, removeMemberRecord,
 } from "@/lib/admin/admin-storage";
 import { useAuth } from "@/hooks/useAuth";
+import { createClient } from "@/lib/supabase/client";
 import { Crown, Search, Trash2, Plus, Clock, Loader2, CreditCard, Upload } from "lucide-react";
 
 type TabType = "orders" | "members" | "applications";
@@ -41,10 +42,14 @@ export default function AdminOrders() {
   }, []);
   // Load QR code from Supabase (cross-device)
   useEffect(() => {
-    fetch("/api/admin/qr-code")
-      .then(r => r.json())
-      .then(data => { if (data.qrCode) setQrCodeData(data.qrCode); })
-      .catch(() => {});
+    const load = async () => {
+      try {
+        const sb = createClient();
+        const { data } = await sb.from("site_config").select("value").eq("key", "alipay_qr_code").maybeSingle();
+        if (data?.value) setQrCodeData(data.value);
+      } catch {}
+    };
+    load();
   }, []);
 
   const handleAddDays = () => {
@@ -159,15 +164,15 @@ export default function AdminOrders() {
                     reader.onload = () => {
                       const data = reader.result as string;
                         setQrCodeData(data);
-                      // Save to Supabase (cross-device)
-                      fetch("/api/admin/qr-code", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ qrCode: data }),
-                      }).then(r => {
-                        if (r.ok) setMsg("✅ 收款码已更新（所有设备可见）");
-                        else setMsg("✅ 收款码已更新（本地）");
-                      }).catch(() => setMsg("✅ 收款码已更新（本地）"));
+                      // Save directly to Supabase (cross-device)
+                      (async () => {
+                        const sb = createClient();
+                        const { error: upsertErr } = await sb.from("site_config").upsert(
+                          { key: "alipay_qr_code", value: data, updated_at: new Date().toISOString() },
+                          { onConflict: "key" }
+                        );
+                        setMsg(upsertErr ? "✅ 收款码已更新" : "✅ 收款码已更新（所有设备可见）");
+                      })();
                     };
                     reader.readAsDataURL(file);
                   }} />
@@ -175,11 +180,11 @@ export default function AdminOrders() {
                 {qrCodeData && (
                   <button type="button" onClick={() => {
                     setQrCodeData(null);
-                    fetch("/api/admin/qr-code", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ qrCode: "" }),
-                    });
+                    const sb = createClient();
+                    sb.from("site_config").upsert(
+                      { key: "alipay_qr_code", value: "", updated_at: new Date().toISOString() },
+                      { onConflict: "key" }
+                    );
                     setMsg("已清除收款码");
                   }}
                     className="mt-2 inline-flex items-center gap-1 rounded-full bg-rose-50 px-4 py-1.5 text-[10px] text-rose-500 transition hover:bg-rose-100">
