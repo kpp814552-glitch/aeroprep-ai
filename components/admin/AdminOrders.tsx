@@ -9,18 +9,6 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Crown, Search, Trash2, Plus, Clock, Loader2, CreditCard, Upload } from "lucide-react";
 
-// Decode @supabase/ssr cookie value (base64- prefix + base64url-encoded JSON)
-function decodeSsbCookie(cookieVal: string): any {
-  try {
-    if (!cookieVal.startsWith("base64-")) return null;
-    const b64 = cookieVal.slice(7);
-    // base64url -> base64
-    const std = b64.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = std.padEnd(std.length + (4 - std.length % 4) % 4, "=");
-    const jsonStr = atob(padded);
-    return JSON.parse(jsonStr);
-  } catch { return null; }
-}
 
 type TabType = "orders" | "members" | "applications";
 
@@ -53,26 +41,9 @@ export default function AdminOrders() {
     const interval = setInterval(load, 15000);
     return () => clearInterval(interval);
   }, []);
-  // Load QR code from Supabase (cross-device)
+  // Hardcoded QR code image
   useEffect(() => {
-    const load = async () => {
-      try {
-        const res = await fetch(
-          process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?key=eq.alipay_qr_code&select=value",
-          {
-            headers: {
-              apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-              Authorization: "Bearer " + (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""),
-            },
-          }
-        );
-        const arr = await res.json();
-        if (arr?.[0]?.value) setQrCodeData(arr[0].value);
-      } catch (e) {
-        console.error("[QR Load] Error:", e);
-      }
-    };
-    load();
+    setQrCodeData("/qr-payment.jpg");
   }, []);
 
   const handleAddDays = () => {
@@ -213,95 +184,17 @@ export default function AdminOrders() {
                     const reader = new FileReader();
                     reader.onload = () => {
                       const data = reader.result as string;
-                        setQrCodeData(data);
-                      // Upload using direct REST API with cookie auth token
-                      (async () => {
-                        try {
-                          // Read auth token from @supabase/ssr cookies
-                          const cookies = document.cookie.split("; ").reduce((acc, c) => {
-                            const [k, v] = c.split("=");
-                            acc[k.trim()] = v.trim();
-                            return acc;
-                          }, {} as Record<string, string>);
-                          
-                          // Find the auth cookie (name: sb-{ref}-auth-token)
-                          const authCookieKey = Object.keys(cookies).find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
-                          const rawCookie = authCookieKey ? cookies[authCookieKey] : null;
-                          
-                          let token = "";
-                          if (rawCookie) {
-                            const parsed = decodeSsbCookie(decodeURIComponent(rawCookie));
-                            if (parsed?.access_token) token = parsed.access_token;
-                          }
-                          
-                          if (!token) { setMsg("❌ 未登录，请刷新页面后重试"); return; }
-                          
-                          const res = await fetch(
-                            process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?on_conflict=key",
-                            {
-                              method: "POST",
-                              headers: {
-                                "Content-Type": "application/json",
-                                apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-                                Authorization: "Bearer " + token,
-                                Prefer: "resolution=merge-duplicates",
-                              },
-                              body: JSON.stringify({
-                                key: "alipay_qr_code",
-                                value: data,
-                                updated_at: new Date().toISOString(),
-                              }),
-                            }
-                          );
-                          if (res.ok) {
-                            setMsg("✅ 收款码已更新（所有设备可见）");
-                          } else {
-                            const errText = await res.text().catch(() => "未知错误");
-                            setMsg("❌ 上传失败: " + errText);
-                          }
-                        } catch (e) {
-                          setMsg("❌ 上传异常: " + String(e));
-                        }
-                      })();
+                        // QR code is now hardcoded - image replaced at build time
+                      setQrCodeData("/qr-payment.jpg");
+                      setMsg("✅ 收款码已更新（静态图片）");
                     };
                     reader.readAsDataURL(file);
                   }} />
                 </label>
                 {qrCodeData && (
                   <button type="button" onClick={() => {
-                    setQrCodeData(null);
-                    (async () => {
-                      try {
-                        const cookies = document.cookie.split("; ").reduce((acc, c) => {
-                          const [k, v] = c.split("=");
-                          acc[k.trim()] = v.trim();
-                          return acc;
-                        }, {} as Record<string, string>);
-                        const authCookieKey = Object.keys(cookies).find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
-                        const rawCookie = authCookieKey ? cookies[authCookieKey] : null;
-                        let token = "";
-                        if (rawCookie) {
-                          const parsed = decodeSsbCookie(decodeURIComponent(rawCookie));
-                          if (parsed?.access_token) token = parsed.access_token;
-                        }
-                        if (token) {
-                          await fetch(
-                            process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?on_conflict=key",
-                            {
-                              method: "POST",
-                              headers: {
-                                "Content-Type": "application/json",
-                                apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-                                Authorization: "Bearer " + token,
-                                Prefer: "resolution=merge-duplicates",
-                              },
-                              body: JSON.stringify({ key: "alipay_qr_code", value: "", updated_at: new Date().toISOString() }),
-                            }
-                          );
-                        }
-                      } catch {}
-                    })();
-                    setMsg("已清除收款码");
+                    setQrCodeData("/qr-payment.jpg");
+                    setMsg("已重置为默认收款码");
                   }}
                     className="mt-2 inline-flex items-center gap-1 rounded-full bg-rose-50 px-4 py-1.5 text-[10px] text-rose-500 transition hover:bg-rose-100">
                     <Trash2 className="h-3 w-3" />清除图片
