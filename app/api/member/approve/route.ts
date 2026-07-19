@@ -15,7 +15,9 @@ export async function POST(request: NextRequest) {
   const { data: profile } = await supabase.from("users").select("is_admin").eq("id", user.id).single();
   if (!profile?.is_admin) return NextResponse.json({ error: "无权限" }, { status: 403 });
 
-  const { userId } = await request.json();
+  let body;
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "无效的请求数据" }, { status: 400 }); }
+  const { userId } = body;
   if (!userId) return NextResponse.json({ error: "参数不完整" }, { status: 400 });
 
   // First get the user's pending_plan

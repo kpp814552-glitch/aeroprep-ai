@@ -7,7 +7,9 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 
-  const { orderId, planId } = await request.json();
+  let body;
+  try { body = await request.json(); } catch { return NextResponse.json({ error: "无效的请求数据" }, { status: 400 }); }
+  const { orderId, planId } = body;
   if (!orderId || !planId) return NextResponse.json({ error: "参数不完整" }, { status: 400 });
 
   // Save pending application on the users table (member_until column)
