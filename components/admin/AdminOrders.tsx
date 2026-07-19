@@ -29,16 +29,17 @@ export default function AdminOrders() {
   const refresh = () => { setOrders(getPayments()); setMembers(getMemberRecords()); };
   useEffect(() => { refresh(); }, []);
   
-  // Fetch pending applications
+  // Fetch pending applications + auto poll every 15 seconds
   useEffect(() => {
     const load = async () => {
-      setAppLoading(true);
       try {
         const res = await fetch("/api/member/pending");
         if (res.ok) { const data = await res.json(); setApplications(data.applicants || []); }
-      } catch {} finally { setAppLoading(false); }
+      } catch {}
     };
     load();
+    const interval = setInterval(load, 15000);
+    return () => clearInterval(interval);
   }, []);
   // Load QR code from Supabase (cross-device)
   useEffect(() => {
@@ -91,9 +92,36 @@ export default function AdminOrders() {
       {/* Orders Tab */}
       {tab === "orders" && (
         <GlassPanel className="px-5 py-4">
-          <p className="mb-4 text-sm font-semibold text-slate-800">全部订单</p>
+          <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
+            <CreditCard className="h-4 w-4 text-sky-500" />全部订单
+            {applications.length > 0 && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700">待审核: {applications.length}</span>}
+          </p>
+          
+          {/* Pending applications from Supabase */}
+          {applications.length > 0 && (
+            <div className="mb-4">
+              <p className="mb-2 text-[11px] font-medium text-amber-700">待审核申请（来自Supabase）</p>
+              <div className="space-y-2">
+                {applications.map((app: any) => (
+                  <div key={app.id} className="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-2.5">
+                    <div>
+                      <p className="text-xs font-medium text-slate-800">{app.email || app.username || app.id}</p>
+                      <p className="text-[10px] text-slate-500">{app.pending_plan === "1day" ? "1天" : app.pending_plan === "3day" ? "3天" : "30天"}会员</p>
+                    </div>
+                    <button type="button" onClick={() => setTab("applications")}
+                      className="rounded-full bg-amber-100 px-3 py-1 text-[10px] font-medium text-amber-700 transition hover:bg-amber-200">
+                      审核
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Local orders */}
+          <p className="mb-2 text-[11px] font-medium text-slate-500">本地订单记录</p>
           {orders.length === 0 ? (
-            <p className="text-xs text-slate-400 py-6 text-center">暂无订单记录</p>
+            <p className="text-xs text-slate-400 py-4 text-center">暂无本地订单记录</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
