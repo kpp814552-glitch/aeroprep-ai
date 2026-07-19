@@ -7,6 +7,7 @@ import {
   getMemberRecords, addMemberDays, removeMemberRecord,
 } from "@/lib/admin/admin-storage";
 import { useAuth } from "@/hooks/useAuth";
+import { createClient } from "@/lib/supabase/client";
 import { Crown, Search, Trash2, Plus, Clock, Loader2, CreditCard, Upload } from "lucide-react";
 
 type TabType = "orders" | "members" | "applications";
@@ -39,20 +40,18 @@ export default function AdminOrders() {
     };
     load();
   }, []);
-  // Load QR code from Supabase (cross-device, direct REST)
+  // Load QR code from Supabase (cross-device)
   useEffect(() => {
-    fetch(
-      process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?key=eq.alipay_qr_code&select=value",
-      {
-        headers: {
-          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-          Authorization: "Bearer " + (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""),
-        },
+    const load = async () => {
+      try {
+        const sb = createClient();
+        const { data } = await sb.from("site_config").select("value").eq("key", "alipay_qr_code").maybeSingle();
+        if (data?.value) setQrCodeData(data.value);
+      } catch (e) {
+        console.error("[QR Load] Error:", e);
       }
-    )
-      .then(r => r.json())
-      .then(arr => { if (arr?.[0]?.value) setQrCodeData(arr[0].value); })
-      .catch(() => {});
+    };
+    load();
   }, []);
 
   const handleAddDays = () => {
@@ -167,26 +166,25 @@ export default function AdminOrders() {
                     reader.onload = () => {
                       const data = reader.result as string;
                         setQrCodeData(data);
-                      // Save directly to Supabase (cross-device, direct REST)
-                      fetch(
-                        process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?on_conflict=key",
-                        {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-                            Authorization: "Bearer " + (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""),
-                            Prefer: "resolution=merge-duplicates",
-                          },
-                          body: JSON.stringify({
-                            key: "alipay_qr_code",
-                            value: data,
-                            updated_at: new Date().toISOString(),
-                          }),
+                      // Save using Supabase CLIENT (has admin auth token from login session)
+                      (async () => {
+                        try {
+                          const sb = createClient();
+                          const { error: err } = await sb.from("site_config").upsert(
+                            { key: "alipay_qr_code", value: data, updated_at: new Date().toISOString() },
+                            { onConflict: "key" }
+                          );
+                          if (err) {
+                            console.error("[QR Upload] Supabase error:", err);
+                            setMsg("❌ 上传失败: " + err.message);
+                          } else {
+                            setMsg("✅ 收款码已更新（所有设备可见）");
+                          }
+                        } catch (e) {
+                          console.error("[QR Upload] Exception:", e);
+                          setMsg("❌ 上传异常");
                         }
-                      ).then(r => {
-                        setMsg(r.ok ? "✅ 收款码已更新（所有设备可见）" : "✅ 收款码已更新");
-                      }).catch(() => setMsg("✅ 收款码已更新"));
+                      })();
                     };
                     reader.readAsDataURL(file);
                   }} />
@@ -194,23 +192,15 @@ export default function AdminOrders() {
                 {qrCodeData && (
                   <button type="button" onClick={() => {
                     setQrCodeData(null);
-                    fetch(
-                      process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?on_conflict=key",
-                      {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-                          Authorization: "Bearer " + (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""),
-                          Prefer: "resolution=merge-duplicates",
-                        },
-                        body: JSON.stringify({
-                          key: "alipay_qr_code",
-                          value: "",
-                          updated_at: new Date().toISOString(),
-                        }),
-                      }
-                    );
+                    (async () => {
+                      try {
+                        const sb = createClient();
+                        await sb.from("site_config").upsert(
+                          { key: "alipay_qr_code", value: "", updated_at: new Date().toISOString() },
+                          { onConflict: "key" }
+                        );
+                      } catch {}
+                    })();
                     setMsg("已清除收款码");
                   }}
                     className="mt-2 inline-flex items-center gap-1 rounded-full bg-rose-50 px-4 py-1.5 text-[10px] text-rose-500 transition hover:bg-rose-100">
