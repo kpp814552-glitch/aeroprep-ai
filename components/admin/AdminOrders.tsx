@@ -194,23 +194,39 @@ export default function AdminOrders() {
                     reader.onload = () => {
                       const data = reader.result as string;
                         setQrCodeData(data);
-                      // Save using Supabase CLIENT (has admin auth token from login session)
+                      // Upload with auth token from session (most reliable approach)
                       (async () => {
                         try {
                           const sb = createClient();
-                          const { error: err } = await sb.from("site_config").upsert(
-                            { key: "alipay_qr_code", value: data, updated_at: new Date().toISOString() },
-                            { onConflict: "key" }
+                          const { data: { session } } = await sb.auth.getSession();
+                          const token = session?.access_token;
+                          if (!token) { setMsg("❌ 未登录，请刷新页面后重试"); return; }
+                          
+                          const res = await fetch(
+                            process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?on_conflict=key",
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+                                Authorization: "Bearer " + token,
+                                Prefer: "resolution=merge-duplicates",
+                              },
+                              body: JSON.stringify({
+                                key: "alipay_qr_code",
+                                value: data,
+                                updated_at: new Date().toISOString(),
+                              }),
+                            }
                           );
-                          if (err) {
-                            console.error("[QR Upload] Supabase error:", err);
-                            setMsg("❌ 上传失败: " + err.message);
-                          } else {
+                          if (res.ok) {
                             setMsg("✅ 收款码已更新（所有设备可见）");
+                          } else {
+                            const errText = await res.text().catch(() => "未知错误");
+                            setMsg("❌ 上传失败: " + errText);
                           }
                         } catch (e) {
-                          console.error("[QR Upload] Exception:", e);
-                          setMsg("❌ 上传异常");
+                          setMsg("❌ 上传异常: " + String(e));
                         }
                       })();
                     };
@@ -223,10 +239,23 @@ export default function AdminOrders() {
                     (async () => {
                       try {
                         const sb = createClient();
-                        await sb.from("site_config").upsert(
-                          { key: "alipay_qr_code", value: "", updated_at: new Date().toISOString() },
-                          { onConflict: "key" }
-                        );
+                        const { data: { session } } = await sb.auth.getSession();
+                        const token = session?.access_token;
+                        if (token) {
+                          await fetch(
+                            process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?on_conflict=key",
+                            {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                                apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+                                Authorization: "Bearer " + token,
+                                Prefer: "resolution=merge-duplicates",
+                              },
+                              body: JSON.stringify({ key: "alipay_qr_code", value: "", updated_at: new Date().toISOString() }),
+                            }
+                          );
+                        }
                       } catch {}
                     })();
                     setMsg("已清除收款码");
