@@ -82,3 +82,28 @@ CREATE POLICY "Users can read own interviews"
 CREATE POLICY "Users can insert own interviews"
   ON public.interviews FOR INSERT
   WITH CHECK (auth.uid() = user_id);
+
+-- ========================================
+-- Site Config (全局站点配置)
+-- ========================================
+CREATE TABLE IF NOT EXISTS public.site_config (
+  key TEXT PRIMARY KEY,
+  value TEXT DEFAULT '',
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_by TEXT DEFAULT ''
+);
+
+ALTER TABLE public.site_config ENABLE ROW LEVEL SECURITY;
+
+-- 允许所有人读取 site_config（收款码等公开信息）
+CREATE POLICY "Anyone can read site_config"
+  ON public.site_config FOR SELECT
+  USING (true);
+
+-- 仅管理员可写入 site_config
+CREATE POLICY "Only admins can insert site_config"
+  ON public.site_config FOR INSERT
+  WITH CHECK (auth.uid() IN (SELECT id FROM public.users WHERE is_admin = true));
+CREATE POLICY "Only admins can update site_config"
+  ON public.site_config FOR UPDATE
+  USING (auth.uid() IN (SELECT id FROM public.users WHERE is_admin = true));

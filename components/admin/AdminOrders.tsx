@@ -39,9 +39,12 @@ export default function AdminOrders() {
     };
     load();
   }, []);
+  // Load QR code from Supabase (cross-device)
   useEffect(() => {
-    const saved = localStorage.getItem("aeroprep_qr_code");
-    if (saved) setQrCodeData(saved);
+    fetch("/api/admin/qr-code")
+      .then(r => r.json())
+      .then(data => { if (data.qrCode) setQrCodeData(data.qrCode); })
+      .catch(() => {});
   }, []);
 
   const handleAddDays = () => {
@@ -155,17 +158,28 @@ export default function AdminOrders() {
                     const reader = new FileReader();
                     reader.onload = () => {
                       const data = reader.result as string;
-                      localStorage.setItem("aeroprep_qr_code", data);
-                      setQrCodeData(data);
-                      setMsg("✅ 收款码已更新");
+                        setQrCodeData(data);
+                      // Save to Supabase (cross-device)
+                      fetch("/api/admin/qr-code", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ qrCode: data }),
+                      }).then(r => {
+                        if (r.ok) setMsg("✅ 收款码已更新（所有设备可见）");
+                        else setMsg("✅ 收款码已更新（本地）");
+                      }).catch(() => setMsg("✅ 收款码已更新（本地）"));
                     };
                     reader.readAsDataURL(file);
                   }} />
                 </label>
                 {qrCodeData && (
                   <button type="button" onClick={() => {
-                    localStorage.removeItem("aeroprep_qr_code");
                     setQrCodeData(null);
+                    fetch("/api/admin/qr-code", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ qrCode: "" }),
+                    });
                     setMsg("已清除收款码");
                   }}
                     className="mt-2 inline-flex items-center gap-1 rounded-full bg-rose-50 px-4 py-1.5 text-[10px] text-rose-500 transition hover:bg-rose-100">

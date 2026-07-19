@@ -119,8 +119,8 @@ function scoreArticulation(turns: InterviewTurn[]) {
   const punctuationCount = (totalText.match(/[。！？]/g)?.length ?? 0);
   const avgCharsPerTurn = turns.length ? totalText.length / turns.length : 0;
   const clarityBonus = punctuationCount >= turns.length * 2 ? 8 : punctuationCount >= turns.length ? 4 : 0;
-  const stableLengthBonus = avgCharsPerTurn >= 60 ? 5 : avgCharsPerTurn >= 30 ? 2 : -3;
-  return normalizeScore(70 + clarityBonus + stableLengthBonus - fillerPenalty);
+  const stableLengthBonus = avgCharsPerTurn >= 80 ? 5 : avgCharsPerTurn >= 50 ? 2 : avgCharsPerTurn >= 25 ? 0 : -5;
+  return normalizeScore(20 + clarityBonus + stableLengthBonus - fillerPenalty);
 }
 
 function scoreAdaptability(turns: InterviewTurn[]) {
@@ -128,14 +128,14 @@ function scoreAdaptability(turns: InterviewTurn[]) {
   const crossKeywords = countMatches(totalText, ["如果", "假设", "突发", "异常", "应急", "变化", "调整", "应对", "灵活"]);
   const actionBonus = countMatches(totalText, ["判断", "决策", "选择", "方案", "优先", "权衡"]) * 1.5;
   const variedStages = new Set(turns.filter(t => t.stage).map(t => t.stage)).size;
-  return normalizeScore(68 + Math.min(12, crossKeywords * 2) + Math.min(10, actionBonus) + variedStages * 2);
+  return normalizeScore(15 + Math.min(8, crossKeywords * 1.5) + Math.min(6, actionBonus) + variedStages * 1);
 }
 
 function scoreServiceAwareness(turns: InterviewTurn[], role: InterviewRole) {
   const totalText = tokenizeText(turns);
   const serviceKeywords = countMatches(totalText, ["服务", "乘客", "旅客", "沟通", "解释", "安抚", "帮助", "体验", "关怀", "耐心"]);
   const teamKeywords = countMatches(totalText, ["协作", "配合", "团队", "分工", "支援", "协助"]);
-  return normalizeScore(65 + Math.min(18, serviceKeywords * 3) + Math.min(10, teamKeywords * 2));
+  return normalizeScore(15 + Math.min(12, serviceKeywords * 2) + Math.min(6, teamKeywords * 1.5));
 }
 
 function scoreExpression(turns: InterviewTurn[]) {
@@ -148,7 +148,7 @@ function scoreExpression(turns: InterviewTurn[]) {
     avgLength >= 80 ? 8 : avgLength >= 50 ? 5 : avgLength >= 25 ? 2 : -6;
   const cadenceBonus = Math.min(5, punctuationDensity * 180);
 
-  return normalizeScore(68 + stableLengthBonus + cadenceBonus - fillerPenalty);
+  return normalizeScore(20 + stableLengthBonus + cadenceBonus - fillerPenalty);
 }
 
 function scoreLogic(turns: InterviewTurn[]) {
@@ -158,7 +158,7 @@ function scoreLogic(turns: InterviewTurn[]) {
   const alignmentBonus = Math.min(12, countQuestionAnswerAlignment(turns) * 0.9);
   const balancedAnswers = turns.filter((turn) => turn.answer.trim().length >= 45).length * 1.8;
 
-  return normalizeScore(66 + structureBonus + resultBonus + alignmentBonus + balancedAnswers);
+  return normalizeScore(18 + structureBonus + resultBonus + alignmentBonus + balancedAnswers);
 }
 
 function scoreProfessional(turns: InterviewTurn[], role: InterviewRole) {
@@ -173,7 +173,7 @@ function scoreProfessional(turns: InterviewTurn[], role: InterviewRole) {
     turn.stage === "professional"
   ).length * 2.2;
 
-  return normalizeScore(64 + keywordCoverage + actionBonus + practiceBonus + stageBonus);
+  return normalizeScore(15 + keywordCoverage + actionBonus + practiceBonus + stageBonus);
 }
 
 function scoreRoleFit(turns: InterviewTurn[], role: InterviewRole, company?: string) {
@@ -184,7 +184,7 @@ function scoreRoleFit(turns: InterviewTurn[], role: InterviewRole, company?: str
   const roleBonus = countMatches(totalText, [roleConfig.label, ...roleConfig.coreTopics]) * 2.4;
   const companyBonus = company ? countMatches(totalText, [company]) * 3.5 : 0;
 
-  return normalizeScore(67 + alignmentBonus + motivationBonus + roleBonus + companyBonus);
+  return normalizeScore(18 + alignmentBonus + motivationBonus + roleBonus + companyBonus);
 }
 
 function stageSummary(stage: InterviewStage | undefined) {
@@ -199,15 +199,15 @@ function buildStrengths(
 ) {
   const items: string[] = [];
 
-  if (scores.expressionAbility >= 82) {
+  if (scores.expressionAbility >= 68) {
     items.push("整体表达自然流畅，听感接近真实面试交流，不是简单背稿式作答。");
   }
 
-  if (scores.logicalThinking >= 82) {
+  if (scores.logicalThinking >= 68) {
     items.push("回答层次比较清楚，能够围绕问题先给结论，再补充经历、依据和结果。");
   }
 
-  if (scores.professionalKnowledge >= 82) {
+  if (scores.professionalKnowledge >= 68) {
     items.push(`对${getRoleConfig(role).label}岗位相关知识点有一定理解，能结合训练或实践经历展开说明。`);
   }
 
@@ -222,15 +222,15 @@ function buildStrengths(
 function buildWeaknesses(scores: InterviewReport["scores"], turns: InterviewTurn[]) {
   const items: string[] = [];
 
-  if (scores.logicalThinking < 75) {
+  if (scores.logicalThinking < 55) {
     items.push("部分回答还停留在直觉式表达，结构不够稳定，观点和例子之间的衔接还能更清晰。");
   }
 
-  if (scores.professionalKnowledge < 75) {
+  if (scores.professionalKnowledge < 55) {
     items.push("专业表述偏概念化，和岗位核心知识点、训练场景之间的连接还不够充分。");
   }
 
-  if (scores.roleFit < 75) {
+  if (scores.roleFit < 55) {
     items.push("求职动机和岗位匹配理由表达得还不够集中，没完全把“为什么适合这份工作”说透。");
   }
 
@@ -255,11 +255,11 @@ function buildSuggestions(
     "项目和实习经历优先突出你本人做了什么、遇到什么问题、最后带来什么结果。",
   ];
 
-  if (scores.professionalKnowledge < 82) {
+  if (scores.professionalKnowledge < 65) {
     items.push(`围绕 ${roleConfig.coreTopics.join("、")} 准备更口语化的表达，把课堂知识转成岗位语言。`);
   }
 
-  if (scores.roleFit < 82) {
+  if (scores.roleFit < 65) {
     items.push("把报考航司、岗位动机和三到五年职业规划连成一条线，减少泛泛而谈。");
   }
 
@@ -284,11 +284,11 @@ function buildOverallEvaluation(
 ) {
   const roleLabel = getRoleConfig(role).label;
 
-  if (totalScore >= 88) {
+  if (totalScore >= 80) {
     return `你在这场${company || "目标航司"} ${roleLabel}${mode ? ` ${mode}` : ""}面试中的综合表现已经比较成熟，回答质量和岗位贴合度都达到了较强水平。`;
   }
 
-  if (totalScore >= 78) {
+  if (totalScore >= 65) {
     return `你在这场${company || "目标航司"} ${roleLabel}${mode ? ` ${mode}` : ""}面试中表现出较好的基础和可培养性，已经具备比较正常的校招竞争力。`;
   }
 
@@ -314,40 +314,31 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
       serviceAwareness * 0.10
   );
 
-  const adjustedScore = normalizeScore(
-    clamp(
-      totalScore < 75
-        ? totalScore + 6
-        : totalScore < 85
-          ? totalScore + 3
-          : totalScore,
-      60,
-      95
-    )
-  );
+  const adjustedScore = normalizeScore(clamp(totalScore, 0, 85));
 
   const hiringProbability = normalizeScore(
     clamp(
       adjustedScore * 0.94 +
         (options.turns.length >= 6 ? 5 : options.turns.length * 0.8) +
         (options.mode === "压力面试" ? -2 : 0),
-      35,
-      97
+      10,
+      92
     )
   );
 
   // ─── 民航岗位竞争力评估（5维度加权） ───
+  const avgLen = options.turns.reduce((s,t) => s + t.answer.trim().length, 0) / Math.max(1, options.turns.length);
   const dimInterview = normalizeScore(
     expressionAbility * 0.30 + articulation * 0.25 + logicalThinking * 0.25 +
-    (options.turns.reduce((s,t) => s + t.answer.trim().length, 0) / Math.max(1, options.turns.length) >= 40 ? 20 : 10)
+    (avgLen >= 60 ? 15 : avgLen >= 30 ? 8 : 3)
   );
-  const dimFit = normalizeScore(roleFit * 0.50 + serviceAwareness * 0.50);
-  const dimProfessional = normalizeScore(professionalKnowledge * 0.60 +
-    (options.turns.filter(t => t.stage === 'professional' || t.stage === 'scenario').length >= 1 ? 40 : 20));
-  const dimComprehensive = normalizeScore(adaptability * 0.40 + articulation * 0.30 + expressionAbility * 0.30);
+  const dimFit = normalizeScore(roleFit * 0.50 + serviceAwareness * 0.50 + 5);
+  const dimProfessional = normalizeScore(professionalKnowledge * 0.50 +
+    (options.turns.filter(t => t.stage === 'professional' || t.stage === 'scenario').length >= 2 ? 20 : 10));
+  const dimComprehensive = normalizeScore(adaptability * 0.35 + articulation * 0.30 + expressionAbility * 0.35 + 5);
   const dimGrowth = normalizeScore(clamp(
     100 - (expressionAbility + logicalThinking + professionalKnowledge + roleFit) / 4,
-    20, 90
+    10, 85
   ));
 
   const competitiveScore = normalizeScore(
@@ -355,23 +346,23 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
   );
 
   let competitiveLevel: string, competitiveRange: string;
-  if (competitiveScore >= 65) { competitiveLevel = 'A'; competitiveRange = '65%-85%'; }
-  else if (competitiveScore >= 45) { competitiveLevel = 'B'; competitiveRange = '45%-65%'; }
-  else if (competitiveScore >= 25) { competitiveLevel = 'C'; competitiveRange = '25%-45%'; }
-  else { competitiveLevel = 'D'; competitiveRange = '25%以下'; }
+  if (competitiveScore >= 60) { competitiveLevel = 'A'; competitiveRange = '60%-85%'; }
+  else if (competitiveScore >= 40) { competitiveLevel = 'B'; competitiveRange = '40%-60%'; }
+  else if (competitiveScore >= 20) { competitiveLevel = 'C'; competitiveRange = '20%-40%'; }
+  else { competitiveLevel = 'D'; competitiveRange = '20%以下'; }
 
   const competitiveStrengths: string[] = [];
-  if (dimInterview >= 50) competitiveStrengths.push('面试表达流畅，回答有基本结构和层次');
-  if (dimFit >= 50) competitiveStrengths.push('对民航岗位有较好的认知和职业动机');
-  if (dimProfessional >= 50) competitiveStrengths.push('具备一定的民航专业基础和行业认知');
-  if (dimComprehensive >= 50) competitiveStrengths.push('情绪稳定，面对问题能做出合理反应');
+  if (dimInterview >= 45) competitiveStrengths.push('面试表达流畅，回答有基本结构和层次');
+  if (dimFit >= 45) competitiveStrengths.push('对民航岗位有较好的认知和职业动机');
+  if (dimProfessional >= 45) competitiveStrengths.push('具备一定的民航专业基础和行业认知');
+  if (dimComprehensive >= 45) competitiveStrengths.push('情绪稳定，面对问题能做出合理反应');
   if (competitiveStrengths.length === 0) competitiveStrengths.push('具备基础表达能力，有进一步提升空间');
 
   const competitiveWeaknesses: string[] = [];
-  if (dimInterview < 35) competitiveWeaknesses.push('表达流畅度和答题完整性需进一步提升');
-  if (dimFit < 35) competitiveWeaknesses.push('岗位认知和服务意识可进一步加强');
-  if (dimProfessional < 35) competitiveWeaknesses.push('民航专业知识和行业认知有待补充');
-  if (dimComprehensive < 35) competitiveWeaknesses.push('应变能力和综合素质需通过模拟训练强化');
+  if (dimInterview < 30) competitiveWeaknesses.push('表达流畅度和答题完整性需进一步提升');
+  if (dimFit < 30) competitiveWeaknesses.push('岗位认知和服务意识可进一步加强');
+  if (dimProfessional < 30) competitiveWeaknesses.push('民航专业知识和行业认知有待补充');
+  if (dimComprehensive < 30) competitiveWeaknesses.push('应变能力和综合素质需通过模拟训练强化');
   if (competitiveWeaknesses.length === 0) competitiveWeaknesses.push('当前无明显短板，建议保持训练节奏持续提升');
 
   const externalFactors = '真实录取结果还受到多种因素影响，包括但不限于：招聘人数与报考人数比例、学历背景、外语水平（尤其英语）、身体条件与形象、航空公司的具体招聘标准、面试官主观判断等。本评估仅基于本次模拟面试表现生成，不代表真实招聘结果。';
@@ -452,7 +443,7 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     comprehensiveEvaluation: interviewEvalLines.join("\n"),
     perQuestionAnalysis,
     personalProfile: `优势：${strengths.length ? strengths.join("；") : "具有基础表达能力，有较强的学习意愿。"}\n风险点：${weaknesses.length ? weaknesses.join("；") : "临场表达仍需提升，专业知识体系待完善。"}`,
-    careerMatch: `当前表现较适合${getRoleConfig(options.role).label}岗位。${adjustedScore >= 78 ? "建议优先尝试该方向面试。" : "建议先强化基础知识，再进行正式面试。"}`,
+    careerMatch: `当前表现较适合${getRoleConfig(options.role).label}岗位。${adjustedScore >= 65 ? "建议优先尝试该方向面试。" : "建议先强化基础知识，再进行正式面试。"}`,
     improvementPlan: improvements.join("\n\n"),
     nextPrediction: `保持当前水平：成功概率约${hiringProbability}%。完成30天提升计划后可提升至${Math.min(95, hiringProbability + 15)}%。`,
     growthMessage: `航空面试不是考验你是否完美，而是考验你是否适合。你在本轮${options.company || ""}模拟面试中展现了${scores.expressionAbility >= 75 ? "良好的表达基础" : "可塑的表达潜力"}，最大的提升空间在于将回答从"泛泛而谈"升级为"结合具体经历、展现岗位思维"。`,

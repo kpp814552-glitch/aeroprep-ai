@@ -23,7 +23,13 @@ export default function MembershipPage() {
   const [payError, setPayError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const router = useRouter();
-  useEffect(() => { const saved = localStorage.getItem("aeroprep_qr_code"); if (saved) setQrSrc(saved); }, []);
+  // Load QR code from Supabase (cross-device)
+  useEffect(() => {
+    fetch("/api/admin/qr-code")
+      .then(r => r.json())
+      .then(data => { if (data.qrCode) setQrSrc(data.qrCode); })
+      .catch(() => {});
+  }, []);
 
   const handlePay = async (planId: PlanId) => {
     setSelected(planId);

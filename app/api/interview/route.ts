@@ -65,41 +65,66 @@ function normalizeReportPayload(payload: unknown, fallback: InterviewReport) {
 
   const candidate = payload as Partial<InterviewReport>;
 
+  // Strict score cap: max 68 for totalScore, max 75 for individual scores
   return {
     scores: {
       expressionAbility:
-        typeof candidate.scores?.expressionAbility === "number"
-          ? candidate.scores.expressionAbility
-          : fallback.scores.expressionAbility,
+        Math.min(
+          typeof candidate.scores?.expressionAbility === "number"
+            ? candidate.scores.expressionAbility
+            : fallback.scores.expressionAbility,
+          68
+        ),
       logicalThinking:
-        typeof candidate.scores?.logicalThinking === "number"
-          ? candidate.scores.logicalThinking
-          : fallback.scores.logicalThinking,
+        Math.min(
+          typeof candidate.scores?.logicalThinking === "number"
+            ? candidate.scores.logicalThinking
+            : fallback.scores.logicalThinking,
+          68
+        ),
       professionalKnowledge:
-        typeof candidate.scores?.professionalKnowledge === "number"
-          ? candidate.scores.professionalKnowledge
-          : fallback.scores.professionalKnowledge,
+        Math.min(
+          typeof candidate.scores?.professionalKnowledge === "number"
+            ? candidate.scores.professionalKnowledge
+            : fallback.scores.professionalKnowledge,
+          68
+        ),
       roleFit:
-        typeof candidate.scores?.roleFit === "number"
-          ? candidate.scores.roleFit
-          : fallback.scores.roleFit,
+        Math.min(
+          typeof candidate.scores?.roleFit === "number"
+            ? candidate.scores.roleFit
+            : fallback.scores.roleFit,
+          68
+        ),
       articulation:
-        typeof candidate.scores?.articulation === "number"
-          ? candidate.scores.articulation
-          : fallback.scores.articulation,
+        Math.min(
+          typeof candidate.scores?.articulation === "number"
+            ? candidate.scores.articulation
+            : fallback.scores.articulation,
+          68
+        ),
       adaptability:
-        typeof candidate.scores?.adaptability === "number"
-          ? candidate.scores.adaptability
-          : fallback.scores.adaptability,
+        Math.min(
+          typeof candidate.scores?.adaptability === "number"
+            ? candidate.scores.adaptability
+            : fallback.scores.adaptability,
+          68
+        ),
       serviceAwareness:
-        typeof candidate.scores?.serviceAwareness === "number"
-          ? candidate.scores.serviceAwareness
-          : fallback.scores.serviceAwareness,
+        Math.min(
+          typeof candidate.scores?.serviceAwareness === "number"
+            ? candidate.scores.serviceAwareness
+            : fallback.scores.serviceAwareness,
+          68
+        ),
     },
     totalScore:
-      typeof candidate.totalScore === "number"
-        ? candidate.totalScore
-        : fallback.totalScore,
+      Math.min(
+        typeof candidate.totalScore === "number"
+          ? candidate.totalScore
+          : fallback.totalScore,
+        68
+      ),
     overallEvaluation:
       typeof candidate.overallEvaluation === "string" && candidate.overallEvaluation.trim()
         ? candidate.overallEvaluation.trim()
