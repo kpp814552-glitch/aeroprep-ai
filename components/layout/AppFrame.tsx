@@ -2,10 +2,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { ChevronLeft, LogOut, UserCircle } from "lucide-react";
+import { ChevronLeft, Crown, LogOut, UserCircle } from "lucide-react";
 import { appName } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { isMember } from "@/lib/member/member-storage";
 
 type AppFrameProps = {
   children: ReactNode;

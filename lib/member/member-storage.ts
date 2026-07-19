@@ -46,6 +46,19 @@ export function activateMember(planId: PlanId): MemberInfo {
   return info;
 }
 
+export function activateFromServer(expiresAt: string, planId?: string): MemberInfo {
+  if (new Date(expiresAt) < new Date()) return null;
+  const plan = planId && PLANS.find((p) => p.id === planId);
+  const info: NonNullable<MemberInfo> = {
+    plan: (plan?.id || "30day") as PlanId,
+    activatedAt: new Date().toISOString(),
+    expiresAt: expiresAt,
+  };
+  localStorage.setItem(MEMBER_KEY, JSON.stringify(info));
+  localStorage.removeItem(COUNT_KEY);
+  return info;
+}
+
 export function isMember(): boolean {
   return getMember() !== null;
 }
@@ -95,12 +108,8 @@ export async function syncServerMember(): Promise<boolean> {
       const existing = getMember();
       // Only activate if local is expired or missing
       if (!existing || new Date(existing.expiresAt) < new Date()) {
-        // Find matching plan
-        const plan = PLANS.find((p) => p.id === data.planId);
-        if (plan) {
-          activateMember(data.planId);
-          return true;
-        }
+        activateFromServer(data.memberUntil, data.planId || undefined);
+        return true;
       }
     }
     return false;
