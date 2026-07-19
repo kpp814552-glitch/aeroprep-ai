@@ -89,6 +89,8 @@ export default function ChatWorkspace() {
   const [recruitType, setRecruitType] = useState("校招");
   const [draft, setDraft] = useState("");
   const [result, setResult] = useState("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [optimizedVersion, setOptimizedVersion] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showResult, setShowResult] = useState(false);
@@ -131,28 +133,13 @@ export default function ChatWorkspace() {
 
 优化后的内容必须：语言自然有温度；体现真实经历；突出岗位匹配；突出职业素养；符合民航招聘标准；避免模板化空话；能够让HR快速抓住亮点。
 
-输出严格按以下结构（用 === 分隔每个部分）：
-
-=== 综合评价 ===
-简要评价当前内容质量（2-3句）
-
-=== 竞争力评分 ===
-从表达逻辑、岗位匹配、专业素养、沟通能力、HR印象等维度评分并简要说明
-
-=== 核心问题 ===
-指出最影响竞争力的关键问题（2-3条）
+输出严格按以下两个板块（用 === 分隔）：
 
 === 优化建议 ===
-逐条给出可执行的修改建议
+逐条列出可执行的修改建议（3-5条），每条用「-」开头，简洁专业
 
 === 优化版本 ===
-完整的高质量优化内容
-
-=== HR视角分析 ===
-模拟HR阅读后的第一印象、可能疑问和追问方向
-
-=== 竞争力提升建议 ===
-还可以补充哪些经历或细节来提升录取概率`;
+完整的高质量优化内容，直接可用的最终版本`;
 
     const userPrompt = `内容类型：${contentType}
 目标岗位：${positionLabel}
@@ -169,7 +156,20 @@ ${draft.trim()}`;
       });
       const payload = await res.json();
       if (!res.ok) throw new Error(payload?.error || "优化请求失败");
-      setResult(payload?.assistant || "未能生成优化结果");
+      const raw = payload?.assistant || "未能生成优化结果";
+      setResult(raw);
+      
+      // Parse sections
+      const sections = raw.split("=== 优化").filter(Boolean);
+      for (const sec of sections) {
+        if (sec.startsWith("建议")) {
+          const body = sec.replace("建议 ===", "").replace("建议===", "").trim();
+          setSuggestions(body.split("\n").filter((l: string) => l.trim().startsWith("-") || l.trim().startsWith("•") || l.trim().startsWith("1.")).map(l => l.replace(/^[-•]\s*|^\d+\.\s*/, "").trim()).filter(Boolean));
+        } else if (sec.startsWith("版本")) {
+          const body = sec.replace("版本 ===", "").replace("版本===", "").trim();
+          setOptimizedVersion(body);
+        }
+      }
       setShowResult(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "优化请求失败");
@@ -379,26 +379,22 @@ ${draft.trim()}`;
               </div>
 
               {/* Optimization Suggestions */}
-              <div className="mt-6 rounded-2xl border border-white/40 bg-white/60 px-6 py-5 shadow-sm" style={{ animation: "fadeUp 0.3s ease both", animationDelay: "0.1s" }}>
-                <div className="mb-4 flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-amber-500" />
-                  <p className="text-sm font-semibold text-slate-800">AI优化建议</p>
+              {suggestions.length > 0 && (
+                <div className="mt-6 rounded-2xl border border-white/40 bg-white/60 px-6 py-5 shadow-sm" style={{ animation: "fadeUp 0.3s ease both", animationDelay: "0.1s" }}>
+                  <div className="mb-4 flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-amber-500" />
+                    <p className="text-sm font-semibold text-slate-800">AI优化建议</p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {suggestions.map((s, i) => (
+                      <div key={i} className="flex items-start gap-2.5 rounded-xl bg-white/60 px-4 py-3">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                        <span className="text-xs leading-5 text-slate-600">{s}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {[
-                    "删除冗余表达，使内容更加精炼有力",
-                    "增加民航行业关键词，提升专业度",
-                    "强化安全意识和服务意识表述",
-                    "提升表达逻辑，使用STAR结构",
-                    "补充岗位实操细节和工作场景",
-                  ].map((s, i) => (
-                    <div key={i} className="flex items-start gap-2.5 rounded-xl bg-white/60 px-4 py-3">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                      <span className="text-xs leading-5 text-slate-600">{s}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              )}
 
               {/* Comparison */}
               <div className="mt-6 grid gap-4 md:grid-cols-2" style={{ animation: "fadeUp 0.3s ease both", animationDelay: "0.15s" }}>
@@ -415,58 +411,12 @@ ${draft.trim()}`;
                     </button>
                   </div>
                   <div className="prose prose-slate max-h-[300px] max-w-none overflow-y-auto text-xs leading-6 [&_strong]:text-slate-900">
-                    <ReactMarkdown>{result}</ReactMarkdown>
+                    <ReactMarkdown>{optimizedVersion || result}</ReactMarkdown>
                   </div>
                 </div>
               </div>
 
-              {/* Additional: Follow-ups (interview) or Competitiveness (resume) */}
-              {type === "interview" && (
-                <div className="mt-6 rounded-2xl border border-white/40 bg-white/60 px-6 py-5 shadow-sm" style={{ animation: "fadeUp 0.3s ease both", animationDelay: "0.2s" }}>
-                  <p className="mb-4 text-sm font-semibold text-slate-800">HR可能追问</p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {["请详细描述你在团队中的具体角色", "这个经历中你遇到的最大困难是什么"].map((q, i) => (
-                      <div key={i} className="rounded-xl border border-amber-100 bg-amber-50/40 px-4 py-3">
-                        <Brain className="mb-2 h-3.5 w-3.5 text-amber-500" />
-                        <p className="text-xs leading-5 text-slate-700">{q}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {type === "resume" && (
-                <div className="mt-6 rounded-2xl border border-white/40 bg-white/60 px-6 py-5 shadow-sm" style={{ animation: "fadeUp 0.3s ease both", animationDelay: "0.2s" }}>
-                  <p className="mb-4 text-sm font-semibold text-slate-800">竞争力提升建议</p>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {[
-                      { icon: Target, text: "补充项目中的量化成果，如提升效率百分比", color: "text-sky-500" },
-                      { icon: Star, text: "增加民航相关实训或模拟训练经历", color: "text-amber-500" },
-                    ].map((item, i) => {
-                      const Icon = item.icon;
-                      return (
-                        <div key={i} className="flex items-start gap-3 rounded-xl bg-white/60 px-4 py-3">
-                          <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${item.color}`} />
-                          <span className="text-xs leading-5 text-slate-600">{item.text}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Optimization Notes */}
-              <div className="mt-6 rounded-2xl border border-white/40 bg-white/60 px-6 py-5 shadow-sm" style={{ animation: "fadeUp 0.3s ease both", animationDelay: "0.25s" }}>
-                <p className="mb-3 text-sm font-semibold text-slate-800">优化说明</p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {["民航岗位表达规范", "HR阅读习惯", "STAR表达逻辑", "安全意识", "服务意识", "职业稳定性"].map((item, i) => (
-                    <div key={i} className="flex items-center gap-2.5 rounded-xl bg-white/60 px-4 py-2.5">
-                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-sky-500" />
-                      <span className="text-xs text-slate-600">{item}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
               {/* Re-optimize */}
               <div className="mt-10 flex justify-center">
