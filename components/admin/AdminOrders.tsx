@@ -29,14 +29,16 @@ export default function AdminOrders() {
   useEffect(() => { refresh(); }, []);
   
   // Fetch pending applications
-  const fetchApplications = async () => {
-    setAppLoading(true);
-    try {
-      const res = await fetch("/api/member/pending");
-      if (res.ok) { const data = await res.json(); setApplications(data.applicants || []); }
-    } catch {} finally { setAppLoading(false); }
-  };
-  useEffect(() => { fetchApplications(); }, []);
+  useEffect(() => {
+    const load = async () => {
+      setAppLoading(true);
+      try {
+        const res = await fetch("/api/member/pending");
+        if (res.ok) { const data = await res.json(); setApplications(data.applicants || []); }
+      } catch {} finally { setAppLoading(false); }
+    };
+    load();
+  }, []);
   useEffect(() => {
     const saved = localStorage.getItem("aeroprep_qr_code");
     if (saved) setQrCodeData(saved);
@@ -211,7 +213,11 @@ export default function AdminOrders() {
           <GlassPanel className="px-5 py-4">
             <div className="flex items-center justify-between mb-4">
               <p className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Crown className="h-4 w-4 text-amber-500" />待审核的会员申请</p>
-              <button type="button" onClick={fetchApplications} disabled={appLoading}
+              <button type="button" onClick={async () => {
+                setAppLoading(true);
+                try { const res = await fetch("/api/member/pending"); if (res.ok) { const d = await res.json(); setApplications(d.applicants || []); } }
+                catch {} finally { setAppLoading(false); }
+              }} disabled={appLoading}
                 className="rounded-full bg-white/60 px-3 py-1.5 text-[10px] text-slate-500 transition hover:bg-white">
                 {appLoading ? "加载中..." : "刷新"}
               </button>
@@ -239,7 +245,7 @@ export default function AdminOrders() {
                         const data = await res.json();
                         if (data.success) {
                           setMsg("✅ 已通过 " + (data.email || app.email || "") + " 的会员申请");
-                          fetchApplications();
+                          setAppLoading(true); try { const r = await fetch("/api/member/pending"); if (r.ok) { const d = await r.json(); setApplications(d.applicants || []); } } catch {} finally { setAppLoading(false); }
                         } else {
                           setMsg("❌ " + (data.error || "操作失败"));
                         }
