@@ -41,6 +41,7 @@ import {
   TtsAutoplayBlockedError } from "@/lib/audio/tts-player";
 import {
   useAuth } from "@/hooks/useAuth";
+import { useInterviewTimer } from "@/hooks/useInterviewTimer";
 
 type SpeechRecognitionConstructor = new () => SpeechRecognition;
 
@@ -221,14 +222,12 @@ const resumeQualityRef = useRef<any>(
     ? (() => { try { return JSON.parse(sessionStorage.getItem("aeroprep_resume_quality") || "null"); } catch { return null; } })()
     : null
 );
-  const startAtRef = useRef<number | null>(null);
-  const elapsedTimerRef = useRef<number | null>(null);
-  const answerTimerRef = useRef<number | null>(null);
   const endAnswerRef = useRef<() => void>(() => {});
+  // ── Timer Hook ──
+  const timer = useInterviewTimer();
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const finalTranscriptRef = useRef("");
   const interimTranscriptRef = useRef("");
-  const turnStartedAtRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const microphoneStreamRef = useRef<MediaStream | null>(null);
@@ -254,8 +253,7 @@ const resumeQualityRef = useRef<any>(
   const [phase, setPhase] = useState<InterviewPhase>('preparing');
 
   // ── UI State ──
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const [answerCountdown, setAnswerCountdown] = useState(0);
+  // (timer.elapsedSeconds, answerCountdown from timer hook)
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [currentStage, setCurrentStage] = useState<InterviewStage>("self-intro");
   const [interviewerLabel, setInterviewerLabel] = useState("AI 面试官");
@@ -296,23 +294,6 @@ const resumeQualityRef = useRef<any>(
     return createInterviewVoiceSession({
       endpoint: "/api/tts",
     });
-  }, []);
-
-  // ── Timer helpers ──
-  const clearAnswerTimer = useCallback(() => {
-    if (answerTimerRef.current) {
-      window.clearInterval(answerTimerRef.current);
-      answerTimerRef.current = null;
-    }
-  }, []);
-
-  const startElapsedTimer = useCallback(() => {
-    if (elapsedTimerRef.current !== null) return;
-    startAtRef.current = Date.now();
-    elapsedTimerRef.current = window.setInterval(() => {
-      if (startAtRef.current === null) return;
-      setElapsedSeconds(Math.max(0, Math.round((Date.now() - startAtRef.current) / 1000)));
-    }, 1000);
   }, []);
 
   // ── Voice monitor ──
@@ -403,8 +384,8 @@ const resumeQualityRef = useRef<any>(
 
       setIsGeneratingReport(true);
       setIsAnswering(false);
-      clearAnswerTimer();
-      setAnswerCountdown(0);
+      timer.clearAnswerTimer();
+      timer.setAnswerCountdown(0);
       setVoiceActivityState("Processing");
       setStatusText("正在整理面试记录并生成报告...（1/2 准备报告数据）");
       stopRecognition();
@@ -444,7 +425,7 @@ const resumeQualityRef = useRef<any>(
           persona,
           interviewer: interviewerLabel,
           voiceProviderName,
-          elapsedSeconds: totalElapsedSeconds,
+          elapsedSeconds: timer.getTotalElapsedSeconds(),
           turns: finalTurns,
           createdAt: new Date().toISOString(),
           report: payload.report,
@@ -505,7 +486,7 @@ const resumeQualityRef = useRef<any>(
           mode,
           persona,
           turns: finalTurns,
-          elapsedSeconds: totalElapsedSeconds,
+          elapsedSeconds: timer.getTotalElapsedSeconds(),
         });
         const fallbackRecord = buildSessionRecord({
           sessionId: sessionIdRef.current,
@@ -516,7 +497,7 @@ const resumeQualityRef = useRef<any>(
           persona,
           interviewer: interviewerLabel,
           voiceProviderName,
-          elapsedSeconds: totalElapsedSeconds,
+          elapsedSeconds: timer.getTotalElapsedSeconds(),
           turns: finalTurns,
           createdAt: new Date().toISOString(),
           report: fallbackReport,
@@ -547,7 +528,7 @@ const resumeQualityRef = useRef<any>(
       roleLabel,
       stopRecognition,
       voiceProviderName,
-      clearAnswerTimer,
+      timer.clearAnswerTimer,
       user,
     ]
   );
@@ -668,7 +649,7 @@ const resumeQualityRef = useRef<any>(
 
         // ─── Update recording timer ───
         if (recordingTimerRef.current) {
-          const elapsed = Math.floor((Date.now() - (turnStartedAtRef.current || Date.now())) / 1000);
+          const elapsed = timer.getTurnDuration();
           const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
           const secs = String(elapsed % 60).padStart(2, '0');
           recordingTimerRef.current.textContent = mins + ':' + secs;
@@ -704,7 +685,7 @@ const resumeQualityRef = useRef<any>(
     setInterimTranscript("");
     setVoiceActivityState("Listening");
     setStatusText("请开始回答，系统正在实时识别");
-    turnStartedAtRef.current = Date.now();
+    timer.turnStartedAtRef.current = Date.now();
     setIsAnswering(true);
 
     await startVoiceMonitor();
@@ -819,20 +800,7 @@ const resumeQualityRef = useRef<any>(
     [company, mode, persona, role]
   );
 
-  const startAnswerCountdown = useCallback((seconds: number) => {
-    clearAnswerTimer();
-    setAnswerCountdown(seconds);
-    let remaining = seconds;
-    answerTimerRef.current = window.setInterval(() => {
-      remaining -= 1;
-      setAnswerCountdown(Math.max(remaining, 0));
 
-      if (remaining <= 0) {
-        clearAnswerTimer();
-        endAnswerRef.current();
-      }
-    }, 1000);
-  }, [clearAnswerTimer]);
 
   // ── State Machine: Preparing Phase ──
   useEffect(() => {
@@ -932,9 +900,9 @@ const resumeQualityRef = useRef<any>(
           setVoiceActivityState('waiting_answer');
           setStatusText('请开始作答');
           const answerSeconds = getAnswerSecondsForStage(pending.stage);
-          setAnswerCountdown(answerSeconds);
+          timer.setAnswerCountdown(answerSeconds);
           startRecognition();
-          startAnswerCountdown(answerSeconds);
+          timer.startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
         },
       });
 
@@ -955,7 +923,7 @@ const resumeQualityRef = useRef<any>(
       }
       throw error;
     }
-  }, [company, mode, startAnswerCountdown, startRecognition, voiceSession]);
+  }, [company, mode, timer.startAnswerCountdown, startRecognition, voiceSession]);
 
   // ── Handle user clicking "开始面试" (ready → playing) ──
   const handleStartInterview = useCallback(async () => {
@@ -964,7 +932,7 @@ const resumeQualityRef = useRef<any>(
     if (!pending) return;
 
     // Start elapsed timer
-    startElapsedTimer();
+    timer.startElapsedTimer();
 
     saveGrowthEvent({
       type: 'interview_started',
@@ -976,7 +944,7 @@ const resumeQualityRef = useRef<any>(
 
     setPhase('playing');
     await playCurrentQuestion(pending);
-  }, [company, mode, phase, playCurrentQuestion, startElapsedTimer]);
+  }, [company, mode, phase, playCurrentQuestion, timer.startElapsedTimer]);
 
   // ── Handle user ending answer (listening → processing → playing) ──
   const handleEndAnswer = useCallback(async () => {
@@ -990,13 +958,13 @@ const resumeQualityRef = useRef<any>(
     setPhase('processing');
     setVoiceActivityState('Processing');
     setStatusText('正在结束本轮回答...');
-    setAnswerCountdown(0);
+    timer.setAnswerCountdown(0);
 
     // Snapshot transcript BEFORE stopping recognition (protect against lost chunks)
     const transcriptSnapshot = finalTranscriptRef.current.trim();
 
     const completeTranscript = await stopRecognitionAsync();
-    clearAnswerTimer();
+    timer.clearAnswerTimer();
     setIsAnswering(false);
     setLiveTranscript('');
     setInterimTranscript('');
@@ -1009,8 +977,8 @@ const resumeQualityRef = useRef<any>(
       : transcriptSnapshot;
     const answerText = (completeTranscript || bestTranscript || interimTranscriptRef.current).trim();
     // console.log('[ASR] Final transcript length=' + answerText.length + ' snapshot=' + transcriptSnapshot.length);
-    const answerDurationSeconds = turnStartedAtRef.current
-      ? Math.max(1, Math.round((Date.now() - turnStartedAtRef.current) / 1000))
+    const answerDurationSeconds = timer.turnStartedAtRef.current
+      ? Math.max(1, Math.round((Date.now() - timer.turnStartedAtRef.current) / 1000))
       : 0;
 
     const turn: InterviewTurn = {
@@ -1037,7 +1005,7 @@ const resumeQualityRef = useRef<any>(
     setTurns(nextTurns);
 
     const totalElapsedSeconds =
-      startAtRef.current === null ? elapsedSeconds : Math.round((Date.now() - startAtRef.current) / 1000);
+      timer.startAtRef.current === null ? timer.elapsedSeconds : Math.round((Date.now() - timer.startAtRef.current) / 1000);
 
     const effectiveMaxRounds = getTotalRoundsForMode(mode);
 
@@ -1076,10 +1044,10 @@ const resumeQualityRef = useRef<any>(
       setPhase('error');
     }
   }, [
-    clearAnswerTimer,
+    timer.clearAnswerTimer,
     currentStage,
     company,
-    elapsedSeconds,
+    timer.elapsedSeconds,
     fetchNextQuestion,
     generateReportAndFinish,
     interviewerLabel,
@@ -1112,9 +1080,9 @@ const resumeQualityRef = useRef<any>(
           setVoiceActivityState('waiting_answer');
           setStatusText('请开始作答');
           const answerSeconds = getAnswerSecondsForStage(pending.stage);
-          setAnswerCountdown(answerSeconds);
+          timer.setAnswerCountdown(answerSeconds);
           startRecognition();
-          startAnswerCountdown(answerSeconds);
+          timer.startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
         },
       });
     } catch (error) {
@@ -1126,7 +1094,7 @@ const resumeQualityRef = useRef<any>(
       setFatalError(error instanceof Error ? error.message : '语音播放失败');
       setPhase('error');
     }
-  }, [autoplayBlocked, phase, startAnswerCountdown, startRecognition, voiceSession]);
+  }, [autoplayBlocked, phase, timer.startAnswerCountdown, startRecognition, voiceSession]);
 
   // ── Scroll transcript ──
   useEffect(() => {
@@ -1220,11 +1188,6 @@ const resumeQualityRef = useRef<any>(
   // ── Cleanup on unmount ──
   useEffect(() => {
     return () => {
-      if (elapsedTimerRef.current) {
-        window.clearInterval(elapsedTimerRef.current);
-      }
-
-      clearAnswerTimer();
       stopRecognition();
       voiceSession?.stop();
 
@@ -1232,11 +1195,11 @@ const resumeQualityRef = useRef<any>(
         window.speechSynthesis.cancel();
       }
     };
-  }, [clearAnswerTimer, stopRecognition, voiceSession]);
+  }, [stopRecognition, voiceSession]);
 
   // ── Computed UI values ──
   const activeVoiceState = voiceStateMeta[voiceActivityState] ?? voiceStateMeta.Silent;
-  const answerCountdownLabel = formatAnswerCountdown(answerCountdown);
+  const answerCountdownLabel = formatAnswerCountdown(timer.answerCountdown);
   const showHeader = phase === 'playing' || phase === 'listening' || phase === 'processing';
   const showBottomCard = phase === 'playing' || phase === 'listening' || phase === 'processing';
   const isPlayingPhase = phase === 'playing';
@@ -1332,7 +1295,7 @@ const resumeQualityRef = useRef<any>(
                   面试时长 / Duration
                 </p>
                 <p className="mt-2 text-[1.5rem] sm:text-[2.15rem] font-light tracking-[0.12em] text-white/92 md:text-[2.85rem]">
-                  {formatDuration(elapsedSeconds)}
+                  {formatDuration(timer.elapsedSeconds)}
                 </p>
               </div>
             </div>
@@ -1406,7 +1369,7 @@ const resumeQualityRef = useRef<any>(
                 面试已结束
               </p>
               <p className="mt-2 text-sm text-white/50">
-                {completedTurnsRef.current /* eslint-disable-line react-hooks/refs */} 轮 · 用时 {Math.floor(elapsedSeconds / 60)} 分 {elapsedSeconds % 60} 秒
+                {completedTurnsRef.current /* eslint-disable-line react-hooks/refs */} 轮 · 用时 {Math.floor(timer.elapsedSeconds / 60)} 分 {timer.elapsedSeconds % 60} 秒
               </p>
               <p className="mt-1 text-sm text-white/50">
                 综合评分：{completedScoreRef.current /* eslint-disable-line react-hooks/refs */} 分
