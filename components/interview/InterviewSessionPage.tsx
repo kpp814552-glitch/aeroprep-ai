@@ -42,148 +42,7 @@ import {
 import {
   useAuth } from "@/hooks/useAuth";
 import { useInterviewTimer } from "@/hooks/useInterviewTimer";
-
-type SpeechRecognitionConstructor = new () => SpeechRecognition;
-
-type SpeechRecognitionResultItem = {
-  transcript: string;
-};
-
-type SpeechRecognitionResult = {
-  isFinal: boolean;
-  length: number;
-  item(index: number): SpeechRecognitionResultItem;
-  [index: number]: SpeechRecognitionResultItem;
-};
-
-type SpeechRecognitionResultList = {
-  length: number;
-  item(index: number): SpeechRecognitionResult;
-  [index: number]: SpeechRecognitionResult;
-};
-
-type SpeechRecognitionEvent = Event & {
-  resultIndex: number;
-  results: SpeechRecognitionResultList;
-};
-
-type SpeechRecognition = EventTarget & {
-  lang: string;
-  interimResults: boolean;
-  continuous: boolean;
-  start: () => void;
-  stop: () => void;
-  abort: () => void;
-  onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event?: Event) => void) | null;
-  onend: (() => void) | null;
-};
-
-type InterviewApiQuestion = {
-  question?: string;
-  stage?: InterviewStage;
-  interviewer?: string;
-  roleLabel?: string;
-};
-
-type InterviewApiReport = {
-  report?: InterviewReport;
-};
-
-type PendingQuestion = {
-  text: string;
-  stage: InterviewStage;
-  interviewer: string;
-  roleLabel: string;
-};
-
-type VoiceActivityState =
-  | "Listening"
-  | "Silent"
-  | "Processing"
-  | "tts_generating"
-  | "tts_playing"
-  | "waiting_answer";
-
-const voiceStateMeta: Record<
-  VoiceActivityState,
-  { label: string; subtitle: string; accent: string; dotClassName: string }
-> = {
-  Listening: {
-    label: "LISTENING",
-    subtitle: "正在聆听...",
-    accent: "text-emerald-300",
-    dotClassName: "bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.65)]",
-  },
-  Silent: {
-    label: "SILENT",
-    subtitle: "当前静音",
-    accent: "text-white/88",
-    dotClassName: "bg-white/55 shadow-[0_0_12px_rgba(255,255,255,0.22)]",
-  },
-  Processing: {
-    label: "PROCESSING",
-    subtitle: "AI 思考中...",
-    accent: "text-amber-200",
-    dotClassName: "bg-amber-300 shadow-[0_0_14px_rgba(252,211,77,0.4)]",
-  },
-  tts_generating: {
-    label: "TTS GENERATING",
-    subtitle: "正在生成语音...",
-    accent: "text-sky-200",
-    dotClassName: "bg-sky-300 shadow-[0_0_14px_rgba(125,211,252,0.4)]",
-  },
-  tts_playing: {
-    label: "TTS PLAYING",
-    subtitle: "面试官正在提问...",
-    accent: "text-cyan-200",
-    dotClassName: "bg-cyan-300 shadow-[0_0_14px_rgba(103,232,249,0.4)]",
-  },
-  waiting_answer: {
-    label: "WAITING ANSWER",
-    subtitle: "请开始作答",
-    accent: "text-white/88",
-    dotClassName: "bg-white/55 shadow-[0_0_12px_rgba(255,255,255,0.22)]",
-  },
-};
-
-function formatDuration(totalSeconds: number) {
-  const hours = Math.floor(totalSeconds / 3600)
-    .toString()
-    .padStart(2, "0");
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-    .toString()
-    .padStart(2, "0");
-  const seconds = Math.floor(totalSeconds % 60)
-    .toString()
-    .padStart(2, "0");
-
-  return `${hours}:${minutes}:${seconds}`;
-}
-
-function formatAnswerCountdown(totalSeconds: number) {
-  const safeSeconds = Math.max(0, totalSeconds);
-  const minutes = Math.floor(safeSeconds / 60)
-    .toString()
-    .padStart(2, "0");
-  const seconds = Math.floor(safeSeconds % 60)
-    .toString()
-    .padStart(2, "0");
-
-  return `${minutes}:${seconds}`;
-}
-
-function getSpeechRecognitionConstructor() {
-  if (typeof window === "undefined") return null;
-
-  const speechWindow = window as Window &
-    typeof globalThis & {
-      SpeechRecognition?: SpeechRecognitionConstructor;
-      webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    };
-
-  return speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition || null;
-}
+import { useInterviewVoice } from "@/hooks/useInterviewVoice";
 
 function createSessionId() {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -209,6 +68,10 @@ async function getMicrophoneStream() {
   });
 }
 
+type PendingQuestion = { stage: InterviewStage; text: string; interviewer?: string; roleLabel?: string };
+type InterviewApiQuestion = { question: { stage: InterviewStage; text: string; turnCount?: number } | null; stage?: InterviewStage; interviewer?: string; roleLabel?: string };
+type InterviewApiReport = { report: InterviewReport | null };
+
 export default function InterviewSessionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -225,25 +88,25 @@ const resumeQualityRef = useRef<any>(
   const endAnswerRef = useRef<() => void>(() => {});
   // ── Timer Hook ──
   const timer = useInterviewTimer();
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const finalTranscriptRef = useRef("");
-  const interimTranscriptRef = useRef("");
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const microphoneStreamRef = useRef<MediaStream | null>(null);
-  const voiceMonitorFrameRef = useRef<number | null>(null);
-  const waveformCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const recordingTimerRef = useRef<HTMLSpanElement | null>(null);
-  const lastSoundTimeRef = useRef<number>(0);  // initialized when recording starts
-  const silenceWarningRef = useRef<HTMLParagraphElement | null>(null);
+  const listeningRef = useRef(false);
+  const voiceSession = useMemo<InterviewVoiceSession | null>(() => {
+    if (typeof window === "undefined") return null;
+
+    return createInterviewVoiceSession({
+      endpoint: "/api/tts",
+    });
+  }, []);
+  const voice = useInterviewVoice(voiceSession, listeningRef);
 
   const company = searchParams.get("company") ?? "国航";
   const role = normalizeRole(searchParams.get("role"));
   const mode = searchParams.get("mode") ?? "校招";
   const persona = searchParams.get("persona") ?? "专业型HR";
 
-  const recognitionSupported =
-    typeof window !== "undefined" && Boolean(getSpeechRecognitionConstructor());
+  const recogCtor = typeof window !== "undefined"
+    ? (window as any)?.SpeechRecognition || (window as any)?.webkitSpeechRecognition || null
+    : null;
+  const recognitionSupported = Boolean(recogCtor);
   const mediaSupported =
     typeof window !== "undefined" &&
     Boolean(navigator.mediaDevices?.getUserMedia) &&
@@ -258,18 +121,12 @@ const resumeQualityRef = useRef<any>(
   const [currentStage, setCurrentStage] = useState<InterviewStage>("self-intro");
   const [interviewerLabel, setInterviewerLabel] = useState("AI 面试官");
   const [roleLabel, setRoleLabel] = useState("飞行员");
-  const [liveTranscript, setLiveTranscript] = useState("");
-  const [interimTranscript, setInterimTranscript] = useState("");
   const [voiceProviderName] =
     useState<VoiceProviderName | null>(null);
-  const [voiceActivityState, setVoiceActivityState] =
-    useState<VoiceActivityState>("Silent");
   const [statusText, setStatusText] = useState("正在连接面试室");
   const [turns, setTurns] = useState<InterviewTurn[]>([]);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [fatalError, setFatalError] = useState("");
-  const [isAnswering, setIsAnswering] = useState(false);
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   // ── Refs for async-safe data flow ──
   const interviewFinishedRef = useRef(false);
@@ -283,469 +140,15 @@ const resumeQualityRef = useRef<any>(
   const completedTurnsRef = useRef(0);
 
   const transcriptPreview = useMemo(() => {
-    const combined = `${liveTranscript}${interimTranscript ? ` ${interimTranscript}` : ""}`.trim();
+    const combined = `${voice.liveTranscript}${voice.interimTranscript ? ` ${voice.interimTranscript}` : ""}`.trim();
     return combined || "面试开始后，这里会实时显示你的回答。";
-  }, [interimTranscript, liveTranscript]);
+  }, [voice.interimTranscript, voice.liveTranscript]);
 
   const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
-  const voiceSession = useMemo<InterviewVoiceSession | null>(() => {
-    if (typeof window === "undefined") return null;
 
-    return createInterviewVoiceSession({
-      endpoint: "/api/tts",
-    });
-  }, []);
 
-  // ── Voice monitor ──
-  const stopVoiceMonitor = useCallback(() => {
-    if (voiceMonitorFrameRef.current) {
-      window.cancelAnimationFrame(voiceMonitorFrameRef.current);
-      voiceMonitorFrameRef.current = null;
-    }
 
-    // Clear waveform
-    if (waveformCanvasRef.current) {
-      const canvas = waveformCanvasRef.current;
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.strokeStyle = "rgba(245, 198, 137, 0.2)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(0, canvas.height / 2);
-        ctx.lineTo(canvas.width, canvas.height / 2);
-        ctx.stroke();
-      }
-    }
-
-    // Reset recording timer
-    recordingTimerRef.current = null;
-    lastSoundTimeRef.current = Date.now();
-    if (silenceWarningRef.current) silenceWarningRef.current.style.display = "none";
-
-    analyserRef.current = null;
-
-    if (audioContextRef.current) {
-      void audioContextRef.current.close().catch(() => undefined);
-      audioContextRef.current = null;
-    }
-
-    if (microphoneStreamRef.current) {
-      microphoneStreamRef.current.getTracks().forEach((track) => track.stop());
-      microphoneStreamRef.current = null;
-    }
-  }, []);
-
-  const stopRecognition = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.onresult = null;
-      recognitionRef.current.onerror = null;
-      recognitionRef.current.onend = null;
-      recognitionRef.current.abort();
-      recognitionRef.current = null;
-    }
-    stopVoiceMonitor();
-  }, [stopVoiceMonitor]);
-
-  const stopRecognitionAsync = useCallback((): Promise<string> => {
-    return new Promise((resolve) => {
-      if (!recognitionRef.current) {
-        stopVoiceMonitor();
-        resolve(finalTranscriptRef.current);
-        return;
-      }
-      recognitionRef.current.onerror = null;
-      const timeout = window.setTimeout(() => {
-        recognitionRef.current = null;
-        stopVoiceMonitor();
-        resolve(finalTranscriptRef.current);
-      }, 3000);
-      recognitionRef.current.onend = () => {
-        window.clearTimeout(timeout);
-        recognitionRef.current = null;
-        stopVoiceMonitor();
-        resolve(finalTranscriptRef.current);
-      };
-      recognitionRef.current.stop();
-    });
-  }, [stopVoiceMonitor]);
-
-  const persistAndNavigateToReport = useCallback(
-    (record: InterviewSessionRecord) => {
-      saveInterviewSession(record);
-      router.push(`/interview/report?sessionId=${encodeURIComponent(record.sessionId)}`);
-    },
-    [router]
-  );
-
-  const generateReportAndFinish = useCallback(
-    async (finalTurns: InterviewTurn[], totalElapsedSeconds: number) => {
-      if (isGeneratingReport) return;
-
-      setIsGeneratingReport(true);
-      setIsAnswering(false);
-      timer.clearAnswerTimer();
-      timer.setAnswerCountdown(0);
-      setVoiceActivityState("Processing");
-      setStatusText("正在整理面试记录并生成报告...（1/2 准备报告数据）");
-      stopRecognition();
-
-      try {
-        const response = await fetch("/api/interview", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            action: "report",
-            role,
-            company,
-            mode,
-            persona,
-            resumeText: resumeTextRef.current,
-      resumeQuality: resumeQualityRef.current,
-            turns: finalTurns,
-          }),
-        });
-
-        const payload = (await response.json()) as InterviewApiReport;
-
-        if (!response.ok || !payload.report) {
-          throw new Error("报告生成失败");
-        }
-
-        setStatusText("正在生成面试报告...（2/2 生成完成）");
-
-        const record = buildSessionRecord({
-          sessionId: sessionIdRef.current,
-          company,
-          role,
-          roleLabel,
-          mode,
-          persona,
-          interviewer: interviewerLabel,
-          voiceProviderName,
-          elapsedSeconds: timer.getTotalElapsedSeconds(),
-          turns: finalTurns,
-          createdAt: new Date().toISOString(),
-          report: payload.report,
-        });
-
-        // console.log('[Report Save] sessionId=' + record.sessionId + ' score=' + payload.report?.totalScore);
-        saveInterviewSession(record);
-        saveInterviewCompletionGrowth(record);
-        // console.log('[Interview Finish] turns=' + finalTurns.length + ' elapsed=' + totalElapsedSeconds + 's score=' + payload.report?.totalScore);
-        completedSessionIdRef.current = record.sessionId;
-        completedScoreRef.current = payload.report?.totalScore ?? 0;
-        completedTurnsRef.current = finalTurns.length;
-        interviewFinishedRef.current = true;
-        successPathRef.current = true;
-        // Free user: increment interview count
-        if (!isMember()) incrementFreeInterviewCount();
-        setIsGeneratingReport(false);
-        setPhase('completed');
-
-        // Save to Supabase if logged in
-        if (user) {
-          fetch("/api/interview/save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              role,
-              role_label: roleLabel,
-              company,
-              mode,
-              persona,
-              score: payload.report?.totalScore || 0,
-              evaluation: payload.report?.overallEvaluation || "",
-              strengths: payload.report?.strengths || [],
-              weaknesses: payload.report?.weaknesses || [],
-              started_at: new Date(sessionIdRef.current.split("-")[1] || Date.now()).toISOString(),
-              ended_at: new Date().toISOString(),
-              duration_seconds: totalElapsedSeconds,
-              total_turns: finalTurns.length,
-            }),
-          }).catch(() => {
-            console.warn("[Interview] Failed to save to DB");
-          });
-        }
-
-        // User clicks "查看面试报告" to navigate
-      } catch (error) {
-        console.error('[Report] API call FAILED');
-      console.error('[Report] navigator.onLine:', navigator.onLine);
-      console.error('[Report] Error type:', error instanceof TypeError ? 'TypeError (network/abort)' : error instanceof SyntaxError ? 'SyntaxError (JSON parse)' : 'Other');
-      console.error('[Report] Error message:', error instanceof Error ? error.message : String(error));
-      console.error('[Report] Using local analyzeInterviewReport fallback');
-        // IMPORTANT: analyzeInterviewReport generates the SAME detailed report as the server fallback
-        // This ensures every interview gets a complete report regardless of API availability
-        // Use same local analysis engine as server fallback for complete detailed report
-        const fallbackReport = analyzeInterviewReport({
-          role,
-          company,
-          mode,
-          persona,
-          turns: finalTurns,
-          elapsedSeconds: timer.getTotalElapsedSeconds(),
-        });
-        const fallbackRecord = buildSessionRecord({
-          sessionId: sessionIdRef.current,
-          company,
-          role,
-          roleLabel,
-          mode,
-          persona,
-          interviewer: interviewerLabel,
-          voiceProviderName,
-          elapsedSeconds: timer.getTotalElapsedSeconds(),
-          turns: finalTurns,
-          createdAt: new Date().toISOString(),
-          report: fallbackReport,
-        });
-        // console.log('[Report Save] Saving fallback record (no report)', fallbackRecord.sessionId);
-        saveInterviewSession(fallbackRecord);
-        saveInterviewCompletionGrowth(fallbackRecord);
-        completedSessionIdRef.current = fallbackRecord.sessionId;
-        completedScoreRef.current = fallbackReport.totalScore || 0;
-        completedTurnsRef.current = finalTurns.length;
-        interviewFinishedRef.current = true;
-        successPathRef.current = false;
-        // Free user: increment interview count (fallback)
-        if (!isMember()) incrementFreeInterviewCount();
-        setIsGeneratingReport(false);
-        setPhase('completed');
-        setStatusText('面试已完成');
-      }
-    },
-    [
-      company,
-      interviewerLabel,
-      isGeneratingReport,
-      mode,
-      persona,
-      persistAndNavigateToReport,
-      role,
-      roleLabel,
-      stopRecognition,
-      voiceProviderName,
-      timer.clearAnswerTimer,
-      user,
-    ]
-  );
-
-  // ── Voice monitor ──
-  const startVoiceMonitor = useCallback(async () => {
-    if (!mediaSupported) return;
-
-    try {
-      // Reuse pre-warmed stream if available, otherwise request now
-      if (!microphoneStreamRef.current) {
-        microphoneStreamRef.current = await getMicrophoneStream();
-      }
-      const stream = microphoneStreamRef.current;
-
-      const audioContext = new window.AudioContext();
-      audioContextRef.current = audioContext;
-
-      const source = audioContext.createMediaStreamSource(stream);
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 512;
-      analyser.smoothingTimeConstant = 0.74;
-      source.connect(analyser);
-      analyserRef.current = analyser;
-
-      const samples = new Uint8Array(analyser.frequencyBinCount);
-      let previousState: VoiceActivityState = "Silent";
-
-      const tick = () => {
-        if (!analyserRef.current) return;
-
-        analyserRef.current.getByteTimeDomainData(samples);
-        let sum = 0;
-        let maxAmplitude = 0;
-
-        for (let index = 0; index < samples.length; index += 1) {
-          const normalized = (samples[index] - 128) / 128;
-          sum += normalized * normalized;
-          const absVal = Math.abs(normalized);
-          if (absVal > maxAmplitude) maxAmplitude = absVal;
-        }
-
-        const rms = Math.sqrt(sum / samples.length);
-        const speaking = rms > 0.05;
-
-        if (speaking) {
-          if (previousState !== "Listening") {
-            previousState = "Listening";
-            setVoiceActivityState("Listening");
-          }
-          lastSoundTimeRef.current = Date.now();
-        } else if (previousState !== "Processing") {
-          previousState = "Silent";
-          setVoiceActivityState("Silent");
-        }
-
-        // ─── Draw waveform canvas ───
-        if (waveformCanvasRef.current) {
-          const canvas = waveformCanvasRef.current;
-          const rect = canvas.getBoundingClientRect();
-          const dpr = window.devicePixelRatio || 1;
-          // Only resize if dimensions changed
-          if (canvas.width !== Math.round(rect.width * dpr)) {
-            canvas.width = Math.round(rect.width * dpr);
-            canvas.height = Math.round(rect.height * dpr);
-          }
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-            const drawWidth = rect.width;
-            const drawHeight = rect.height;
-            const centerY = drawHeight / 2;
-
-            if (rms > 0.01 || speaking) {
-              // Active waveform
-              ctx.strokeStyle = "rgba(245, 198, 137, 0.7)";
-              ctx.lineWidth = 1.5;
-              ctx.lineJoin = "round";
-              ctx.beginPath();
-
-              const step = Math.max(1, Math.floor(samples.length / drawWidth));
-              const effectiveCount = Math.ceil(samples.length / step);
-              const sliceWidth = drawWidth / effectiveCount;
-              let x = 0;
-
-              for (let i = 0; i < samples.length; i += step) {
-                const v = (samples[i] - 128) / 128;
-                const amplitude = v * Math.min(1, rms * 20) * (drawHeight * 0.4);
-                const y = centerY + amplitude;
-
-                if (x === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-                x += sliceWidth * step;
-              }
-
-              ctx.stroke();
-            } else {
-              // Idle flat line
-              ctx.strokeStyle = "rgba(245, 198, 137, 0.2)";
-              ctx.lineWidth = 1;
-              ctx.beginPath();
-              ctx.moveTo(0, centerY);
-              ctx.lineTo(drawWidth, centerY);
-              ctx.stroke();
-            }
-          }
-        }
-
-        // ─── Silence detection (3s) ───
-        if (silenceWarningRef.current && voiceActivityState === "Listening") {
-          const silenceDuration = Date.now() - lastSoundTimeRef.current;
-          silenceWarningRef.current.style.display = silenceDuration > 3000 ? "block" : "none";
-        } else if (silenceWarningRef.current) {
-          silenceWarningRef.current.style.display = "none";
-        }
-
-        // ─── Update recording timer ───
-        if (recordingTimerRef.current) {
-          const elapsed = timer.getTurnDuration();
-          const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
-          const secs = String(elapsed % 60).padStart(2, '0');
-          recordingTimerRef.current.textContent = mins + ':' + secs;
-        }
-
-        voiceMonitorFrameRef.current = window.requestAnimationFrame(tick);
-      };
-
-      lastSoundTimeRef.current = Date.now();
-      voiceMonitorFrameRef.current = window.requestAnimationFrame(tick);
-    } catch {
-      setStatusText("麦克风权限已打开，但声音检测初始化失败");
-    }
-  }, [mediaSupported]);
-
-  const startRecognition = useCallback(async () => {
-    if (!recognitionSupported) {
-      setStatusText("当前浏览器不支持实时语音识别");
-      return;
-    }
-
-    const RecognitionConstructor = getSpeechRecognitionConstructor();
-    setIsAnswering(true);
-    if (!RecognitionConstructor) {
-      setStatusText("当前浏览器不支持实时语音识别");
-      return;
-    }
-
-    stopRecognition();
-
-    finalTranscriptRef.current = "";
-    setLiveTranscript("");
-    setInterimTranscript("");
-    setVoiceActivityState("Listening");
-    setStatusText("请开始回答，系统正在实时识别");
-    timer.turnStartedAtRef.current = Date.now();
-    setIsAnswering(true);
-
-    await startVoiceMonitor();
-
-    const recognition = new RecognitionConstructor();
-    recognition.lang = "zh-CN";
-    recognition.interimResults = true;
-    recognition.continuous = true;
-
-    recognition.onresult = (event) => {
-      let appendedFinal = "";
-      let nextInterim = "";
-
-      for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        const result = event.results[index];
-        const text = result[0]?.transcript ?? "";
-
-        if (result.isFinal) {
-          // console.log('[ASR Final] text=' + text + ' len=' + text.length);
-          appendedFinal += text;
-        } else {
-          // console.log('[ASR Partial] interim len=' + text.length);
-          nextInterim += text;
-        }
-      }
-
-      if (appendedFinal) {
-        setLiveTranscript((currentValue) => {
-          const merged = `${currentValue}${currentValue ? " " : ""}${appendedFinal.trim()}`.trim();
-          finalTranscriptRef.current = merged;
-          return merged;
-        });
-      }
-
-      interimTranscriptRef.current = nextInterim.trim();
-      setInterimTranscript(nextInterim.trim());
-      setVoiceActivityState("Listening");
-    };
-
-    recognition.onerror = () => {
-      setVoiceActivityState("Processing");
-      setStatusText("语音识别出现波动，系统会继续尝试");
-    };
-
-    recognition.onend = () => {
-      if (phase !== 'processing' && phase !== 'completed') {
-        setVoiceActivityState("Silent");
-      }
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  }, [
-    phase,
-    recognitionSupported,
-    startVoiceMonitor,
-    stopRecognition,
-  ]);
-
-  // ── API calls ──
+  // ── API callbacks ──
   const fetchOpeningQuestion = useCallback(async () => {
     const response = await fetch("/api/interview", {
       method: "POST",
@@ -759,7 +162,7 @@ const resumeQualityRef = useRef<any>(
         mode,
         persona,
         resumeText: resumeTextRef.current,
-      resumeQuality: resumeQualityRef.current,
+        resumeQuality: resumeQualityRef.current,
       }),
     });
 
@@ -785,7 +188,7 @@ const resumeQualityRef = useRef<any>(
           mode,
           persona,
           resumeText: resumeTextRef.current,
-      resumeQuality: resumeQualityRef.current,
+          resumeQuality: resumeQualityRef.current,
           turns: nextTurns,
         }),
       });
@@ -799,8 +202,6 @@ const resumeQualityRef = useRef<any>(
     },
     [company, mode, persona, role]
   );
-
-
 
   // ── State Machine: Preparing Phase ──
   useEffect(() => {
@@ -818,11 +219,11 @@ const resumeQualityRef = useRef<any>(
 
         // 2. Fetch opening question
         setStatusText('正在准备面试内容...');
-        setVoiceActivityState('tts_generating');
+        voice.setVoiceActivityState('tts_generating');
         if (cancelled) return;
 
         const firstQuestion = firstQ!;
-        const qText = firstQuestion.question?.trim() ?? '';
+        const qText = firstQuestion.question?.text?.trim() ?? '';
         if (!qText) throw new Error('首轮问题内容为空');
 
         // 3. Store pending question (hidden from UI until user clicks start)
@@ -880,12 +281,12 @@ const resumeQualityRef = useRef<any>(
 
   // ── Play current question (TTS + text sync via onPlayStart) ──
   const playCurrentQuestion = useCallback(async (pending: PendingQuestion) => {
-    setAutoplayBlocked(false);
+    voice.setAutoplayBlocked(false);
     setStatusText('面试官正在提问...');
-    setVoiceActivityState('tts_playing');
+    voice.setVoiceActivityState('tts_playing');
     setLiveTranscript('');
     setInterimTranscript('');
-    finalTranscriptRef.current = '';
+    voice.finalTranscriptRef.current = '';
 
     try {
       await voiceSession?.speakQuestion(pending.text, {
@@ -897,11 +298,11 @@ const resumeQualityRef = useRef<any>(
         onPlayEnd: () => {
           // Transition to listening after TTS finishes
           setPhase('listening');
-          setVoiceActivityState('waiting_answer');
+          voice.setVoiceActivityState('waiting_answer');
           setStatusText('请开始作答');
           const answerSeconds = getAnswerSecondsForStage(pending.stage);
           timer.setAnswerCountdown(answerSeconds);
-          startRecognition();
+          voice.startRecognition();
           timer.startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
         },
       });
@@ -916,14 +317,14 @@ const resumeQualityRef = useRef<any>(
       });
     } catch (error) {
       if (error instanceof TtsAutoplayBlockedError) {
-        setAutoplayBlocked(true);
+        voice.setAutoplayBlocked(true);
         setStatusText('请点击下方按钮播放语音');
-        setVoiceActivityState('tts_playing');
+        voice.setVoiceActivityState('tts_playing');
         return;
       }
       throw error;
     }
-  }, [company, mode, timer.startAnswerCountdown, startRecognition, voiceSession]);
+  }, [company, mode, timer.startAnswerCountdown, voice.startRecognition, voiceSession]);
 
   // ── Handle user clicking "开始面试" (ready → playing) ──
   const handleStartInterview = useCallback(async () => {
@@ -956,26 +357,26 @@ const resumeQualityRef = useRef<any>(
 
     // Enter processing UI immediately
     setPhase('processing');
-    setVoiceActivityState('Processing');
+    voice.setVoiceActivityState('Processing');
     setStatusText('正在结束本轮回答...');
     timer.setAnswerCountdown(0);
 
     // Snapshot transcript BEFORE stopping recognition (protect against lost chunks)
-    const transcriptSnapshot = finalTranscriptRef.current.trim();
+    const transcriptSnapshot = voice.finalTranscriptRef.current.trim();
 
-    const completeTranscript = await stopRecognitionAsync();
+    const completeTranscript = await voice.stopRecognitionAsync();
     timer.clearAnswerTimer();
-    setIsAnswering(false);
+    voice.setIsAnswering(false);
     setLiveTranscript('');
     setInterimTranscript('');
 
     // Use the most complete transcript: prefer post-stop (may include final results),
     // but fall back to snapshot if stop resolved too early
-    const transcriptAfterStop = finalTranscriptRef.current.trim();
+    const transcriptAfterStop = voice.finalTranscriptRef.current.trim();
     const bestTranscript = transcriptAfterStop.length >= transcriptSnapshot.length
       ? transcriptAfterStop
       : transcriptSnapshot;
-    const answerText = (completeTranscript || bestTranscript || interimTranscriptRef.current).trim();
+    const answerText = (completeTranscript || bestTranscript || voice.interimTranscriptRef.current).trim();
     // console.log('[ASR] Final transcript length=' + answerText.length + ' snapshot=' + transcriptSnapshot.length);
     const answerDurationSeconds = timer.turnStartedAtRef.current
       ? Math.max(1, Math.round((Date.now() - timer.turnStartedAtRef.current) / 1000))
@@ -1017,7 +418,7 @@ const resumeQualityRef = useRef<any>(
     // Fetch next question + preload TTS (pipeline)
     try {
       const nextQ = await fetchNextQuestion(nextTurns);
-      const qText = nextQ.question?.trim() ?? '';
+      const qText = nextQ.question?.text?.trim() ?? '';
       if (!qText) throw new Error('下一轮问题内容为空');
 
       pendingQuestionRef.current = {
@@ -1056,7 +457,7 @@ const resumeQualityRef = useRef<any>(
     phase,
     playCurrentQuestion,
     roleLabel,
-    stopRecognitionAsync,
+    voice.stopRecognitionAsync,
     turns,
     voiceSession,
   ]);
@@ -1068,7 +469,7 @@ const resumeQualityRef = useRef<any>(
     const pending = pendingQuestionRef.current;
     if (!pending) return;
 
-    setAutoplayBlocked(false);
+    voice.setAutoplayBlocked(false);
     try {
       await voiceSession?.speakQuestion(pending.text, {
         onPlayStart: () => {
@@ -1077,24 +478,24 @@ const resumeQualityRef = useRef<any>(
         },
         onPlayEnd: () => {
           setPhase('listening');
-          setVoiceActivityState('waiting_answer');
+          voice.setVoiceActivityState('waiting_answer');
           setStatusText('请开始作答');
           const answerSeconds = getAnswerSecondsForStage(pending.stage);
           timer.setAnswerCountdown(answerSeconds);
-          startRecognition();
+          voice.startRecognition();
           timer.startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
         },
       });
     } catch (error) {
       if (error instanceof TtsAutoplayBlockedError) {
-        setAutoplayBlocked(true);
+        voice.setAutoplayBlocked(true);
         setStatusText('请点击下方按钮播放语音');
         return;
       }
       setFatalError(error instanceof Error ? error.message : '语音播放失败');
       setPhase('error');
     }
-  }, [autoplayBlocked, phase, timer.startAnswerCountdown, startRecognition, voiceSession]);
+  }, [autoplayBlocked, phase, timer.startAnswerCountdown, voice.startRecognition, voiceSession]);
 
   // ── Scroll transcript ──
   useEffect(() => {
@@ -1188,14 +589,14 @@ const resumeQualityRef = useRef<any>(
   // ── Cleanup on unmount ──
   useEffect(() => {
     return () => {
-      stopRecognition();
+      voice.stopRecognition();
       voiceSession?.stop();
 
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
       }
     };
-  }, [stopRecognition, voiceSession]);
+  }, [voice.stopRecognition, voiceSession]);
 
   // ── Computed UI values ──
   const activeVoiceState = voiceStateMeta[voiceActivityState] ?? voiceStateMeta.Silent;
@@ -1412,7 +813,7 @@ const resumeQualityRef = useRef<any>(
                         {phase === 'processing' && isGeneratingReport ? '面试结束 / Interview Complete' : phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
                       </p>
                       {isListeningPhase ? (
-                        <span ref={recordingTimerRef} className="font-light tabular-nums text-[0.82rem] tracking-[0.12em] text-[#f5c689]/60">
+                        <span ref={voice.recordingTimerRef} className="font-light tabular-nums text-[0.82rem] tracking-[0.12em] text-[#f5c689]/60">
                           00:00
                         </span>
                       ) : null}
@@ -1420,7 +821,7 @@ const resumeQualityRef = useRef<any>(
                     {isListeningPhase ? (
                       <div className="mt-1.5">
                         <canvas
-                          ref={waveformCanvasRef}
+                          ref={voice.waveformCanvasRef}
                           className="h-8 w-full rounded-sm"
                           style={{ height: '32px' }}
                         />
@@ -1429,7 +830,7 @@ const resumeQualityRef = useRef<any>(
                             {voiceActivityState === 'Listening' ? '正在聆听...' : voiceActivityState === 'waiting_answer' ? '等待你的回答' : '—'}
                           </p>
                           <p
-                            ref={silenceWarningRef}
+                            ref={voice.silenceWarningRef}
                             className="text-[0.6rem] tracking-[0.1em] text-amber-300/70"
                             style={{ display: 'none' }}
                           >
