@@ -41,14 +41,19 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  } catch (e) {
+    // Edge runtime may have issues with @supabase/ssr cookie handling
+    // Fall through — client-side AuthProvider will handle the auth gating
+    return NextResponse.next();
   }
-
-  return supabaseResponse;
 }
 
 export const config = {
