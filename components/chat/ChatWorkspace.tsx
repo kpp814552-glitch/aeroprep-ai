@@ -164,7 +164,7 @@ ${draft.trim()}`;
       for (const sec of sections) {
         if (sec.startsWith("建议")) {
           const body = sec.replace("建议 ===", "").replace("建议===", "").trim();
-          setSuggestions(body.split("\n").filter((l: string) => l.trim().startsWith("-") || l.trim().startsWith("•") || l.trim().startsWith("1.")).map(l => l.replace(/^[-•]\s*|^\d+\.\s*/, "").trim()).filter(Boolean));
+          setSuggestions(body.split("\n").filter((l: string) => l.trim().startsWith("-") || l.trim().startsWith("•") || l.trim().startsWith("1.")).map((l: string) => l.replace(/^[-•]\s*|^\d+\.\s*/, "").trim()).filter(Boolean));
         } else if (sec.startsWith("版本")) {
           const body = sec.replace("版本 ===", "").replace("版本===", "").trim();
           setOptimizedVersion(body);
