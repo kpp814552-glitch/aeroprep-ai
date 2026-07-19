@@ -22,6 +22,7 @@ export default function AdminOrders() {
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [addEmail, setAddEmail] = useState("");
   const [addDays, setAddDays] = useState("");
+  const [serverMembers, setServerMembers] = useState<any[]>([]);
   const [days, setDays] = useState(30);
   const [msg, setMsg] = useState("");
 
@@ -37,8 +38,15 @@ export default function AdminOrders() {
         if (res.ok) { const data = await res.json(); setApplications(data.applicants || []); }
       } catch {}
     };
+    const loadMembers = async () => {
+      try {
+        const res = await fetch("/api/member/status?all=true");
+        if (res.ok) { const data = await res.json(); setServerMembers(data.members || []); }
+      } catch {}
+    };
     load();
-    const interval = setInterval(load, 15000);
+    loadMembers();
+    const interval = setInterval(() => { load(); loadMembers(); }, 15000);
     return () => clearInterval(interval);
   }, []);
   // Hardcoded QR code image
@@ -206,26 +214,36 @@ export default function AdminOrders() {
           </GlassPanel>
 
           <GlassPanel className="px-5 py-4">
-            <p className="mb-4 text-sm font-semibold text-slate-800">会员记录</p>
-            {members.length === 0 ? (
+            <div className="flex items-center justify-between mb-4">
+              <p className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Crown className="h-4 w-4 text-amber-500" />会员记录（来自Supabase）</p>
+              <button type="button" onClick={() => setMsg("已刷新")}
+                className="rounded-full bg-white/60 px-3 py-1.5 text-[10px] text-slate-500 transition hover:bg-white">
+                刷新
+              </button>
+            </div>
+            {serverMembers.length === 0 ? (
               <p className="py-6 text-center text-xs text-slate-400">暂无会员记录</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead><tr className="text-left text-slate-400 border-b border-white/30">
                     <th className="pb-2 pr-4 font-medium">邮箱</th>
-                    <th className="pb-2 pr-4 font-medium">方案</th>
                     <th className="pb-2 pr-4 font-medium">到期时间</th>
-                    <th className="pb-2 pr-4 font-medium">操作人</th>
+                    <th className="pb-2 pr-4 font-medium">状态</th>
                     <th className="pb-2 font-medium">操作</th>
                   </tr></thead>
-                  <tbody>{members.map((m) => (
-                    <tr key={m.email} className="border-b border-white/20 text-slate-700">
-                      <td className="py-2.5 pr-4 text-sky-700">{m.email}</td>
-                      <td className="py-2.5 pr-4">{m.plan}</td>
-                      <td className="py-2.5 pr-4">{new Date(m.expiresAt).toLocaleString("zh-CN")}</td>
-                      <td className="py-2.5 pr-4 text-slate-400">{m.addedBy}</td>
-                      <td className="py-2.5"><button onClick={() => handleRemoveMember(m.email)} className="rounded-full bg-rose-50 px-3 py-1 text-[10px] text-rose-500 hover:bg-rose-100"><Trash2 className="mr-0.5 inline h-3 w-3" />移除</button></td>
+                  <tbody>{serverMembers.map((m) => (
+                    <tr key={m.id} className="border-b border-white/20 text-slate-700">
+                      <td className="py-2.5 pr-4 text-sky-700">{m.email || m.id}</td>
+                      <td className="py-2.5 pr-4">{new Date(m.member_until).toLocaleString("zh-CN")}</td>
+                      <td className="py-2.5 pr-4">
+                        {new Date(m.member_until) > new Date() ? (
+                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-600">生效中</span>
+                        ) : (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-400">已过期</span>
+                        )}
+                      </td>
+                      <td className="py-2.5"><button onClick={() => handleRemoveMember(m.email || m.id)} className="rounded-full bg-rose-50 px-3 py-1 text-[10px] text-rose-500 hover:bg-rose-100"><Trash2 className="mr-0.5 inline h-3 w-3" />移除</button></td>
                     </tr>
                   ))}</tbody>
                 </table>
@@ -287,7 +305,6 @@ export default function AdminOrders() {
               </div>
             )}
           </GlassPanel>
-        </div>
       )}
 
     </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Crown, Sparkles, Clock, CreditCard, X, CheckCircle as CheckCircleIcon, Brain, BookOpen, BarChart3, Infinity, Star, Zap, ChevronDown, Shield } from "lucide-react";
+import { getMember, isMember } from "@/lib/member/member-storage";
 import AppFrame from "@/components/layout/AppFrame";
 import { PLANS, activateMember, type PlanId } from "@/lib/member/member-storage";
 
@@ -71,10 +72,27 @@ export default function MembershipPage() {
               选择你的<span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">会员计划</span>
             </h1>
             <p className="mt-4 text-sm leading-6 text-slate-500">
-              免费用户永久使用<strong>资料中心</strong>和<strong>AI优化</strong>。
-              AI面试可免费体验3次。升级会员解锁全部功能。
+              {!isMember() ? "免费用户永久使用资料中心和AI优化。AI面试可免费体验3次。升级会员解锁全部功能。" : ""}
             </p>
           </div>
+
+          {/* ===== MEMBER STATUS + COUNTDOWN ===== */}
+          {isMember() && (() => {
+            const m = getMember();
+            const expiresAt = m?.expiresAt;
+            return expiresAt ? <div id="member-status" className="mx-auto mt-8 max-w-md rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white px-6 py-5 text-center shadow-sm">
+              <Crown className="mx-auto h-6 w-6 text-amber-500" />
+              <p className="mt-2 text-sm font-semibold text-slate-800">会员已开通</p>
+              <p className="mt-1 text-xs text-slate-500">有效期至：{new Date(expiresAt).toLocaleString("zh-CN")}</p>
+              <p className="mt-2 text-2xl font-bold text-amber-600 countdown-timer" data-expires={expiresAt}>
+                <span className="text-xs font-normal text-slate-400">剩余 </span>
+                <span className="countdown-days">0</span><span className="text-sm text-slate-400">天 </span>
+                <span className="countdown-hours">00</span><span className="text-sm text-slate-400">:</span>
+                <span className="countdown-mins">00</span><span className="text-sm text-slate-400">:</span>
+                <span className="countdown-secs">00</span>
+              </p>
+            </div> : null;
+          })()}
 
           {/* ===== PLAN CARDS ===== */}
           <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-3">

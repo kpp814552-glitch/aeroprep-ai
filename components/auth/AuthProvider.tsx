@@ -73,9 +73,15 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
     init();
 
+    // Periodic sync: check membership status every 30 seconds
+    const memberInterval = setInterval(() => {
+      syncServerMember().catch(() => {});
+    }, 30000);
+
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      clearInterval(memberInterval);
     };
   }, [supabase, fetchProfile]);
 

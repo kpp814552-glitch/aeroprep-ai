@@ -3,8 +3,28 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
+  const url = new URL(request.url);
+  const all = url.searchParams.get("all") === "true";
+  
   const supabase = createClient(request);
   const { data: { user } } = await supabase.auth.getUser();
+  
+  if (all) {
+    // Return all members (for admin panel)
+    if (!user) return NextResponse.json({ members: [] });
+    const { data: adminCheck } = await supabase.from("users").select("is_admin").eq("id", user.id).single();
+    if (!adminCheck?.is_admin) return NextResponse.json({ members: [] });
+    
+    const { data: members } = await supabase
+      .from("users")
+      .select("id, email, username, member_until")
+      .not("member_until", "is", null)
+      .order("member_until", { ascending: false });
+    
+    return NextResponse.json({ members: members || [] });
+  }
+  
+  // Normal: return current user status
   if (!user) return NextResponse.json({ isMember: false });
 
   const { data: profile } = await supabase
@@ -19,7 +39,6 @@ export async function GET(request: NextRequest) {
   const now = new Date().toISOString();
   const isMember = !!memberUntil && memberUntil > now;
 
-  // Calculate planId: prefer pending_plan, fall back to matching member_until duration
   let planId = profile.pending_plan || null;
   if (!planId && isMember && memberUntil) {
     const days = Math.round((new Date(memberUntil).getTime() - Date.now()) / 86400000);
