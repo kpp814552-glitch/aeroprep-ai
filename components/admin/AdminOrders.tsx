@@ -305,6 +305,7 @@ export default function AdminOrders() {
               </div>
             )}
           </GlassPanel>
+        </div>
       )}
 
     </div>
