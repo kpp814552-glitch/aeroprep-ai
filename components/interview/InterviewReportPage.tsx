@@ -284,14 +284,10 @@ export default function InterviewReportPage() {
               </p>
 
               {/* 竞争力分数 + 等级 */}
-              <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">当前等级</p>
                   <p className="mt-1 text-3xl font-bold tracking-[-0.04em] text-slate-950">{report.competitiveLevel}</p>
-                </div>
-                <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">综合评分</p>
-                  <p className="mt-1 text-3xl font-bold tracking-[-0.04em] text-slate-950">{report.competitiveScore}</p>
                 </div>
                 <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
                   <p className="text-xs uppercase tracking-[0.2em] text-slate-500">参考区间</p>
@@ -360,10 +356,7 @@ export default function InterviewReportPage() {
             <ReportList title="不足分析" items={report.weaknesses} />
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_0.9fr]">
             <ReportList title="改进建议" items={report.improvementSuggestions} />
-            <ReportList title="推荐训练方向" items={report.recommendedTraining} />
-          </div>
 
           <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
            <div className="rounded-[32px] border border-white/44 bg-white/56 p-6 shadow-[0_18px_42px_rgba(75,54,31,0.06)]">
@@ -377,39 +370,8 @@ export default function InterviewReportPage() {
                  </div>
                </div>
              ) : null}
-             {report.perQuestionAnalysis && report.perQuestionAnalysis.length > 0 ? (
-               <div className="mt-6 border-t border-white/40 pt-6">
-                 <p className="text-sm font-medium text-slate-950">面试问题逐题分析</p>
-                 <p className="mt-1 text-xs text-slate-500">点击展开查看每题详细评价</p>
-                 <div className="mt-3 space-y-2">
-                   {report.perQuestionAnalysis.map((analysis, idx) => (
-                     <div key={idx} className="rounded-[16px] border border-white/44 bg-white/60 overflow-hidden">
-                       <button
-                         type="button"
-                         onClick={() => toggleQuestion(idx)}
-                         className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-medium text-slate-800 hover:bg-white/40 transition"
-                       >
-                         <span>第{idx+1}题</span>
-                         <span className="text-xs text-slate-400">{expandedQuestions[idx] ? '收起 ▲' : '展开 ▼'}</span>
-                       </button>
-                       {expandedQuestions[idx] ? (
-                         <div className="border-t border-white/30 px-4 py-3 text-sm leading-7 text-slate-700 whitespace-pre-wrap">
-                           {analysis}
-                         </div>
-                       ) : null}
-                     </div>
-                   ))}
-                 </div>
-               </div>
-             ) : null}
-             {report.personalProfile ? (
-               <div className="mt-6 border-t border-white/40 pt-6">
-                 <p className="text-sm font-medium text-slate-950">个人能力画像</p>
-                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
-                   {report.personalProfile}
-                 </div>
-               </div>
-             ) : null}
+             
+             
              {report.careerMatch ? (
                <div className="mt-6 border-t border-white/40 pt-6">
                  <p className="text-sm font-medium text-slate-950">岗位匹配分析</p>
@@ -418,14 +380,7 @@ export default function InterviewReportPage() {
                  </div>
                </div>
              ) : null}
-             {report.improvementPlan ? (
-               <div className="mt-6 border-t border-white/40 pt-6">
-                 <p className="text-sm font-medium text-slate-950">未来提升方案</p>
-                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
-                   {report.improvementPlan}
-                 </div>
-               </div>
-             ) : null}
+             
              {report.nextPrediction ? (
                <div className="mt-6 border-t border-white/40 pt-6">
                  <p className="text-sm font-medium text-slate-950">下一次面试预测</p>
