@@ -80,7 +80,7 @@ export default function ProfilePage() {
 
   const trendBars = useMemo(() => {
     const scores = completedSessions
-      .slice(0, 6)
+      .slice(0, 50)
       .map((session) => session.report?.totalScore ?? 0)
       .reverse();
 
@@ -106,9 +106,10 @@ export default function ProfilePage() {
 
   const growthSummary = useMemo(() => {
     const started = growthEvents.filter((event) => event.type === "interview_started").length;
+    const completed = completedSessions.length;
     const answered = growthEvents.filter((event) => event.type === "question_answered").length;
     const ttsPlayed = growthEvents.filter((event) => event.type === "tts_played").length;
-    return { started, answered, ttsPlayed };
+    return { started, completed, answered, ttsPlayed };
   }, [growthEvents]);
 
   return (
@@ -139,7 +140,7 @@ export default function ProfilePage() {
                       面试历史
                     </p>
                     <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-slate-950">
-                      {completedSessions.length} 次
+                  {completedSessions.length} 次 · {trendBars.length} 条记录
                     </p>
                   </div>
                 </GlassCard>
@@ -255,7 +256,7 @@ export default function ProfilePage() {
                   Growth Snapshot
                 </p>
                 <p className="mt-4 text-3xl font-semibold tracking-[-0.04em]">
-                  已记录 {growthSummary.started} 次开始，{growthSummary.answered} 次作答
+                  累计 {growthSummary.completed} 次面试 · 回答 {growthSummary.answered} 次
                 </p>
                 <p className="mt-4 max-w-xl text-sm leading-7 text-slate-300">
                   TTS 已播放 {growthSummary.ttsPlayed} 次。成长中心现在会随着面试开始、问题作答、语音播放和面试完成持续更新，不再展示静态数据。
