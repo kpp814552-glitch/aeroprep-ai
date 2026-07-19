@@ -355,23 +355,23 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
   );
 
   let competitiveLevel: string, competitiveRange: string;
-  if (competitiveScore >= 80) { competitiveLevel = 'A'; competitiveRange = '80%-90%'; }
-  else if (competitiveScore >= 60) { competitiveLevel = 'B'; competitiveRange = '60%-80%'; }
-  else if (competitiveScore >= 40) { competitiveLevel = 'C'; competitiveRange = '40%-60%'; }
-  else { competitiveLevel = 'D'; competitiveRange = '40%以下'; }
+  if (competitiveScore >= 65) { competitiveLevel = 'A'; competitiveRange = '65%-85%'; }
+  else if (competitiveScore >= 45) { competitiveLevel = 'B'; competitiveRange = '45%-65%'; }
+  else if (competitiveScore >= 25) { competitiveLevel = 'C'; competitiveRange = '25%-45%'; }
+  else { competitiveLevel = 'D'; competitiveRange = '25%以下'; }
 
   const competitiveStrengths: string[] = [];
-  if (dimInterview >= 70) competitiveStrengths.push('面试表达流畅，回答有基本结构和层次');
-  if (dimFit >= 70) competitiveStrengths.push('对民航岗位有较好的认知和职业动机');
-  if (dimProfessional >= 70) competitiveStrengths.push('具备一定的民航专业基础和行业认知');
-  if (dimComprehensive >= 70) competitiveStrengths.push('情绪稳定，面对问题能做出合理反应');
+  if (dimInterview >= 50) competitiveStrengths.push('面试表达流畅，回答有基本结构和层次');
+  if (dimFit >= 50) competitiveStrengths.push('对民航岗位有较好的认知和职业动机');
+  if (dimProfessional >= 50) competitiveStrengths.push('具备一定的民航专业基础和行业认知');
+  if (dimComprehensive >= 50) competitiveStrengths.push('情绪稳定，面对问题能做出合理反应');
   if (competitiveStrengths.length === 0) competitiveStrengths.push('具备基础表达能力，有进一步提升空间');
 
   const competitiveWeaknesses: string[] = [];
-  if (dimInterview < 60) competitiveWeaknesses.push('表达流畅度和答题完整性需进一步提升');
-  if (dimFit < 60) competitiveWeaknesses.push('岗位认知和服务意识可进一步加强');
-  if (dimProfessional < 60) competitiveWeaknesses.push('民航专业知识和行业认知有待补充');
-  if (dimComprehensive < 60) competitiveWeaknesses.push('应变能力和综合素质需通过模拟训练强化');
+  if (dimInterview < 35) competitiveWeaknesses.push('表达流畅度和答题完整性需进一步提升');
+  if (dimFit < 35) competitiveWeaknesses.push('岗位认知和服务意识可进一步加强');
+  if (dimProfessional < 35) competitiveWeaknesses.push('民航专业知识和行业认知有待补充');
+  if (dimComprehensive < 35) competitiveWeaknesses.push('应变能力和综合素质需通过模拟训练强化');
   if (competitiveWeaknesses.length === 0) competitiveWeaknesses.push('当前无明显短板，建议保持训练节奏持续提升');
 
   const externalFactors = '真实录取结果还受到多种因素影响，包括但不限于：招聘人数与报考人数比例、学历背景、外语水平（尤其英语）、身体条件与形象、航空公司的具体招聘标准、面试官主观判断等。本评估仅基于本次模拟面试表现生成，不代表真实招聘结果。';
