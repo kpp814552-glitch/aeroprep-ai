@@ -6,7 +6,6 @@ import { getPayments } from "@/lib/payment/payment-storage";
 import {
   getMemberRecords, addMemberDays, removeMemberRecord,
 } from "@/lib/admin/admin-storage";
-import type { PlanId } from "@/lib/member/member-storage";
 import { useAuth } from "@/hooks/useAuth";
 import { Crown, Search, Trash2, Plus, Clock, Loader2, CreditCard, Upload } from "lucide-react";
 
@@ -24,10 +23,7 @@ export default function AdminOrders() {
   const [addDays, setAddDays] = useState("");
   const [days, setDays] = useState(30);
   const [msg, setMsg] = useState("");
-  const [genEmail, setGenEmail] = useState("");
-  const [genPlan, setGenPlan] = useState<PlanId>("30day");
-  const [genUrl, setGenUrl] = useState("");
-  const [genLoading, setGenLoading] = useState(false);
+
 
   const refresh = () => { setOrders(getPayments()); setMembers(getMemberRecords()); };
   useEffect(() => { refresh(); }, []);

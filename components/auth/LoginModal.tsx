@@ -48,6 +48,8 @@ export default function LoginModal({
     }
 
     onClose();
+    // Small delay to let auth state propagate before navigation
+    await new Promise(r => setTimeout(r, 200));
     router.push(redirectAfterLogin);
   }
 
