@@ -9,6 +9,19 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { Crown, Search, Trash2, Plus, Clock, Loader2, CreditCard, Upload } from "lucide-react";
 
+// Decode @supabase/ssr cookie value (base64- prefix + base64url-encoded JSON)
+function decodeSsbCookie(cookieVal: string): any {
+  try {
+    if (!cookieVal.startsWith("base64-")) return null;
+    const b64 = cookieVal.slice(7);
+    // base64url -> base64
+    const std = b64.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = std.padEnd(std.length + (4 - std.length % 4) % 4, "=");
+    const jsonStr = atob(padded);
+    return JSON.parse(jsonStr);
+  } catch { return null; }
+}
+
 type TabType = "orders" | "members" | "applications";
 
 export default function AdminOrders() {
@@ -204,22 +217,21 @@ export default function AdminOrders() {
                       // Upload using direct REST API with cookie auth token
                       (async () => {
                         try {
-                          // Get auth token from cookies (set by @supabase/ssr on login)
+                          // Read auth token from @supabase/ssr cookies
                           const cookies = document.cookie.split("; ").reduce((acc, c) => {
                             const [k, v] = c.split("=");
-                            acc[k] = v;
+                            acc[k.trim()] = v.trim();
                             return acc;
                           }, {} as Record<string, string>);
+                          
+                          // Find the auth cookie (name: sb-{ref}-auth-token)
                           const authCookieKey = Object.keys(cookies).find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
-                          const authCookie = authCookieKey ? cookies[authCookieKey] : null;
+                          const rawCookie = authCookieKey ? cookies[authCookieKey] : null;
                           
                           let token = "";
-                          if (authCookie) {
-                            // Cookie value is base64-encoded JSON with access_token
-                            try {
-                              const parsed = JSON.parse(atob(authCookie));
-                              token = parsed.access_token || "";
-                            } catch {}
+                          if (rawCookie) {
+                            const parsed = decodeSsbCookie(decodeURIComponent(rawCookie));
+                            if (parsed?.access_token) token = parsed.access_token;
                           }
                           
                           if (!token) { setMsg("❌ 未登录，请刷新页面后重试"); return; }
@@ -262,14 +274,15 @@ export default function AdminOrders() {
                       try {
                         const cookies = document.cookie.split("; ").reduce((acc, c) => {
                           const [k, v] = c.split("=");
-                          acc[k] = v;
+                          acc[k.trim()] = v.trim();
                           return acc;
                         }, {} as Record<string, string>);
                         const authCookieKey = Object.keys(cookies).find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
-                        const authCookie = authCookieKey ? cookies[authCookieKey] : null;
+                        const rawCookie = authCookieKey ? cookies[authCookieKey] : null;
                         let token = "";
-                        if (authCookie) {
-                          try { const parsed = JSON.parse(atob(authCookie)); token = parsed.access_token || ""; } catch {}
+                        if (rawCookie) {
+                          const parsed = decodeSsbCookie(decodeURIComponent(rawCookie));
+                          if (parsed?.access_token) token = parsed.access_token;
                         }
                         if (token) {
                           await fetch(
