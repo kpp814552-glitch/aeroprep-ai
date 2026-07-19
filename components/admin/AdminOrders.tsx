@@ -7,7 +7,6 @@ import {
   getMemberRecords, addMemberDays, removeMemberRecord,
 } from "@/lib/admin/admin-storage";
 import { useAuth } from "@/hooks/useAuth";
-import { createClient } from "@/lib/supabase/client";
 import { Crown, Search, Trash2, Plus, Clock, Loader2, CreditCard, Upload } from "lucide-react";
 
 type TabType = "orders" | "members" | "applications";
@@ -45,9 +44,17 @@ export default function AdminOrders() {
   useEffect(() => {
     const load = async () => {
       try {
-        const sb = createClient();
-        const { data } = await sb.from("site_config").select("value").eq("key", "alipay_qr_code").maybeSingle();
-        if (data?.value) setQrCodeData(data.value);
+        const res = await fetch(
+          process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?key=eq.alipay_qr_code&select=value",
+          {
+            headers: {
+              apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+              Authorization: "Bearer " + (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""),
+            },
+          }
+        );
+        const arr = await res.json();
+        if (arr?.[0]?.value) setQrCodeData(arr[0].value);
       } catch (e) {
         console.error("[QR Load] Error:", e);
       }
@@ -194,12 +201,27 @@ export default function AdminOrders() {
                     reader.onload = () => {
                       const data = reader.result as string;
                         setQrCodeData(data);
-                      // Upload with auth token from session (most reliable approach)
+                      // Upload using direct REST API with cookie auth token
                       (async () => {
                         try {
-                          const sb = createClient();
-                          const { data: { session } } = await sb.auth.getSession();
-                          const token = session?.access_token;
+                          // Get auth token from cookies (set by @supabase/ssr on login)
+                          const cookies = document.cookie.split("; ").reduce((acc, c) => {
+                            const [k, v] = c.split("=");
+                            acc[k] = v;
+                            return acc;
+                          }, {} as Record<string, string>);
+                          const authCookieKey = Object.keys(cookies).find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
+                          const authCookie = authCookieKey ? cookies[authCookieKey] : null;
+                          
+                          let token = "";
+                          if (authCookie) {
+                            // Cookie value is base64-encoded JSON with access_token
+                            try {
+                              const parsed = JSON.parse(atob(authCookie));
+                              token = parsed.access_token || "";
+                            } catch {}
+                          }
+                          
                           if (!token) { setMsg("❌ 未登录，请刷新页面后重试"); return; }
                           
                           const res = await fetch(
@@ -238,9 +260,17 @@ export default function AdminOrders() {
                     setQrCodeData(null);
                     (async () => {
                       try {
-                        const sb = createClient();
-                        const { data: { session } } = await sb.auth.getSession();
-                        const token = session?.access_token;
+                        const cookies = document.cookie.split("; ").reduce((acc, c) => {
+                          const [k, v] = c.split("=");
+                          acc[k] = v;
+                          return acc;
+                        }, {} as Record<string, string>);
+                        const authCookieKey = Object.keys(cookies).find(k => k.startsWith("sb-") && k.endsWith("-auth-token"));
+                        const authCookie = authCookieKey ? cookies[authCookieKey] : null;
+                        let token = "";
+                        if (authCookie) {
+                          try { const parsed = JSON.parse(atob(authCookie)); token = parsed.access_token || ""; } catch {}
+                        }
                         if (token) {
                           await fetch(
                             process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?on_conflict=key",

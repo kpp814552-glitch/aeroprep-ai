@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Crown, Sparkles, Clock, CreditCard, X, CheckCircle as CheckCircleIcon, Brain, BookOpen, BarChart3, Infinity, Star, Zap, ChevronDown, Shield } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import { PLANS, activateMember, type PlanId } from "@/lib/member/member-storage";
@@ -26,16 +25,18 @@ export default function MembershipPage() {
   const router = useRouter();
   // Load QR code from Supabase (cross-device)
   useEffect(() => {
-    const load = async () => {
-      try {
-        const sb = createClient();
-        const { data } = await sb.from("site_config").select("value").eq("key", "alipay_qr_code").maybeSingle();
-        if (data?.value) setQrSrc(data.value);
-      } catch (e) {
-        console.error("[QR Load] Error:", e);
+    fetch(
+      process.env.NEXT_PUBLIC_SUPABASE_URL + "/rest/v1/site_config?key=eq.alipay_qr_code&select=value",
+      {
+        headers: {
+          apikey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+          Authorization: "Bearer " + (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""),
+        },
       }
-    };
-    load();
+    )
+      .then(r => r.json())
+      .then(arr => { if (arr?.[0]?.value) setQrSrc(arr[0].value); })
+      .catch(() => {});
   }, []);
 
   const handlePay = async (planId: PlanId) => {
