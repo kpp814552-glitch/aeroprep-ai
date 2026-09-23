@@ -11,6 +11,8 @@ type DeepSeekCallOptions = {
   reasoningEffort?: "none" | "low" | "medium" | "high";
   /** 请求超时（毫秒） */
   timeoutMs?: number;
+  /** 用量归类（写进 api_usage_logs.endpoint，便于后台分别统计面试 / 优化成本） */
+  endpoint?: string;
 };
 
 export type DeepSeekRawResult = {
@@ -20,6 +22,8 @@ export type DeepSeekRawResult = {
   parsed: unknown | null;
   /** 是否因为 token 用尽被截断 */
   truncated: boolean;
+  /** 本次真实 token 用量（接口未返回时为 null） */
+  usage: { inputTokens: number; outputTokens: number; totalTokens: number } | null;
 };
 
 /** 与 callDeepSeek 相同，但额外返回原始正文，便于调用方做兜底展示 */
@@ -32,6 +36,7 @@ export async function callDeepSeekRaw(
     maxTokens = 16000,
     reasoningEffort = "low",
     timeoutMs = 110000,
+    endpoint = "interview",
   } = options;
 
   const startTime = Date.now();
@@ -87,7 +92,7 @@ export async function callDeepSeekRaw(
       totalTokens: usage.total_tokens || 0,
       characters: 0,
       cost: estimateDeepSeekCost(inputTokens, outputTokens),
-      endpoint: 'interview',
+      endpoint,
     }).catch(() => {});
   }
 
@@ -104,6 +109,13 @@ export async function callDeepSeekRaw(
     content,
     parsed: parseJsonResponse(content),
     truncated: finishReason === "length",
+    usage: usage
+      ? {
+          inputTokens: usage.prompt_tokens || 0,
+          outputTokens: usage.completion_tokens || 0,
+          totalTokens: usage.total_tokens || 0,
+        }
+      : null,
   };
 }
 
