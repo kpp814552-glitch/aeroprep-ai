@@ -48,8 +48,8 @@ export function estimateDeepSeekCost(inputTokens: number, outputTokens: number):
 }
 
 /**
- * Volcengine TTS pricing: ~¥2 per 10K characters.
+ * 火山引擎 TTS 计价：¥28 / 10 万字（= ¥2.8 / 万字符 = ¥0.00028 / 字符）
  */
 export function estimateTTSCost(characters: number): number {
-  return (characters / 10_000) * 2
+  return (characters / 100_000) * 28
 }
