@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { BarChart3, Clock3, FileSearch, LineChart, TrendingUp, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,6 +13,8 @@ import {
 } from "@/lib/profile/growth-storage";
 import { readInterviewSessions, subscribeInterviewSessions } from "@/lib/interview/session-storage";
 import type { InterviewSessionRecord } from "@/lib/interview/types";
+
+const COMPETITIVE_LABELS: Record<string, string> = { A: "优秀", B: "较强", C: "中等", D: "待提升" };
 
 function formatMeta(value: string) {
   const date = new Date(value);
@@ -32,6 +35,16 @@ export default function ProfilePage() {
   const [sessions, setSessions] = useState(() => readInterviewSessions());
   const [growthEvents, setGrowthEvents] = useState(() => readGrowthEvents());
   const [selectedSession, setSelectedSession] = useState<InterviewSessionRecord | null>(null);
+
+  // ESC 关闭报告弹窗
+  useEffect(() => {
+    if (!selectedSession) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectedSession(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedSession]);
 
   useEffect(() => {
     const sync = () => {
@@ -63,7 +76,8 @@ export default function ProfilePage() {
         score: session.report?.totalScore ?? 0,
         rounds: session.turns?.length ?? 0,
         durationSeconds: session.elapsedSeconds ?? 0,
-        hiringProbability: session.report?.hiringProbability ?? 0,
+        competitiveLevel: session.report?.competitiveLevel ?? "",
+        competitiveRange: session.report?.competitiveRange ?? "",
         report: session.report,
       })),
     [completedSessions]
@@ -79,12 +93,11 @@ export default function ProfilePage() {
   }, [completedSessions]);
 
   const trendBars = useMemo(() => {
-    const scores = completedSessions
-      .slice(0, 50)
+    // 取最近 12 次（存储上限 16 条），保证柱状图可读
+    return completedSessions
+      .slice(0, 12)
       .map((session) => session.report?.totalScore ?? 0)
       .reverse();
-
-    return scores.length ? scores : [0];
   }, [completedSessions]);
 
   const reportItems = useMemo(() => {
@@ -186,8 +199,14 @@ export default function ProfilePage() {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-slate-900">{item.title}</p>
                         <p className="mt-1 text-xs text-slate-500">{item.meta}</p>
-                        <p className="mt-0.5 text-xs text-slate-400">
-                          {item.rounds} 轮 · {Math.floor(item.durationSeconds / 60)} 分 {item.durationSeconds % 60} 秒 · 录取率 {item.hiringProbability}%
+                        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+                          <span>{item.rounds} 轮 · {Math.floor(item.durationSeconds / 60)} 分 {item.durationSeconds % 60} 秒</span>
+                          {item.competitiveLevel ? (
+                            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700">
+                              竞争定位 {COMPETITIVE_LABELS[item.competitiveLevel] ?? item.competitiveLevel}
+                              {item.competitiveRange ? ` · ${item.competitiveRange}` : ""}
+                            </span>
+                          ) : null}
                         </p>
                       </div>
                       <div className="flex flex-col items-end gap-1">
@@ -213,19 +232,29 @@ export default function ProfilePage() {
                 <p className="text-sm font-medium text-slate-950">成绩趋势</p>
               </div>
 
-              <div className="mt-8 rounded-[28px] border border-white/36 bg-white/22 px-5 py-6">
-                <div className="flex h-40 sm:h-56 items-end justify-between gap-1 sm:gap-3">
-                  {trendBars.map((height, index) => (
-                    <div key={`trend-${height}-${index}`} className="flex flex-1 flex-col items-center gap-3">
-                      <div
-                        className="w-full rounded-t-[20px] bg-[linear-gradient(180deg,rgba(96,165,250,0.92),rgba(37,113,255,0.54))]"
-                        style={{ height: `${Math.max(height, 8) * 1.6}px` }}
-                      />
-                      <span className="text-xs text-slate-500">0{index + 1}</span>
-                    </div>
-                  ))}
+              {trendBars.length ? (
+                <div className="mt-8 rounded-[28px] border border-white/36 bg-white/22 px-5 py-6">
+                  <div className="flex h-40 items-end justify-between gap-1 sm:h-56 sm:gap-2">
+                    {trendBars.map((score, index) => (
+                      <div key={`trend-${index}`} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                        <span className="text-[10px] font-medium text-slate-500">{score}</span>
+                        <div
+                          className="w-full rounded-t-[14px] bg-[linear-gradient(180deg,rgba(96,165,250,0.92),rgba(37,113,255,0.54))]"
+                          style={{ height: `${Math.max(score, 4) * 1.3}px` }}
+                        />
+                        <span className="text-[10px] text-slate-400">{String(index + 1).padStart(2, "0")}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-center text-xs text-slate-400">
+                    最近 {trendBars.length} 次面试得分（按时间顺序）
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-8 rounded-[28px] border border-dashed border-white/50 bg-white/22 px-6 py-14 text-center">
+                  <p className="text-sm text-slate-500">完成第一次面试后，这里会显示你的成绩趋势</p>
+                </div>
+              )}
             </GlassPanel>
           </div>
 
@@ -259,7 +288,10 @@ export default function ProfilePage() {
                   累计 {growthSummary.completed} 次面试 · 回答 {growthSummary.answered} 次
                 </p>
                 <p className="mt-4 max-w-xl text-sm leading-7 text-slate-300">
-                  TTS 已播放 {growthSummary.ttsPlayed} 次。成长中心现在会随着面试开始、问题作答、语音播放和面试完成持续更新，不再展示静态数据。
+                  已完成 {growthSummary.completed} 次面试训练，累计作答 {growthSummary.answered} 题。
+                  {completedSessions.length >= 2
+                    ? `最近一次得分 ${completedSessions[0]?.report?.totalScore ?? 0} 分，历史平均 ${averageScore} 分，继续保持训练节奏。`
+                    : "建议每周至少完成 2 次模拟面试，并对照报告中的改进建议复盘。"}
                 </p>
               </div>
             </GlassPanel>
@@ -291,8 +323,14 @@ export default function ProfilePage() {
                 <p className="mt-2 text-lg font-semibold text-slate-900">
                   面试报告
                 </p>
-                <p className="mt-1 text-sm text-slate-500">
-                  {selectedSession.turns?.length ?? 0} 轮 · 用时 {Math.floor((selectedSession.elapsedSeconds ?? 0) / 60)} 分 · 评分 {selectedSession.report.totalScore}
+                <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                  <span>{selectedSession.turns?.length ?? 0} 轮 · 用时 {Math.floor((selectedSession.elapsedSeconds ?? 0) / 60)} 分 · 评分 {selectedSession.report.totalScore}</span>
+                  {selectedSession.report.competitiveLevel ? (
+                    <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700">
+                      竞争定位 {COMPETITIVE_LABELS[selectedSession.report.competitiveLevel] ?? selectedSession.report.competitiveLevel}
+                      {selectedSession.report.competitiveRange ? ` · ${selectedSession.report.competitiveRange}` : ""}
+                    </span>
+                  ) : null}
                 </p>
               </div>
 
@@ -302,6 +340,9 @@ export default function ProfilePage() {
                   { label: "逻辑能力", value: selectedSession.report.scores.logicalThinking },
                   { label: "专业能力", value: selectedSession.report.scores.professionalKnowledge },
                   { label: "岗位匹配", value: selectedSession.report.scores.roleFit },
+                  { label: "语言清晰", value: selectedSession.report.scores.articulation ?? 0 },
+                  { label: "应变能力", value: selectedSession.report.scores.adaptability ?? 0 },
+                  { label: "服务意识", value: selectedSession.report.scores.serviceAwareness ?? 0 },
                 ].map((score) => (
                   <div key={score.label} className="rounded-[20px] border border-slate-200/60 bg-slate-50/60 px-4 py-3">
                     <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">{score.label}</p>
@@ -333,12 +374,16 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {selectedSession.report.hiringProbability > 0 && (
-                <div className="rounded-[20px] border border-blue-200/60 bg-blue-50/50 px-4 py-4">
-                  <p className="text-xs font-medium uppercase tracking-[0.2em] text-blue-700">模拟录取率</p>
-                  <p className="mt-1 text-2xl font-semibold text-blue-800">{selectedSession.report.hiringProbability}%</p>
+              <Link
+                href={`/interview/report?sessionId=${encodeURIComponent(selectedSession.sessionId)}`}
+                className="flex items-center justify-between rounded-[20px] border border-blue-200/60 bg-blue-50/50 px-5 py-4 transition hover:bg-blue-50"
+              >
+                <div>
+                  <p className="text-sm font-medium text-blue-800">查看完整报告</p>
+                  <p className="mt-0.5 text-xs text-blue-600/80">含逐题分析、面试官视角、提升方案与成长寄语</p>
                 </div>
-              )}
+                <span className="text-blue-700">→</span>
+              </Link>
 
               {selectedSession.report.highlights.length > 0 && (
                 <div className="space-y-2">
