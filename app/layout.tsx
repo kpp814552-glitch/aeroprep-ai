@@ -55,6 +55,14 @@ export const viewport: Viewport = {
   themeColor: "#1f140f",
 };
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+let supabaseOrigin: string | null = null;
+try {
+  supabaseOrigin = supabaseUrl ? new URL(supabaseUrl).origin : null;
+} catch {
+  supabaseOrigin = null;
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -63,6 +71,12 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full">
+        {supabaseOrigin ? (
+          <>
+            <link rel="preconnect" href={supabaseOrigin} crossOrigin="anonymous" />
+            <link rel="dns-prefetch" href={supabaseOrigin} />
+          </>
+        ) : null}
         <AuthProvider>
           <div className="app-shell flex min-h-full flex-col">{children}</div>
         </AuthProvider>
