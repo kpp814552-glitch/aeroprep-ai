@@ -33,6 +33,22 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     await fetchProfile(user.id);
   }, [user, fetchProfile]);
 
+  // 登录状态下定时同步服务端状态：管理员核发的面试次数会自动入账
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const tick = async () => {
+      if (cancelled) return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      await syncServerMember().catch(() => {});
+    };
+    const interval = window.setInterval(tick, 45000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [user]);
+
   useEffect(() => {
     let cancelled = false;
 

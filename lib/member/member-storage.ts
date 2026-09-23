@@ -48,6 +48,24 @@ export const CREDIT_PACKS: CreditPack[] = [
 const MEMBER_KEY = "aeroprep_member";
 const COUNT_KEY = "aeroprep_free_count";
 const CREDIT_KEY = "aeroprep_credits";
+const CREDITS_EVENT = "aeroprep-credits-updated";
+
+/** 订阅次数变化（到账/扣减都会触发），用于页面实时刷新 */
+export function subscribeCredits(onChange: () => void): () => void {
+  if (typeof window === "undefined") return () => undefined;
+  window.addEventListener(CREDITS_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(CREDITS_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function emitCreditsChanged() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(CREDITS_EVENT));
+  }
+}
 
 // ---------- 遗留会员（只读兼容） ----------
 export function getMember(): MemberInfo {
@@ -117,6 +135,7 @@ export function addCredits(count: number): number {
   if (typeof window === "undefined" || !Number.isFinite(count) || count <= 0) return getCredits();
   const next = getCredits() + Math.floor(count);
   localStorage.setItem(CREDIT_KEY, String(next));
+  emitCreditsChanged();
   return next;
 }
 
@@ -124,6 +143,7 @@ export function setCredits(count: number): number {
   if (typeof window === "undefined") return 0;
   const next = Math.max(0, Math.floor(count));
   localStorage.setItem(CREDIT_KEY, String(next));
+  emitCreditsChanged();
   return next;
 }
 
@@ -169,6 +189,7 @@ export function consumeInterviewQuota(): { ok: boolean; usedFree: boolean; credi
   if (credits > 0) {
     const left = credits - 1;
     localStorage.setItem(CREDIT_KEY, String(left));
+    emitCreditsChanged();
     return { ok: true, usedFree: false, creditsLeft: left };
   }
 
@@ -186,21 +207,43 @@ export function getQuotaSummary(): { isMember: boolean; freeLeft: number; credit
 
 /**
  * 从服务端同步状态：
- * 1) 领取管理员已核发的次数（granted:N 握手协议）
+ * 1) 领取管理员已核发的次数（granted:N 握手协议，先原子核销再入账，防重复）
  * 2) 兼容同步遗留限时会员
+ * 说明：模块级互斥锁避免多处以不同频率轮询时并发领取。
  */
-export async function syncServerMember(): Promise<boolean> {
+let syncInFlight: Promise<boolean> | null = null;
+
+export function syncServerMember(): Promise<boolean> {
+  if (syncInFlight) return syncInFlight;
+  syncInFlight = syncServerMemberInternal().finally(() => {
+    syncInFlight = null;
+  });
+  return syncInFlight;
+}
+
+async function syncServerMemberInternal(): Promise<boolean> {
   try {
     const res = await fetch("/api/member/status");
     if (!res.ok) return false;
     const data = await res.json();
     let changed = false;
 
-    // 管理员核发的次数：领取后通知服务端清除标记
+    // 管理员核发的次数：先把服务端标记原子核销，成功后再本地入账。
+    // 核销失败（含并发被其他请求抢先）则不入账，由下一轮轮询重试。
     if (typeof data.grantedCredits === "number" && data.grantedCredits > 0) {
-      addCredits(data.grantedCredits);
-      fetch("/api/member/ack-grant", { method: "POST" }).catch(() => {});
-      changed = true;
+      try {
+        const ackRes = await fetch("/api/member/ack-grant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ credits: data.grantedCredits }),
+        });
+        const ackData = await ackRes.json().catch(() => ({}));
+        if (ackRes.ok && ackData?.cleared === true) {
+          const granted = Number(ackData.credits) || data.grantedCredits;
+          addCredits(granted);
+          changed = true;
+        }
+      } catch { /* 网络异常：保持标记，下轮重试 */ }
     }
 
     if (data.isMember && data.memberUntil) {

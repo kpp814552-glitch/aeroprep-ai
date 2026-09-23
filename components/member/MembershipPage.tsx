@@ -14,7 +14,10 @@ import AppFrame from "@/components/layout/AppFrame";
 import {
   CREDIT_PACKS,
   PRICE_PER_INTERVIEW,
+  getCredits,
   getQuotaSummary,
+  subscribeCredits,
+  syncServerMember,
   type CreditPack,
 } from "@/lib/member/member-storage";
 
@@ -51,6 +54,7 @@ export default function MembershipPage() {
   const [payError, setPayError] = useState("");
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [quota, setQuota] = useState<{ freeLeft: number; credits: number; isMember: boolean } | null>(null);
+  const [creditedBanner, setCreditedBanner] = useState<number | null>(null);
 
   useEffect(() => {
     setQrSrc("/qr-payment.jpg");
@@ -58,6 +62,34 @@ export default function MembershipPage() {
   }, []);
 
   const refreshQuota = () => setQuota(getQuotaSummary());
+
+  // 次数变化（到账/扣减）即时刷新面板
+  useEffect(() => {
+    return subscribeCredits(() => setQuota(getQuotaSummary()));
+  }, []);
+
+  // 购买页每 10 秒快速同步一次：管理员通过后无需刷新即可到账
+  useEffect(() => {
+    let cancelled = false;
+    const tick = async () => {
+      if (document.visibilityState !== "visible") return;
+      const before = getCredits();
+      await syncServerMember().catch(() => {});
+      if (cancelled) return;
+      const after = getCredits();
+      if (after > before) {
+        setCreditedBanner(after - before);
+        setQuota(getQuotaSummary());
+        window.setTimeout(() => setCreditedBanner(null), 8000);
+      }
+    };
+    tick();
+    const interval = window.setInterval(tick, 10000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
 
   const handlePay = async (pack: CreditPack) => {
     setSelected(pack);
@@ -126,6 +158,13 @@ export default function MembershipPage() {
               新用户免费体验 {3} 次，之后每次 AI 模拟面试 ¥{PRICE_PER_INTERVIEW}。次数长期有效，用完为止。
             </p>
           </div>
+
+          {/* ===== 到账提示 ===== */}
+          {creditedBanner ? (
+            <div className="mx-auto mt-6 max-w-lg rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 text-center text-sm font-medium text-emerald-700 shadow-sm">
+              🎉 {creditedBanner} 次面试已到账，可以开始训练了
+            </div>
+          ) : null}
 
           {/* ===== QUOTA STATUS ===== */}
           {quota && (
