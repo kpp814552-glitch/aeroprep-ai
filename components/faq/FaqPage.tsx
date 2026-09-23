@@ -74,7 +74,7 @@ export default function FaqPage() {
           <div className="absolute left-1/2 top-0 h-[1000px] w-[1000px] -translate-x-1/2 rounded-full bg-gradient-to-b from-sky-50/40 via-sky-50/15 to-transparent blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-3xl px-5 pb-32 pt-16 md:px-8 md:pt-24">
+        <div className="stagger-section relative mx-auto max-w-3xl px-5 pb-32 pt-16 md:px-8 md:pt-24">
           {/* Header */}
           <div className="text-center">
             <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500 shadow-sm backdrop-blur-md">

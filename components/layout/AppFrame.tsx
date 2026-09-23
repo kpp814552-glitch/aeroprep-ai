@@ -26,7 +26,7 @@ export default function AppFrame({
 
   return (
     <div className={cn("relative z-10", className)}>
-      <header className="px-5 pt-5 md:px-8 md:pt-7">
+      <header className="rise-in px-5 pt-5 md:px-8 md:pt-7">
         <div className="mx-auto flex max-w-7xl flex-col gap-2.5 rounded-[26px] border border-white/35 bg-white/55 px-4 py-3 shadow-[0_10px_28px_rgba(21,43,74,0.08)] md:flex-row md:items-center md:justify-between md:gap-0 md:rounded-full md:px-6">
           <div className="flex items-center gap-3">
             {backHref ? (

@@ -59,7 +59,7 @@ export default function LoginModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-      <GlassCard className="relative mx-4 w-full max-w-sm overflow-hidden rounded-[24px] border border-white/40 bg-white/70 p-6 shadow-[0_24px_64px_rgba(0,0,0,0.12)] backdrop-blur-xl">
+      <GlassCard className="rise-in relative mx-4 w-full max-w-sm overflow-hidden rounded-[24px] border border-white/40 bg-white/70 p-6 shadow-[0_24px_64px_rgba(0,0,0,0.12)] backdrop-blur-xl">
         <button
           type="button"
           onClick={onClose}

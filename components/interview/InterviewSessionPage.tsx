@@ -1229,7 +1229,7 @@ const resumeQualityRef = useRef<any>(
       <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("/session-background.webp")' }} />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,10,7,0.08),rgba(24,13,10,0.18)_34%,rgba(14,8,6,0.42)_100%)]" />
       <div className="relative z-10 flex min-h-dvh-safe items-center justify-center px-4">
-        <div className="w-full max-w-md rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,15,10,0.85),rgba(8,6,6,0.85))] px-6 py-8 shadow-[0_24px_64px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+        <div className="rise-in w-full max-w-md rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,15,10,0.85),rgba(8,6,6,0.85))] px-6 py-8 shadow-[0_24px_64px_rgba(0,0,0,0.4)] backdrop-blur-xl">
           <p className="text-sm uppercase tracking-[0.3em] text-[#f5c689]/80">数据保存</p>
           <p className="mt-4 text-base leading-7 text-white/80">
             面试数据未完成上传至服务器，是否将本次面试数据导出到本地电脑备用？
@@ -1266,7 +1266,7 @@ const resumeQualityRef = useRef<any>(
       <div className="absolute inset-x-0 bottom-[13%] h-[24%] bg-[radial-gradient(circle_at_center,rgba(16,9,7,0.22),rgba(16,9,7,0)_72%)]" />
 
       <div className="relative z-10 min-h-dvh-safe px-4 py-4 md:px-5 md:py-5">
-        <div className="mx-auto flex min-h-dvh-safe max-w-[1536px] flex-col">
+        <div className="rise-in mx-auto flex min-h-dvh-safe max-w-[1536px] flex-col">
 
           {/* ── Header: Transcript + Timer (playing/listening only) ── */}
           {showHeader && (

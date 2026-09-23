@@ -131,7 +131,7 @@ export default function ProfilePage() {
   return (
     <AppFrame backHref="/" backLabel="返回首页">
       <main className="relative z-10 px-5 pb-16 pt-8 md:px-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+        <div className="stagger-section mx-auto max-w-7xl space-y-6">
           {!user && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200/70 bg-sky-50/70 px-5 py-3.5">
               <p className="text-xs leading-5 text-sky-800">

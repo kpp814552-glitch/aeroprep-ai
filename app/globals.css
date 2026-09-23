@@ -523,20 +523,41 @@ textarea {
 .wave-bar:nth-child(7)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0.48s; }
 .wave-bar:nth-child(8)  { animation: waveBar 0.6s ease-in-out infinite; animation-delay: 0.56s; }
 
-/* Stagger entrance helper */
-.stagger-section > * {
-  opacity: 0; animation: fadeUp 0.7s cubic-bezier(0.25,0.1,0.25,1) forwards;
+/* ============================================================
+   入场动效（全站统一）
+   .rise-in         单个模块进入（可用 --rise-delay 调延迟）
+   .stagger-section 直接子模块依次进入（1-10 个）
+   仅动 opacity / transform，不触发重排
+   ============================================================ */
+@keyframes riseIn {
+  from { opacity: 0; transform: translate3d(0, 18px, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
-.stagger-section > *:nth-child(1) { animation-delay: 0.1s; }
-.stagger-section > *:nth-child(2) { animation-delay: 0.2s; }
-.stagger-section > *:nth-child(3) { animation-delay: 0.3s; }
-.stagger-section > *:nth-child(4) { animation-delay: 0.4s; }
-.stagger-section > *:nth-child(5) { animation-delay: 0.5s; }
+
+.rise-in {
+  animation: riseIn 0.55s cubic-bezier(0.22, 0.75, 0.25, 1) both;
+  animation-delay: var(--rise-delay, 0ms);
+}
+
+.stagger-section > * {
+  animation: riseIn 0.55s cubic-bezier(0.22, 0.75, 0.25, 1) both;
+}
+.stagger-section > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger-section > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-section > *:nth-child(3) { animation-delay: 0.16s; }
+.stagger-section > *:nth-child(4) { animation-delay: 0.22s; }
+.stagger-section > *:nth-child(5) { animation-delay: 0.28s; }
+.stagger-section > *:nth-child(6) { animation-delay: 0.34s; }
+.stagger-section > *:nth-child(7) { animation-delay: 0.4s; }
+.stagger-section > *:nth-child(8) { animation-delay: 0.46s; }
+.stagger-section > *:nth-child(9) { animation-delay: 0.52s; }
+.stagger-section > *:nth-child(10) { animation-delay: 0.58s; }
 
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .glass-shimmer::after { animation: none; }
   .stagger-section > * { animation: none; opacity: 1; }
+  .rise-in { animation: none; opacity: 1; transform: none; }
   [style*="animation"] { animation: none !important; }
 }
 

@@ -192,7 +192,7 @@ export default function InterviewPrepPage() {
   return (
     <AppFrame backHref="/" backLabel="返回首页">
       <main className="relative z-10 px-5 pb-16 pt-8 md:px-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+        <div className="stagger-section mx-auto max-w-7xl space-y-6">
           <GlassPanel className="soft-enter overflow-hidden px-6 py-8 md:px-8 md:py-10">
             <div className="absolute inset-x-16 top-0 h-28 rounded-full bg-sky-200/55 blur-3xl" />
             <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">

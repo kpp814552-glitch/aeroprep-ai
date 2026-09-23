@@ -225,7 +225,7 @@ export default function AdminDashboard() {
     : "0.0";
 
   return (
-    <div className="space-y-6">
+    <div className="stagger-section space-y-6">
       <div className="flex gap-1.5 rounded-2xl border border-white/40 bg-white/60 p-1.5 mb-4">
         <button type="button" onClick={() => setActiveTab("控制台")}
           className={"flex-1 rounded-xl px-4 py-2 text-xs font-medium transition " + (activeTab === "控制台" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700")}>控制台</button>

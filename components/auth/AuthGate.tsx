@@ -41,7 +41,7 @@ export default function AuthGate({ children, blurContent = true, blockInteractio
 
         {/* Overlay with login prompt */}
         <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
-          <div className="pointer-events-auto mx-4 w-full max-w-xs rounded-2xl border border-white/40 bg-white/80 px-6 py-8 text-center shadow-xl backdrop-blur-2xl">
+          <div className="rise-in pointer-events-auto mx-4 w-full max-w-xs rounded-2xl border border-white/40 bg-white/80 px-6 py-8 text-center shadow-xl backdrop-blur-2xl">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-sky-50">
               <Lock className="h-6 w-6 text-sky-400" />
             </div>

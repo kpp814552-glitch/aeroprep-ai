@@ -217,7 +217,7 @@ export default function InterviewReportPage() {
   return (
     <AppFrame backHref="/interview" backLabel="返回准备页">
       <main className="relative z-10 px-5 pb-16 pt-8 md:px-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+        <div className="stagger-section mx-auto max-w-7xl space-y-6">
           <div className="rounded-[36px] border border-white/48 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.48))] px-6 py-8 shadow-[0_24px_64px_rgba(74,56,31,0.08)] md:px-8 md:py-10">
             <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
               <div>

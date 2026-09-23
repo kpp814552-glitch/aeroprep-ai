@@ -192,7 +192,7 @@ export default function MembershipPage() {
           <div className="absolute -right-60 top-1/3 h-[600px] w-[600px] rounded-full bg-amber-50/25 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-5xl px-5 pb-32 pt-12 md:px-8 md:pt-20">
+        <div className="stagger-section relative mx-auto max-w-5xl px-5 pb-32 pt-12 md:px-8 md:pt-20">
           {/* ===== HERO ===== */}
           <div className="mx-auto max-w-xl text-center">
             <div className="mx-auto mb-5 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500 shadow-sm backdrop-blur-md">
@@ -389,7 +389,7 @@ export default function MembershipPage() {
             onClick={() => setShowPayment(false)}
           >
             <div
-              className="w-full max-w-sm rounded-[24px] border border-white/40 bg-white p-6 shadow-xl backdrop-blur-xl"
+              className="rise-in w-full max-w-sm rounded-[24px] border border-white/40 bg-white p-6 shadow-xl backdrop-blur-xl"
               onClick={(e) => e.stopPropagation()}
             >
               {step === "pay" && (

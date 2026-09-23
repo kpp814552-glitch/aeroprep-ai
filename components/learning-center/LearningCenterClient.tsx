@@ -318,7 +318,7 @@ export default function LearningCenterClient() {
 
   return (
     <>
-    <div className="mx-auto max-w-6xl">
+    <div className="stagger-section mx-auto max-w-6xl">
       {!isLoggedIn && (
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200/70 bg-sky-50/70 px-5 py-3">
           <p className="text-xs leading-5 text-sky-800">

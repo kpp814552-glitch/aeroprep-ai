@@ -258,7 +258,7 @@ export default function ChatWorkspace() {
 
         <div className="relative mx-auto max-w-7xl">
           {/* ====== 顶部：紧凑标题栏（不再是巨幅 hero） ====== */}
-          <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+          <header className="rise-in mb-6 flex flex-wrap items-end justify-between gap-4">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500 shadow-sm backdrop-blur-md">
                 <WandSparkles className="h-3 w-3 text-violet-500" />AI 优化
@@ -280,7 +280,7 @@ export default function ChatWorkspace() {
           </header>
 
           {/* ====== 两栏工作区：左输入 / 右结果 ====== */}
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+          <div className="stagger-section grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
             {/* ---------- 左：输入 ---------- */}
             <section className="space-y-4 lg:sticky lg:top-6">
               <div className="grid grid-cols-2 gap-2">
@@ -541,7 +541,7 @@ export default function ChatWorkspace() {
           ) : null}
 
           {analysis ? (
-            <div ref={resultRef} className="space-y-4">
+            <div ref={resultRef} className="rise-in space-y-4">
               <div className="rounded-[24px] border border-white/50 bg-white/70 px-6 py-5 shadow-sm backdrop-blur-xl">
                 <div className="flex flex-wrap items-center gap-6">
                   <div className="text-center">
@@ -733,7 +733,7 @@ export default function ChatWorkspace() {
           ) : null}
 
           {fallbackText ? (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/60 px-5 py-4">
+            <div className="rise-in rounded-2xl border border-amber-200 bg-amber-50/60 px-5 py-4">
               <p className="mb-2 text-xs font-medium text-amber-800">AI 原始分析（格式解析失败，内容仍可参考）</p>
               <div className="max-h-[420px] overflow-y-auto whitespace-pre-wrap text-xs leading-6 text-amber-900">{fallbackText}</div>
             </div>

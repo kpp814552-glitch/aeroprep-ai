@@ -318,7 +318,7 @@ export default function AdminOrders() {
   const totalOrders = counts.pending + counts.approved + counts.rejected + counts.revoked;
 
   return (
-    <div className="space-y-5">
+    <div className="stagger-section space-y-5">
       <div className="flex gap-1.5 rounded-2xl border border-white/40 bg-white/60 p-1.5">
         {TABS.map((t) => {
           const Icon = t.icon;
