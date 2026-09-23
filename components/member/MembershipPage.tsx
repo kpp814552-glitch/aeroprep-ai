@@ -83,11 +83,18 @@ export default function MembershipPage() {
         window.setTimeout(() => setCreditedBanner(null), 8000);
       }
     };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") tick();
+    };
     tick();
     const interval = window.setInterval(tick, 10000);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
     };
   }, []);
 

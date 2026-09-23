@@ -33,19 +33,31 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     await fetchProfile(user.id);
   }, [user, fetchProfile]);
 
-  // 登录状态下定时同步服务端状态：管理员核发的面试次数会自动入账
+  // 登录状态下定时同步服务端状态：管理员核发的面试次数会自动入账。
+  // 每 20 秒轮询一次，并在切回页面/窗口获得焦点时立即同步，做到"实时到账"。
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
+    let lastRun = 0;
     const tick = async () => {
       if (cancelled) return;
       if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      lastRun = Date.now();
       await syncServerMember().catch(() => {});
     };
-    const interval = window.setInterval(tick, 45000);
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      // 回到页面时如果距离上次同步超过 5 秒，立即补一次
+      if (Date.now() - lastRun > 5000) tick();
+    };
+    const interval = window.setInterval(tick, 20000);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
     };
   }, [user]);
 
