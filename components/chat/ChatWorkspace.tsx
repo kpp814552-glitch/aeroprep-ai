@@ -66,6 +66,14 @@ const EXAMPLES: Record<Kind, string> = {
 const RESUME_DIMENSIONS = ["结构完整性", "量化成果", "岗位匹配度", "专业关键词", "HR 阅读体验"];
 const INTERVIEW_DIMENSIONS = ["逻辑结构", "岗位匹配度", "专业与安全素养", "表达感染力", "案例支撑度"];
 
+const PROGRESS_STEPS = [
+  "正在通读原文，识别内容类型…",
+  "正在对照岗位要求逐句比对…",
+  "正在定位扣分点与可保留亮点…",
+  "正在生成逐句改写与追问预测…",
+  "正在整理最终优化稿…",
+];
+
 function scoreColor(score: number) {
   if (score >= 85) return "text-emerald-600";
   if (score >= 70) return "text-sky-600";
@@ -97,6 +105,7 @@ export default function ChatWorkspace() {
   const [tab, setTab] = useState<"overview" | "rewrites" | "followups" | "optimized">("overview");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
+  const [progressStep, setProgressStep] = useState(0);
 
   const resultRef = useRef<HTMLDivElement | null>(null);
   const positionLabel = useMemo(
@@ -111,6 +120,18 @@ export default function ChatWorkspace() {
       if (raw) setHistory(JSON.parse(raw) as HistoryItem[]);
     } catch { /* ignore */ }
   }, []);
+
+  // 深度分析耗时较久，用分阶段提示让等待可感知
+  useEffect(() => {
+    if (!loading) {
+      setProgressStep(0);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setProgressStep((s) => Math.min(s + 1, PROGRESS_STEPS.length - 1));
+    }, 8000);
+    return () => window.clearInterval(id);
+  }, [loading]);
 
   const persistHistory = useCallback((item: HistoryItem) => {
     setHistory((prev) => {
@@ -406,9 +427,21 @@ export default function ChatWorkspace() {
           ) : null}
 
           {loading ? (
-            <p className="mx-auto mt-3 max-w-4xl text-center text-[11px] text-slate-400">
-              深度诊断需要逐句比对与追问推演，通常 15-30 秒，请勿关闭页面
-            </p>
+            <div className="mx-auto mt-4 max-w-4xl rounded-2xl border border-sky-100 bg-sky-50/60 px-5 py-4">
+              <div className="flex items-center gap-2 text-xs font-medium text-sky-800">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {PROGRESS_STEPS[progressStep]}
+              </div>
+              <div className="mt-3 h-1 overflow-hidden rounded-full bg-sky-100">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-sky-500 to-violet-500 transition-all duration-1000"
+                  style={{ width: `${((progressStep + 1) / PROGRESS_STEPS.length) * 100}%` }}
+                />
+              </div>
+              <p className="mt-2 text-[11px] text-sky-600">
+                深度诊断包含逐句比对与追问推演，通常 20-60 秒，请勿关闭页面
+              </p>
+            </div>
           ) : null}
 
           {history.length > 0 ? (
