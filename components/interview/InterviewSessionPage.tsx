@@ -30,7 +30,7 @@ import type {
   InterviewStage,
   InterviewTurn,
 } from "@/lib/interview/types";
-import { incrementFreeInterviewCount, isMember } from "@/lib/member/member-storage";
+import { canStartInterview, consumeInterviewQuota } from "@/lib/member/member-storage";
 import {
 
   createInterviewVoiceSession,
@@ -440,8 +440,8 @@ const resumeQualityRef = useRef<any>(
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
         successPathRef.current = true;
-        // Free user: increment interview count
-        if (!isMember()) incrementFreeInterviewCount();
+        // 完成一场：优先扣免费额度，再扣已购次数（限时会员不扣）
+        consumeInterviewQuota();
         setIsGeneratingReport(false);
         setPhase('completed');
 
@@ -510,8 +510,8 @@ const resumeQualityRef = useRef<any>(
         completedTurnsRef.current = finalTurns.length;
         interviewFinishedRef.current = true;
         successPathRef.current = false;
-        // Free user: increment interview count (fallback)
-        if (!isMember()) incrementFreeInterviewCount();
+        // 完成一场（本地兜底报告同样计入）
+        consumeInterviewQuota();
         setIsGeneratingReport(false);
         setPhase('completed');
         setStatusText('面试已完成');
@@ -1165,6 +1165,13 @@ const resumeQualityRef = useRef<any>(
       setIsGeneratingReport(false);
     }
   }, [isGeneratingReport, router]);
+
+  // ── Quota guard：无免费额度且无已购次数时，直接进入购买页 ──
+  useEffect(() => {
+    if (!canStartInterview()) {
+      router.replace('/member');
+    }
+  }, [router]);
 
   // ── Auth guard ──
   useEffect(() => {

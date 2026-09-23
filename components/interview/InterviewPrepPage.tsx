@@ -18,8 +18,7 @@ import {
   type InterviewMode,
   type InterviewerPersona,
 } from "@/lib/site";
-import { getRemainingFreeInterviews, isMember } from "@/lib/member/member-storage";
-import { canStartInterview } from "@/lib/member/member-storage";
+import { isMember, canStartInterview, getRemainingFreeInterviews, getCredits } from "@/lib/member/member-storage";
 import { cn } from "@/lib/utils";
 
 type UploadState = {
@@ -375,7 +374,15 @@ export default function InterviewPrepPage() {
                   <div className="mt-8 flex flex-col gap-3">
                   {!isMember() && user && (() => { const admins = typeof window !== "undefined" ? JSON.parse(localStorage.getItem("aeroprep_admin_emails") || "[]") : []; return !admins.includes(user.email?.toLowerCase()); })() && (
                     <div className="rounded-2xl border border-amber-100 bg-amber-50/60 px-4 py-2.5 text-center text-xs text-amber-700">
-                      {isMember() ? "会员用户 · 无限面试" : "免费用户剩余 <strong>" + getRemainingFreeInterviews() + "</strong> 次面试机会"}
+                      {isMember()
+                        ? "会员用户 · 不限次数"
+                        : (() => {
+                            const free = getRemainingFreeInterviews();
+                            const credits = getCredits();
+                            if (free > 0) return "免费剩余 " + free + " 次 · 已购 " + credits + " 次";
+                            if (credits > 0) return "已购次数剩余 " + credits + " 次（¥2/次）";
+                            return "免费次数已用完 · 购买后继续面试";
+                          })()}
                     </div>
                   )}
                     {user ? (

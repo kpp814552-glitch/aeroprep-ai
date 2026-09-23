@@ -6,7 +6,6 @@ import { ChevronLeft, Crown, LogOut, UserCircle } from "lucide-react";
 import { appName } from "@/lib/site";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
-import { isMember } from "@/lib/member/member-storage";
 
 type AppFrameProps = {
   children: ReactNode;
@@ -57,7 +56,7 @@ export default function AppFrame({
               { href: "/interview", label: "AI面试" },
               { href: "/chat", label: "AI优化" },
               { href: "/learning", label: "资料中心" },
-              { href: "/member", label: "会员" },
+              { href: "/member", label: "购买次数" },
               { href: "/faq", label: "常见问题" },
               { href: "/profile", label: "成长中心" },
             ].map((item) => (

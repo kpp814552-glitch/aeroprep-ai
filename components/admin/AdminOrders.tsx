@@ -105,7 +105,7 @@ export default function AdminOrders() {
                   <div key={app.id} className="flex items-center justify-between rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-2.5">
                     <div>
                       <p className="text-xs font-medium text-slate-800">{app.email || app.username || app.id}</p>
-                      <p className="text-[10px] text-slate-500">{app.pending_plan === "1day" ? "1天" : app.pending_plan === "3day" ? "3天" : "30天"}会员</p>
+                      <p className="text-[10px] text-slate-500">{String(app.pending_plan).startsWith("credits:") ? String(app.pending_plan).replace("credits:", "") + " 次面试" : app.pending_plan === "1day" ? "1天会员" : app.pending_plan === "3day" ? "3天会员" : "30天会员"}</p>
                     </div>
                     <button type="button" onClick={() => setTab("applications")}
                       className="rounded-full bg-amber-100 px-3 py-1 text-[10px] font-medium text-amber-700 transition hover:bg-amber-200">
@@ -258,7 +258,7 @@ export default function AdminOrders() {
         <div className="space-y-4">
           <GlassPanel className="px-5 py-4">
             <div className="flex items-center justify-between mb-4">
-              <p className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Crown className="h-4 w-4 text-amber-500" />待审核的会员申请</p>
+              <p className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Crown className="h-4 w-4 text-amber-500" />待审核的购买申请</p>
               <button type="button" onClick={async () => {
                 setAppLoading(true);
                 try { const res = await fetch("/api/member/pending"); if (res.ok) { const d = await res.json(); setApplications(d.applicants || []); } }
@@ -277,12 +277,12 @@ export default function AdminOrders() {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-slate-800">{app.email || app.username || app.id}</p>
                       <p className="text-[10px] text-slate-400 mt-0.5">
-                        申请套餐：{app.pending_plan === "1day" ? "1天" : app.pending_plan === "3day" ? "3天" : "30天"}会员
+                        申请套餐：{String(app.pending_plan).startsWith("credits:") ? String(app.pending_plan).replace("credits:", "") + " 次面试（¥2/次）" : app.pending_plan === "1day" ? "1天会员" : app.pending_plan === "3day" ? "3天会员" : "30天会员"}
                         {app.created_at ? ` · ${new Date(app.created_at).toLocaleDateString("zh-CN")}` : ""}
                       </p>
                     </div>
                     <button type="button" onClick={async () => {
-                      if (!confirm("确认通过此申请？会员将从此刻开始生效。")) return;
+                      if (!confirm("确认通过此申请？通过后次数将在用户下次进入时自动入账。")) return;
                       try {
                         const res = await fetch("/api/member/approve", {
                           method: "POST", headers: { "Content-Type": "application/json" },
@@ -290,7 +290,7 @@ export default function AdminOrders() {
                         });
                         const data = await res.json();
                         if (data.success) {
-                          setMsg("✅ 已通过 " + (data.email || app.email || "") + " 的会员申请");
+                          setMsg("✅ 已通过 " + (data.email || app.email || "") + " 的申请" + (data.credits ? "（" + data.credits + " 次面试）" : ""));
                           setAppLoading(true); try { const r = await fetch("/api/member/pending"); if (r.ok) { const d = await r.json(); setApplications(d.applicants || []); } } catch {} finally { setAppLoading(false); }
                         } else {
                           setMsg("❌ " + (data.error || "操作失败"));
