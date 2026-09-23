@@ -85,8 +85,6 @@ export default function InterviewPrepPage() {
     if (!loading && !user) { const t = setTimeout(() => router.replace('/login?redirect=/interview'), 300); return () => clearTimeout(t); }
   }, [loading, user, router]);
 
-  if (loading) return null;
-  if (!user) return null;
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [resume, setResume] = useState<UploadState>(null);
   const [selectedCompany, setSelectedCompany] = useState<InterviewCompany>("国航");
@@ -151,10 +149,14 @@ export default function InterviewPrepPage() {
       });
   }
 
-  const handleStartInterview = useCallback(() => {
+  const handleStartInterview = useCallback(async () => {
     if (!isMember() && !canStartInterview()) {
-      router.push("/member");
-      return;
+      // 本地缓存可能还没同步到（免费额度以服务端为准），先确认一次再决定
+      await syncServerMember().catch(() => {});
+      if (!isMember() && !canStartInterview()) {
+        router.push("/member");
+        return;
+      }
     }
     if (resume?.text) {
       sessionStorage.setItem("aeroprep_resume_text", resume.text);
@@ -177,6 +179,11 @@ export default function InterviewPrepPage() {
   )}&role=${encodeURIComponent(selectedRole)}&mode=${encodeURIComponent(
     selectedMode
   )}&persona=${encodeURIComponent(selectedPersona)}`;
+
+  // ⚠️ 所有 hook 必须在这两个 return 之前调用，否则会出现
+  // "Rendered more hooks than during the previous render" 白屏
+  if (loading) return null;
+  if (!user) return null;
 
   return (
     <AppFrame backHref="/" backLabel="返回首页">

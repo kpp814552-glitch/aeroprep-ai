@@ -36,7 +36,7 @@ type MyOrder = {
 const FAQS = [
   {
     q: "面试如何计费？",
-    a: `按次收费：每次 AI 模拟面试 ¥${PRICE_PER_INTERVIEW}，新用户可免费体验 3 次。购买的次数长期有效，用完为止。`,
+    a: `按次收费：每次 AI 模拟面试 ¥${PRICE_PER_INTERVIEW}，每个账号可免费体验 1 次（与账号绑定，换设备不重置）。购买的次数长期有效，用完为止。`,
   },
   {
     q: "购买后次数如何到账？",
@@ -52,7 +52,7 @@ const FAQS = [
   },
   {
     q: "可以退款吗？",
-    a: "面试次数为数字虚拟商品，购买后不支持退款。建议先使用 3 次免费额度体验产品，确认合适后再购买。",
+    a: "面试次数为数字虚拟商品，购买后不支持退款。建议先用免费额度完整体验一次，确认合适后再购买。",
   },
 ];
 
@@ -193,7 +193,7 @@ export default function MembershipPage() {
               按次付费，<span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">¥{PRICE_PER_INTERVIEW} / 次</span>
             </h1>
             <p className="mt-4 text-sm leading-6 text-slate-500">
-              新用户免费体验 {3} 次，之后每次 AI 模拟面试 ¥{PRICE_PER_INTERVIEW}。次数长期有效，用完为止。
+              每个账号首次面试免费，之后每次 AI 模拟面试 ¥{PRICE_PER_INTERVIEW}。次数长期有效，用完为止。
             </p>
           </div>
 

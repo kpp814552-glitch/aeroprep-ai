@@ -1,8 +1,12 @@
 // ============================================================
 // 会员 / 计费存储层
-// 现行模式：按次收费（¥2/次），免费试用 3 次
+// 现行模式：按次收费（¥2/次），每个账号首次面试免费
 // 遗留模式：限时会员（1天/3天/30天），保留兼容至过期
 // ============================================================
+
+import { FREE_TRIAL_LIMIT } from "./wallet";
+
+export { FREE_TRIAL_LIMIT };
 
 // ---------- 遗留：限时会员 ----------
 export type PlanId = "1day" | "3day" | "30day";
@@ -28,7 +32,6 @@ export type MemberInfo = { plan: PlanId; activatedAt: string; expiresAt: string 
 
 // ---------- 现行：按次收费 ----------
 export const PRICE_PER_INTERVIEW = 2;
-export const FREE_TRIAL_LIMIT = 3;
 
 export type CreditPack = {
   id: string;
@@ -46,7 +49,7 @@ export const CREDIT_PACKS: CreditPack[] = [
 ];
 
 const MEMBER_KEY = "aeroprep_member";
-const COUNT_KEY = "aeroprep_free_count";
+const FREE_LEFT_KEY = "aeroprep_free_left";
 const CREDIT_KEY = "aeroprep_credits";
 const CREDITS_MIGRATED_KEY = "aeroprep_credits_migrated";
 const CREDITS_EVENT = "aeroprep-credits-updated";
@@ -118,7 +121,7 @@ export function activateMember(planId: PlanId): MemberInfo {
   const expires = new Date(now.getTime() + plan.days * 86400000);
   const info: NonNullable<MemberInfo> = { plan: planId, activatedAt: now.toISOString(), expiresAt: expires.toISOString() };
   localStorage.setItem(MEMBER_KEY, JSON.stringify(info));
-  localStorage.removeItem(COUNT_KEY);
+  localStorage.removeItem(FREE_LEFT_KEY);
   return info;
 }
 
@@ -176,19 +179,32 @@ export function setCredits(count: number): number {
 }
 
 // ---------- 免费试用 ----------
-export function getFreeInterviewCount(): number {
-  if (typeof window === "undefined") return 0;
-  try { return parseInt(localStorage.getItem(COUNT_KEY) || "0", 10) || 0; } catch { return 0; }
-}
-
-export function incrementFreeInterviewCount(): number {
-  const next = getFreeInterviewCount() + 1;
-  localStorage.setItem(COUNT_KEY, String(next));
-  return next;
-}
-
+/**
+ * 剩余免费次数：与账号绑定，真正来源是服务端（按已完成面试条数推导）。
+ * 这里只是同步下来的缓存，清缓存/换设备都改不了服务端的判定。
+ */
 export function getRemainingFreeInterviews(): number {
-  return Math.max(0, FREE_TRIAL_LIMIT - getFreeInterviewCount());
+  // 默认按"没有免费额度"处理：必须等服务端确认后才放行，
+  // 这样清缓存 / 换设备都无法凭空多出一次免费机会。
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = localStorage.getItem(FREE_LEFT_KEY);
+    if (raw === null) return 0;
+    const n = parseInt(raw, 10);
+    return Number.isFinite(n) && n > 0 ? Math.min(n, FREE_TRIAL_LIMIT) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** 用服务端结果覆盖本地缓存（免费额度用完即 0） */
+export function setRemainingFreeInterviews(count: number): number {
+  if (typeof window === "undefined") return 0;
+  const next = Math.max(0, Math.min(FREE_TRIAL_LIMIT, Math.floor(count) || 0));
+  const prev = getRemainingFreeInterviews();
+  try { localStorage.setItem(FREE_LEFT_KEY, String(next)); } catch { /* ignore */ }
+  if (prev !== next) emitCreditsChanged();
+  return next;
 }
 
 // ---------- 资格与扣减 ----------
@@ -209,7 +225,7 @@ export function consumeInterviewQuota(): { ok: boolean; usedFree: boolean; credi
   }
 
   if (getRemainingFreeInterviews() > 0) {
-    incrementFreeInterviewCount();
+    setRemainingFreeInterviews(getRemainingFreeInterviews() - 1);
     return { ok: true, usedFree: true, creditsLeft: getCredits() };
   }
 
@@ -279,6 +295,13 @@ async function syncServerMemberInternal(): Promise<boolean> {
       if (getCredits() !== serverLeft) {
         setCredits(serverLeft);
         changed = true;
+      }
+
+      // 免费额度同样以服务端为准（与账号绑定，清缓存 / 换设备都不会重置）
+      if (typeof data.freeLeft === "number") {
+        const freeLeft = Math.max(0, Math.floor(data.freeLeft));
+        if (getRemainingFreeInterviews() !== freeLeft) changed = true;
+        setRemainingFreeInterviews(freeLeft);
       }
     }
 

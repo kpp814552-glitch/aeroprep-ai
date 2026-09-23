@@ -64,6 +64,28 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   revoked: "已撤销",
 };
 
+/**
+ * 每个账号的免费体验次数：与账号绑定，由服务端按"已完成面试条数"计算，
+ * 清浏览器缓存 / 换设备都不会重置。
+ */
+export const FREE_TRIAL_LIMIT = 1;
+
+/**
+ * 由服务端事实（已完成面试总数）推导额度使用情况。
+ * totalInterviews 来自 interviews 表：用户可以新增、但删不掉（没有 DELETE 策略），
+ * 所以它是一份"只会变大"的可信计数，用来做免费/付费的前 N 次划分。
+ */
+export function deriveUsage(totalInterviews: number, rowUsed: number) {
+  const total = Math.max(0, Math.floor(totalInterviews));
+  const paidFloor = Math.max(0, total - FREE_TRIAL_LIMIT);
+  return {
+    freeUsed: Math.min(total, FREE_TRIAL_LIMIT),
+    freeLeft: Math.max(0, FREE_TRIAL_LIMIT - total),
+    /** 实际扣费的场次：取"账本已扣"与"按面试数推导"的较大值，防止被改小 */
+    paidUsed: Math.max(Math.max(0, Math.floor(rowUsed)), paidFloor),
+  };
+}
+
 /** 订单流水保留条数：优先丢弃最旧的已处理订单，pending 永不丢弃 */
 const MAX_ORDERS = 40;
 

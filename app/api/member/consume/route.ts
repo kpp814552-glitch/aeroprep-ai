@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { walletBalance } from "@/lib/member/wallet";
+import { deriveUsage, totalGranted } from "@/lib/member/wallet";
 import { loadRegistry, mutateWallet } from "@/lib/member/wallet-server";
 
 /**
@@ -27,11 +27,19 @@ export async function POST(request: NextRequest) {
   const registryRow = await loadRegistry(supabase, user.id);
   const registry = "error" in registryRow ? undefined : registryRow.registry;
 
+  // 已完成面试条数：与状态接口同一套推导，保证扣减口径一致
+  const { count: totalInterviews } = await supabase
+    .from("interviews")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
   const result = await mutateWallet(supabase, user.id, (doc) => {
+    const usage = deriveUsage(totalInterviews || 0, doc.used);
+    const granted = totalGranted(doc, registry);
     const wallet = {
-      granted: doc.legacyGranted + (registry?.granted || 0),
-      used: doc.used,
-      left: walletBalance(doc, registry),
+      granted,
+      used: usage.paidUsed,
+      left: Math.max(0, granted - usage.paidUsed),
     };
 
     // 幂等：同一场面试重复上报
@@ -43,12 +51,13 @@ export async function POST(request: NextRequest) {
       return { commit: false, value: { charged: false, duplicate: false, wallet } };
     }
 
-    doc.used += 1;
+    // 账本与会话事实对齐后再 +1
+    doc.used = usage.paidUsed + 1;
     if (key) doc.lastConsume = { key, at: new Date().toISOString() };
     const next = {
-      granted: doc.legacyGranted + (registry?.granted || 0),
+      granted,
       used: doc.used,
-      left: walletBalance(doc, registry),
+      left: Math.max(0, granted - doc.used),
     };
     return { commit: true, value: { charged: true, duplicate: false, wallet: next } };
   });

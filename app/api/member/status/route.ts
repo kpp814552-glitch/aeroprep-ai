@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { mergeOrders, totalGranted, walletBalance } from "@/lib/member/wallet";
+import { FREE_TRIAL_LIMIT, deriveUsage, mergeOrders, totalGranted } from "@/lib/member/wallet";
 import { loadRegistry, loadWallet } from "@/lib/member/wallet-server";
 import { isPlatformAdmin } from "@/lib/admin/auth";
 
@@ -62,10 +62,19 @@ export async function GET(request: NextRequest) {
   const doc = "error" in walletRow ? { v: 3 as const, used: 0, legacyGranted: 0, orders: [] } : walletRow.doc;
   const registry = "error" in registryRow ? undefined : registryRow.registry;
 
+  // 免费额度与扣费下限都基于服务端事实：该账号已完成的面试条数
+  const { count: totalInterviews } = await supabase
+    .from("interviews")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  const usage = deriveUsage(totalInterviews || 0, doc.used);
+  const granted = totalGranted(doc, registry);
+
   const wallet = {
-    granted: totalGranted(doc, registry),
-    used: doc.used,
-    left: walletBalance(doc, registry),
+    granted,
+    used: usage.paidUsed,
+    left: Math.max(0, granted - usage.paidUsed),
     legacyGranted: doc.legacyGranted,
   };
   const orders = mergeOrders(doc.orders, registry).slice(0, 20);
@@ -85,6 +94,10 @@ export async function GET(request: NextRequest) {
     planId,
     // 管理后台入口依据：与 /api/admin/* 使用同一套白名单判定
     isAdmin: await isPlatformAdmin(supabase, user),
+    // 免费额度（与账号绑定：按已完成面试条数推导，清缓存不会重置）
+    freeLimit: FREE_TRIAL_LIMIT,
+    freeUsed: usage.freeUsed,
+    freeLeft: usage.freeLeft,
     // 兼容旧客户端字段：次数已改为服务端账本，不再走"领取"握手
     grantedCredits: 0,
     wallet,
