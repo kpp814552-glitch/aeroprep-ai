@@ -69,7 +69,7 @@ export default function FaqPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <main className="relative z-10 min-h-screen">
+      <main className="relative z-10 min-h-dvh-safe">
         <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
           <div className="absolute left-1/2 top-0 h-[1000px] w-[1000px] -translate-x-1/2 rounded-full bg-gradient-to-b from-sky-50/40 via-sky-50/15 to-transparent blur-3xl" />
         </div>

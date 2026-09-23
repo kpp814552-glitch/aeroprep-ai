@@ -195,7 +195,7 @@ ${draft.trim()}`;
 
   return (
     <AppFrame>
-      <main className="relative z-10 min-h-screen px-5 pb-24 pt-12 md:px-8 md:pt-16">
+      <main className="relative z-10 min-h-dvh-safe px-5 pb-24 pt-12 md:px-8 md:pt-16">
         <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
           <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-sky-100/20 blur-3xl" />
           <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-violet-100/15 blur-3xl" />

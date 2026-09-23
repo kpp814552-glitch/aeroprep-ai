@@ -1207,10 +1207,10 @@ const resumeQualityRef = useRef<any>(
 
   // ── Save dialog (shown when API fails) ──
   return showSaveDialog ? (
-    <main className="relative min-h-screen overflow-hidden bg-[#1f140f] text-white">
+    <main className="relative min-h-dvh-safe overflow-hidden bg-[#1f140f] text-white">
       <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("/session-background.webp")' }} />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,10,7,0.08),rgba(24,13,10,0.18)_34%,rgba(14,8,6,0.42)_100%)]" />
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
+      <div className="relative z-10 flex min-h-dvh-safe items-center justify-center px-4">
         <div className="w-full max-w-md rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,15,10,0.85),rgba(8,6,6,0.85))] px-6 py-8 shadow-[0_24px_64px_rgba(0,0,0,0.4)] backdrop-blur-xl">
           <p className="text-sm uppercase tracking-[0.3em] text-[#f5c689]/80">数据保存</p>
           <p className="mt-4 text-base leading-7 text-white/80">
@@ -1237,7 +1237,7 @@ const resumeQualityRef = useRef<any>(
       </div>
     </main>
   ) : (
-    <main className="relative min-h-screen overflow-hidden bg-[#1f140f] text-white">
+    <main className="relative min-h-dvh-safe overflow-hidden bg-[#1f140f] text-white">
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: 'url("/session-background.webp")' }}
@@ -1247,8 +1247,8 @@ const resumeQualityRef = useRef<any>(
       <div className="absolute inset-x-0 bottom-0 h-[24%] bg-[linear-gradient(180deg,rgba(18,10,7,0),rgba(18,10,7,0.08)_34%,rgba(10,6,5,0.42)_100%)]" />
       <div className="absolute inset-x-0 bottom-[13%] h-[24%] bg-[radial-gradient(circle_at_center,rgba(16,9,7,0.22),rgba(16,9,7,0)_72%)]" />
 
-      <div className="relative z-10 min-h-screen px-4 py-4 md:px-5 md:py-5">
-        <div className="mx-auto flex min-h-screen max-w-[1536px] flex-col">
+      <div className="relative z-10 min-h-dvh-safe px-4 py-4 md:px-5 md:py-5">
+        <div className="mx-auto flex min-h-dvh-safe max-w-[1536px] flex-col">
 
           {/* ── Header: Transcript + Timer (playing/listening only) ── */}
           {showHeader && (
@@ -1269,7 +1269,7 @@ const resumeQualityRef = useRef<any>(
 
                 <div
                   ref={transcriptScrollRef}
-                  className="mt-2.5 h-[12.4rem] max-sm:h-[8rem] space-y-2 overflow-y-auto pr-1 text-[0.7rem] leading-6 text-white/74 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/12"
+                  className="mt-2.5 h-[12.4rem] max-sm:h-[7.5rem] space-y-2 overflow-y-auto pr-1 text-[0.75rem] sm:text-[0.7rem] leading-6 text-white/74 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/12"
                 >
                   <p>
                     <span className="text-white/56">{interviewerLabel}：</span>
@@ -1402,7 +1402,7 @@ const resumeQualityRef = useRef<any>(
 
           {/* ── Bottom Card (playing/listening) ── */}
           {showBottomCard && (
-            <section className="relative flex flex-1 items-end justify-center pb-[6.5rem] pt-6 md:pb-[7.1rem]">
+            <section className="safe-bottom relative flex flex-1 items-end justify-center pt-4 md:pt-6">
               <div className="relative w-full max-w-[1120px]">
                 <div className="pointer-events-none absolute inset-x-0 bottom-[-1.1rem] flex justify-center px-5 md:px-8">
                   <div className="w-full max-w-[760px] rounded-[18px] border border-white/5 bg-[linear-gradient(180deg,rgba(18,11,9,0.3),rgba(8,7,7,0.18))] px-4 py-2 shadow-[0_10px_22px_rgba(0,0,0,0.16)] backdrop-blur-sm md:px-5 md:py-2.5">
@@ -1464,7 +1464,7 @@ const resumeQualityRef = useRef<any>(
                           type="button"
                           onClick={handleResumeAudioPlayback}
                           aria-label="播放面试官语音"
-                          className="pointer-events-auto inline-flex items-center rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
+                          className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white max-sm:py-3"
                         >
                           播放语音
                         </button>
@@ -1474,7 +1474,7 @@ const resumeQualityRef = useRef<any>(
                           onClick={handleEndAnswer}
                           aria-label="结束回答"
                           disabled={!isAnswering || isGeneratingReport}
-                          className="pointer-events-auto inline-flex items-center rounded-full border border-white/20 bg-white/14 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-white/88 transition hover:border-white/30 hover:bg-white/22 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35"
+                          className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-white/20 bg-white/14 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-white/88 transition hover:border-white/30 hover:bg-white/22 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35 max-sm:py-3"
                         >
                           End Answer
                         </button>

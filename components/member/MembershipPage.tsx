@@ -53,7 +53,7 @@ export default function MembershipPage() {
 
   return (
     <AppFrame>
-      <main className="relative z-10 min-h-screen">
+      <main className="relative z-10 min-h-dvh-safe">
         {/* Single continuous background */}
         <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
           <div className="absolute left-1/2 top-0 h-[1200px] w-[1000px] -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-50/40 via-sky-50/20 to-transparent blur-3xl" />

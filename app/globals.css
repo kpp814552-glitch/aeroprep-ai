@@ -539,3 +539,21 @@ textarea {
   .stagger-section > * { animation: none; opacity: 1; }
   [style*="animation"] { animation: none !important; }
 }
+
+/* Dynamic viewport height with 100vh fallback (fixes iOS Safari URL-bar cut-off) */
+.min-h-dvh-safe {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Bottom padding that respects iPhone home-indicator safe area */
+.safe-bottom {
+  --safe-pb: 3.5rem;
+  padding-bottom: calc(var(--safe-pb) + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 640px) {
+  .safe-bottom { --safe-pb: 5rem; }
+}
+@media (min-width: 768px) {
+  .safe-bottom { --safe-pb: 7.1rem; }
+}
