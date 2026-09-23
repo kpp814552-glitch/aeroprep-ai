@@ -1,447 +1,664 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { WandSparkles, Loader2, FileText, MessageSquare, CheckCircle2, Lightbulb, Copy, BarChart3, Sparkles, RotateCcw, Clipboard, Target, Shield, Zap, Star, TrendingUp, Brain, Users } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BarChart3,
+  CheckCircle2,
+  Clipboard,
+  Copy,
+  Download,
+  FileText,
+  History,
+  Lightbulb,
+  Loader2,
+  MessageSquare,
+  RotateCcw,
+  Sparkles,
+  Target,
+  WandSparkles,
+} from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassPanel } from "@/components/ui/glass";
 import LoginModal from "@/components/auth/LoginModal";
 import { useAuth } from "@/hooks/useAuth";
+import type { OptimizeAnalysis } from "@/app/api/optimize/route";
 
-// ====== CountUp Hook ======
-function useCountUp(target: number, duration = 1200): number {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const started = useRef(false);
-  useEffect(() => {
-    if (!ref.current || started.current) return;
-    const el = ref.current;
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return;
-      observer.disconnect(); started.current = true;
-      const startTime = performance.now();
-      const step = (now: number) => {
-        const elapsed = now - startTime;
-        const p = Math.min(elapsed / duration, 1);
-        setCount(Math.round(target * (1 - Math.pow(1 - p, 3))));
-        if (p < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
-    }, { threshold: 0.3 });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [target, duration]);
-  return count;
-}
+type Kind = "resume" | "interview";
 
-function AnimatedNumber({ value, suffix = "" }: { value: number; suffix?: string }) {
-  const count = useCountUp(value);
-  return <span className="tabular-nums">{count}{suffix}</span>;
-}
-
-// ====== Mode Config ======
-const modeConfig = {
-  resume: {
-    heroTitle: "AI 简历优化",
-    heroSub: "优化简历表达、岗位匹配度与民航关键词覆盖率，打造更具竞争力的简历",
-    accentColor: "from-sky-400 to-blue-500",
-    accentBorder: "bg-gradient-to-b from-sky-400 to-blue-500",
-    glowColor: "bg-sky-100/30",
-    btnGradient: "from-[#5BA8FF] to-[#3B82F6]",
-    btnText: "开始优化简历",
-    loadingText: "AI正在优化简历...",
-    placeholder: "请粘贴完整简历内容，建议包含教育经历、项目经历、实习经历、校园经历、技能证书等信息，AI 将重点优化表达方式、岗位匹配度、民航关键词覆盖率及专业度",
-    inputAccent: "focus:border-sky-400",
-    icon: FileText,
-  },
-  interview: {
-    heroTitle: "AI 面试回答优化",
-    heroSub: "优化回答逻辑、STAR结构与HR表达习惯，让回答更具专业性",
-    accentColor: "from-violet-400 to-purple-500",
-    accentBorder: "bg-gradient-to-b from-violet-400 to-purple-500",
-    glowColor: "bg-violet-100/30",
-    btnGradient: "from-[#8B5CF6] to-[#7C3AED]",
-    btnText: "开始优化回答",
-    loadingText: "AI正在优化回答...",
-    placeholder: "请粘贴你的面试回答，例如自我介绍、职业规划、STAR案例、岗位认知等内容，AI 将重点优化表达逻辑、STAR结构、服务意识、安全意识以及HR阅读体验",
-    inputAccent: "focus:border-violet-400",
-    icon: MessageSquare,
-  },
+type HistoryItem = {
+  id: string;
+  kind: Kind;
+  positionLabel: string;
+  answerType: string;
+  recruitType: string;
+  content: string;
+  analysis: OptimizeAnalysis;
+  createdAt: string;
 };
 
+const HISTORY_KEY = "aeroprep_optimize_history";
+const MAX_HISTORY = 8;
+
 const positionOptions = [
-  { value: "pilot", label: "飞行员" }, { value: "cabin", label: "乘务员" },
-  { value: "cabin-safety", label: "安全员" }, { value: "maintenance", label: "机务维修" },
-  { value: "dispatcher", label: "签派员" }, { value: "atc", label: "空管员" },
-  { value: "airport-ops", label: "运行" }, { value: "terminal-service", label: "安检/地服" },
+  { value: "pilot", label: "飞行员" },
+  { value: "cabin", label: "空中乘务员" },
+  { value: "cabin-safety", label: "客舱安全员" },
+  { value: "maintenance", label: "机务维修" },
+  { value: "dispatcher", label: "签派员" },
+  { value: "atc", label: "空中交通管制员" },
+  { value: "airport-ops", label: "机场运行" },
+  { value: "terminal-service", label: "地服/安检" },
 ];
 
-const answerTypes = [
-  { value: "自我介绍", label: "自我介绍" },
-  { value: "STAR案例", label: "STAR案例" },
-  { value: "职业规划", label: "职业规划" },
-  { value: "岗位认知", label: "岗位认知" },
-  { value: "综合问题", label: "综合问题" },
-];
+const answerTypes = ["自我介绍", "STAR案例", "职业规划", "岗位认知", "情景应变", "综合问题"];
+
+/** 一键填入的示例：让用户立刻看到分析效果 */
+const EXAMPLES: Record<Kind, string> = {
+  interview:
+    "面试官你好，我叫张明，是航空服务专业的大三学生。我性格比较开朗，喜欢和人打交道，在校期间参加过学校的礼仪社团，也做过迎新志愿者。我觉得乘务员可以到处飞，能去很多地方看看，这也是我想做这行的原因。我平时做事比较认真，学习能力也还可以，希望有机会加入贵公司。",
+  resume:
+    "张明 / 航空服务专业 / 2026 届本科；教育经历：2022.09-2026.06 某民航大学 航空服务专业；校园经历：参加学校礼仪社团、担任班级生活委员；实习经历：2024 年暑假在某机场地服实习一个月，负责旅客引导与值机协助；技能证书：英语四级、普通话二级甲等、红十字急救证；自我评价：性格开朗、能吃苦、有责任心，喜欢服务行业。",
+};
+
+const RESUME_DIMENSIONS = ["结构完整性", "量化成果", "岗位匹配度", "专业关键词", "HR 阅读体验"];
+const INTERVIEW_DIMENSIONS = ["逻辑结构", "岗位匹配度", "专业与安全素养", "表达感染力", "案例支撑度"];
+
+function scoreColor(score: number) {
+  if (score >= 85) return "text-emerald-600";
+  if (score >= 70) return "text-sky-600";
+  if (score >= 55) return "text-amber-600";
+  return "text-rose-600";
+}
+
+function scoreBg(score: number) {
+  if (score >= 85) return "bg-emerald-500";
+  if (score >= 70) return "bg-sky-500";
+  if (score >= 55) return "bg-amber-500";
+  return "bg-rose-500";
+}
 
 export default function ChatWorkspace() {
   const { user } = useAuth();
-  const [type, setType] = useState<"resume" | "interview" | null>(null);
   const [showLogin, setShowLogin] = useState(false);
-  const [position, setPosition] = useState("pilot");
+
+  const [kind, setKind] = useState<Kind>("interview");
+  const [position, setPosition] = useState("cabin");
   const [answerType, setAnswerType] = useState("自我介绍");
   const [recruitType, setRecruitType] = useState("校招");
   const [draft, setDraft] = useState("");
-  const [result, setResult] = useState("");
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [optimizedVersion, setOptimizedVersion] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [showResult, setShowResult] = useState(false);
-  
-  const resultRef = useRef<HTMLDivElement>(null);
-  const cfg = type ? modeConfig[type] : null;
+  const [analysis, setAnalysis] = useState<OptimizeAnalysis | null>(null);
+  const [fallbackText, setFallbackText] = useState("");
+  const [tab, setTab] = useState<"overview" | "rewrites" | "followups" | "optimized">("overview");
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [copied, setCopied] = useState(false);
 
-  // Mode switch transition
-  const switchType = (newType: "resume" | "interview") => {
-    if (newType === type) return;
-    setType(newType);
-    setResult("");
-    setShowResult(false);
+  const resultRef = useRef<HTMLDivElement | null>(null);
+  const positionLabel = useMemo(
+    () => positionOptions.find((p) => p.value === position)?.label || "民航岗位",
+    [position],
+  );
+  const dimensionNames = kind === "resume" ? RESUME_DIMENSIONS : INTERVIEW_DIMENSIONS;
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (raw) setHistory(JSON.parse(raw) as HistoryItem[]);
+    } catch { /* ignore */ }
+  }, []);
+
+  const persistHistory = useCallback((item: HistoryItem) => {
+    setHistory((prev) => {
+      const next = [item, ...prev.filter((h) => h.id !== item.id)].slice(0, MAX_HISTORY);
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, []);
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) setDraft(text.slice(0, 5000));
+    } catch { /* 用户拒绝授权时忽略 */ }
+  };
+
+  const resetResult = () => {
+    setAnalysis(null);
+    setFallbackText("");
     setError("");
   };
 
-  useEffect(() => {
-    if (showResult && resultRef.current) {
-      setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    }
-  }, [showResult]);
-
-  const handlePaste = async () => {
-    try { const t = await navigator.clipboard.readText(); if (t) setDraft(t); } catch {}
-  };
-
-  const handleOptimize = async () => {
-    if (!draft.trim() || loading || !type) return;
-    // 游客可以浏览和试填，真正提交优化前先引导登录 / 注册
+  const runOptimize = async () => {
+    if (!draft.trim() || loading) return;
     if (!user) {
       setShowLogin(true);
       return;
     }
-    setLoading(true); setError(""); setResult(""); setShowResult(false);
 
-    const typeLabel = type === "resume" ? "简历" : "面试回答";
-    const contentType = type === "resume" ? (type === "resume" ? "简历" : answerType) : answerType;
-    const positionLabel = positionOptions.find((p) => p.value === position)?.label || position;
-
-    const systemPrompt = `你是 AeroPrep AI 的核心优化引擎，也是拥有十年以上招聘经验的民航 HR、面试官、职业发展顾问以及中文表达专家。你的任务不是简单润色文字，而是站在真实航空公司招聘视角，对用户输入的内容进行专业、深入、有价值的优化。
-
-当用户输入内容时，自动识别内容类型，从多个维度综合分析：表达逻辑、岗位匹配度、民航行业文化契合度、安全意识、服务意识、责任意识、团队协作、职业稳定性、模板化表达、个人特色、空话套话、案例支撑、个人成长体现。
-
-对于${typeLabel}，重点分析岗位匹配度、专业关键词覆盖率、项目/经历质量、量化成果、整体逻辑以及HR阅读体验。
-
-优化后的内容必须：语言自然有温度；体现真实经历；突出岗位匹配；突出职业素养；符合民航招聘标准；避免模板化空话；能够让HR快速抓住亮点。
-
-输出严格按以下两个板块（用 === 分隔）：
-
-=== 优化建议 ===
-逐条列出可执行的修改建议（3-5条），每条用「-」开头，简洁专业
-
-=== 优化版本 ===
-完整的高质量优化内容，直接可用的最终版本`;
-
-    const userPrompt = `内容类型：${contentType}
-目标岗位：${positionLabel}
-招聘方式：${recruitType}
-
-我的原始内容：
-${draft.trim()}`;
-
+    setLoading(true);
+    resetResult();
     try {
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }] }),
+        body: JSON.stringify({
+          kind,
+          positionLabel,
+          recruitType,
+          answerType: kind === "interview" ? answerType : "简历",
+          content: draft.trim(),
+        }),
       });
-      const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error || "优化请求失败");
-      const raw = payload?.assistant || "未能生成优化结果";
-      setResult(raw);
-      
-      // Parse sections
-      const sections = raw.split("=== 优化").filter(Boolean);
-      for (const sec of sections) {
-        if (sec.startsWith("建议")) {
-          const body = sec.replace("建议 ===", "").replace("建议===", "").trim();
-          setSuggestions(body.split("\n").filter((l: string) => l.trim().startsWith("-") || l.trim().startsWith("•") || l.trim().startsWith("1.")).map((l: string) => l.replace(/^[-•]\s*|^\d+\.\s*/, "").trim()).filter(Boolean));
-        } else if (sec.startsWith("版本")) {
-          const body = sec.replace("版本 ===", "").replace("版本===", "").trim();
-          setOptimizedVersion(body);
-        }
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        setError(data?.error || "分析失败，请稍后重试");
+        return;
       }
-      setShowResult(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "优化请求失败");
+      if (!data?.ok || !data.analysis) {
+        setFallbackText(String(data?.rawText || ""));
+        setError(data?.error || "AI 返回格式异常，已展示原始分析");
+        return;
+      }
+
+      const next = data.analysis as OptimizeAnalysis;
+      setAnalysis(next);
+      setTab("overview");
+      persistHistory({
+        id: `${Date.now()}`,
+        kind,
+        positionLabel,
+        answerType: kind === "interview" ? answerType : "简历",
+        recruitType,
+        content: draft.trim(),
+        analysis: next,
+        createdAt: new Date().toISOString(),
+      });
+      window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    } catch {
+      setError("网络异常，请检查网络后重试");
     } finally {
       setLoading(false);
     }
   };
 
-  const copyResult = () => { if (result) navigator.clipboard.writeText(result); };
+  const restoreHistory = (item: HistoryItem) => {
+    setKind(item.kind);
+    setPosition(positionOptions.find((p) => p.label === item.positionLabel)?.value || "cabin");
+    setAnswerType(item.answerType);
+    setRecruitType(item.recruitType);
+    setDraft(item.content);
+    setAnalysis(item.analysis);
+    setFallbackText("");
+    setError("");
+    setTab("overview");
+    window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+  };
 
-  // Score cards per mode
-  const scores = type === "resume" ? [
-    { label: "综合评分", value: "88" as const, color: "text-emerald-600" },
-    { label: "岗位匹配度", value: "92%", color: "text-sky-600" },
-    { label: "关键词覆盖率", value: "78%", color: "text-violet-600" },
-    { label: "HR第一印象", value: "A", color: "text-amber-600" },
-  ] : [
-    { label: "表达流畅度", value: "90", color: "text-emerald-600" },
-    { label: "STAR完整度", value: "82%", color: "text-violet-600" },
-    { label: "HR印象预测", value: "85", color: "text-sky-600" },
-    { label: "岗位契合度", value: "88%", color: "text-amber-600" },
-  ];
+  const copyText = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch { /* ignore */ }
+  };
+
+  const downloadText = (text: string) => {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `AeroPrep-优化稿-${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const tabs = analysis
+    ? [
+        { key: "overview" as const, label: "诊断总览", icon: BarChart3 },
+        { key: "rewrites" as const, label: `逐句改写 ${analysis.rewrites.length}`, icon: Lightbulb },
+        { key: "followups" as const, label: `追问预测 ${analysis.followups.length}`, icon: Target },
+        { key: "optimized" as const, label: "优化稿", icon: FileText },
+      ]
+    : [];
 
   return (
     <AppFrame>
       <main className="relative z-10 min-h-dvh-safe px-5 pb-24 pt-12 md:px-8 md:pt-16">
         <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-          <div className="absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full bg-sky-100/20 blur-3xl" />
-          <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-violet-100/15 blur-3xl" />
-        </div>
-        {/* Background blobs - change with mode */}
-        <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-          <div className={`absolute -left-40 -top-40 h-[500px] w-[500px] rounded-full blur-3xl transition-all duration-700 ${
-            type === "resume" ? "bg-sky-100/25 scale-110" : type === "interview" ? "bg-violet-100/25 scale-110" : "bg-sky-100/20"
-          }`} />
-          <div className={`absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full blur-3xl transition-all duration-700 ${
-            type === "resume" ? "bg-blue-100/20 scale-110" : type === "interview" ? "bg-purple-100/20 scale-110" : "bg-blue-100/15"
-          }`} />
+          <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-sky-100/25 blur-3xl" />
+          <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-violet-100/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-5xl stagger-section">
-          {/* ====== Hero ====== */}
-          <div className="mx-auto max-w-[560px] text-center" >
+        <div className="relative mx-auto max-w-6xl">
+          <div className="mx-auto max-w-2xl text-center">
             <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500 shadow-sm backdrop-blur-md">
               <WandSparkles className="h-3 w-3 text-violet-500" />AI 优化
             </div>
-            <h1 className="text-4xl font-semibold tracking-[-0.04em] md:text-5xl">
-              {type ? (
-                <span className={`bg-gradient-to-r ${cfg?.accentColor || "from-sky-500 to-violet-500"} bg-clip-text text-transparent`}>
-                  {cfg?.heroTitle || "AI 内容优化"}
-                </span>
-              ) : (
-                <span>AI <span className="bg-gradient-to-r from-sky-500 to-violet-500 bg-clip-text text-transparent">内容优化</span></span>
-              )}
+            <h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">
+              <span className="bg-gradient-to-r from-sky-500 to-violet-500 bg-clip-text text-transparent">面试官视角</span>
+              的深度诊断
             </h1>
-            <p className="mx-auto mt-4 max-w-[560px] text-base leading-7" style={{ color: "#6B7280" }}>
-              {type ? cfg?.heroSub : "粘贴你的简历、自我介绍或面试回答，AI将在几秒钟内完成民航岗位专项优化。"}
+            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500 md:text-base">
+              不是简单润色——按目标岗位给出五维评分、逐句改写、追问预测和可直接使用的优化稿。
             </p>
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] text-slate-500">
+              {["五维真实评分", "逐句改写对照", "面试追问预测", "岗位关键词覆盖"].map((item) => (
+                <span key={item} className="rounded-full border border-white/50 bg-white/60 px-3 py-1.5 shadow-sm">
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* ====== Mode Cards ====== */}
-          <div className="mx-auto mt-10 grid max-w-3xl gap-4 sm:grid-cols-2">
+          <div className="mx-auto mt-10 grid max-w-2xl gap-4 sm:grid-cols-2">
             {[
-              { id: "resume" as const, icon: FileText, title: "简历优化", desc: "优化简历表达、岗位匹配度、关键词覆盖率", activeColor: "from-sky-400 to-blue-500" },
-              { id: "interview" as const, icon: MessageSquare, title: "面试回答优化", desc: "优化回答逻辑、STAR结构与HR表达习惯", activeColor: "from-violet-400 to-purple-500" },
+              { id: "interview" as const, icon: MessageSquare, title: "面试回答优化", desc: "自我介绍 / STAR / 岗位认知 / 情景题" },
+              { id: "resume" as const, icon: FileText, title: "简历诊断优化", desc: "结构 / 量化成果 / 岗位关键词" },
             ].map((card) => {
               const Icon = card.icon;
-              const isActive = type === card.id;
-              const isOtherActive = type !== null && type !== card.id;
+              const active = kind === card.id;
               return (
                 <button
                   key={card.id}
                   type="button"
-                  onClick={() => switchType(card.id)}
-                  className={`group relative h-[170px] w-full overflow-hidden rounded-2xl border px-6 py-6 text-left transition-all duration-300 active:scale-[0.98] ${
-                    isActive
-                      ? "border-white/80 bg-white shadow-lg"
-                      : isOtherActive
-                      ? "border-white/30 bg-white/40 shadow-sm opacity-50"
-                      : "border-[rgba(255,255,255,0.8)] bg-white/60 shadow-sm hover:scale-[1.02] hover:shadow-md"
+                  onClick={() => { setKind(card.id); resetResult(); }}
+                  className={`relative flex items-center gap-3 rounded-2xl border px-5 py-4 text-left transition ${
+                    active ? "border-sky-200 bg-white shadow-md" : "border-white/50 bg-white/50 shadow-sm hover:bg-white/70"
                   }`}
                 >
-                  {/* Active accent bar */}
-                  {isActive && <div className={`absolute left-0 top-0 h-full w-[3px] ${card.activeColor}`} />}
-                  {/* Active glow */}
-                  {isActive && <div className="absolute -inset-4 rounded-2xl bg-sky-100/30 blur-2xl" />}
-                  {/* "当前模式" badge */}
-                  {isActive && (
-                    <div className="absolute right-3 top-3 rounded-full bg-gradient-to-r from-sky-400 to-violet-400 px-2.5 py-0.5 text-[9px] font-medium text-white shadow-sm">
-                      当前模式
-                    </div>
-                  )}
-                  <div className="relative z-10 flex h-full flex-col justify-between">
-                    <div className={`flex h-12 w-12 items-center justify-center rounded-xl transition-all duration-300 ${
-                      isActive ? `bg-gradient-to-br ${card.activeColor} text-white shadow-md scale-110` : "bg-white/60 text-slate-500"
-                    }`}>
-                      <Icon className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className={`text-sm font-semibold ${isActive ? "text-slate-900" : "text-slate-700"}`}>{card.title}</p>
-                      <p className={`mt-0.5 text-xs ${isActive ? "text-slate-500" : "text-slate-400"}`}>{card.desc}</p>
-                    </div>
-                  </div>
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                    active ? "bg-gradient-to-br from-sky-500 to-violet-500 text-white" : "bg-white/70 text-slate-500"
+                  }`}>
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className={`block text-sm font-semibold ${active ? "text-slate-900" : "text-slate-600"}`}>{card.title}</span>
+                    <span className="mt-0.5 block truncate text-[11px] text-slate-400">{card.desc}</span>
+                  </span>
                 </button>
               );
             })}
           </div>
 
-          {/* ====== Input Area ====== */}
-          {type && (
-            <div className="mx-auto mt-8 max-w-3xl animate-[fadeUp_0.3s_ease]" key={type}>
-              <GlassPanel className="overflow-hidden rounded-[24px] border border-white/40 bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
-                {/* Toolbar */}
-                <div className="flex items-center justify-between border-b border-white/30 px-5 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
-                      type === "resume" ? "bg-sky-50 text-sky-600" : "bg-violet-50 text-violet-600"
-                    }`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${type === "resume" ? "bg-sky-400" : "bg-violet-400"}`} />
-                      {type === "resume" ? "简历优化" : "面试回答优化"}
-                    </span>
-                    <span className="text-xs text-slate-400"><span>{draft.length}</span> / 5000</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button type="button" onClick={handlePaste}
-                      className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1 text-[10px] font-medium text-slate-500 transition hover:bg-white/80">
-                      <Clipboard className="h-3 w-3" />粘贴
-                    </button>
-                    {draft && (
-                      <button type="button" onClick={() => { setDraft(""); setResult(""); setShowResult(false); }}
-                        className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1 text-[10px] font-medium text-slate-500 transition hover:bg-white/80">
-                        <RotateCcw className="h-3 w-3" />清空
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Textarea */}
-                <textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value.slice(0, 5000))}
-                  placeholder={cfg?.placeholder}
-                  rows={10}
-                  className={`w-full resize-none bg-transparent px-5 py-4 text-sm leading-7 text-slate-800 outline-none placeholder:text-slate-400 transition-all ${cfg?.inputAccent || "focus:border-sky-300"}`}
-                  style={{ minHeight: "320px" }}
-                />
-              </GlassPanel>
-
-              {/* Dynamic dropdown + recruit type */}
-              <div className="mt-3 flex items-center justify-center gap-3">
-                {type === "resume" ? (
-                  <select value={position} onChange={(e) => setPosition(e.target.value)}
-                    className={`rounded-xl border border-slate-200/60 bg-white/80 px-3 py-1.5 text-xs text-slate-600 outline-none ${cfg?.inputAccent || ""}`}>
-                    {positionOptions.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-                  </select>
-                ) : (
-                  <select value={answerType} onChange={(e) => setAnswerType(e.target.value)}
-                    className={`rounded-xl border border-slate-200/60 bg-white/80 px-3 py-1.5 text-xs text-slate-600 outline-none ${cfg?.inputAccent || ""}`}>
-                    {answerTypes.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                  </select>
-                )}
-                <div className="flex gap-1.5">
-                  {["校招", "社招"].map((r) => (
-                    <button key={r} type="button" onClick={() => setRecruitType(r)}
-                      className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
-                        recruitType === r
-                          ? r === "校招" ? "bg-violet-100 text-violet-700" : "bg-amber-100 text-amber-700"
-                          : "bg-white/60 text-slate-500 hover:bg-white/80"
-                      }`}>{r}</button>
-                  ))}
-                </div>
+          <GlassPanel className="mx-auto mt-6 max-w-4xl overflow-hidden rounded-[24px] border border-white/40 bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/30 px-5 py-3">
+              <div className="flex items-center gap-3">
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
+                  kind === "resume" ? "bg-sky-50 text-sky-600" : "bg-violet-50 text-violet-600"
+                }`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${kind === "resume" ? "bg-sky-400" : "bg-violet-400"}`} />
+                  {kind === "resume" ? "简历诊断" : "回答优化"}
+                </span>
+                <span className="text-[11px] text-slate-400">{draft.length} / 5000</span>
               </div>
-
-              {/* Optimize Button */}
-              <div className="mt-6 flex justify-center">
-                <button type="button" onClick={handleOptimize}
-                  disabled={loading || !draft.trim()}
-                  className={`inline-flex h-[52px] w-[240px] items-center justify-center gap-2 rounded-2xl text-sm font-medium text-white shadow-lg transition-all active:scale-[0.98] ${
-                    loading || !draft.trim()
-                      ? "bg-slate-300 cursor-not-allowed shadow-none"
-                      : `bg-gradient-to-r ${cfg?.btnGradient} hover:brightness-110 hover:shadow-xl`
-                  }`}>
-                  {loading ? <><Loader2 className="h-4 w-4 animate-spin" />{cfg?.loadingText || "AI正在优化..."}</>
-                    : <><Sparkles className="h-4 w-4" />{cfg?.btnText || "开始优化"}</>}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setDraft(EXAMPLES[kind]); resetResult(); }}
+                  className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 text-[10px] font-medium text-slate-500 transition hover:bg-white"
+                >
+                  <Sparkles className="h-3 w-3" />填入示例
                 </button>
+                <button
+                  type="button"
+                  onClick={handlePaste}
+                  className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 text-[10px] font-medium text-slate-500 transition hover:bg-white"
+                >
+                  <Clipboard className="h-3 w-3" />粘贴
+                </button>
+                {draft ? (
+                  <button
+                    type="button"
+                    onClick={() => { setDraft(""); resetResult(); }}
+                    className="inline-flex items-center gap-1 rounded-full bg-white/70 px-3 py-1 text-[10px] font-medium text-slate-500 transition hover:bg-white"
+                  >
+                    <RotateCcw className="h-3 w-3" />清空
+                  </button>
+                ) : null}
               </div>
-
-              {error && <div className="mt-4 rounded-2xl bg-rose-50 px-5 py-3 text-center text-sm text-rose-600">{error}</div>}
             </div>
-          )}
 
-          {/* ====== Results ====== */}
-          {showResult && result && (
-            <div ref={resultRef} className="mx-auto mt-16 max-w-5xl" style={{ animation: "fadeUp 0.3s ease both" }}>
-              <style>{`@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}`}</style>
+            <textarea
+              value={draft}
+              onChange={(e) => setDraft(e.target.value.slice(0, 5000))}
+              rows={10}
+              placeholder={
+                kind === "resume"
+                  ? "粘贴完整简历内容（教育经历、实习、项目、证书等），AI 会按目标岗位诊断结构与量化成果"
+                  : "粘贴你的面试回答或自我介绍，AI 会按目标岗位做五维诊断、逐句改写与追问预测"
+              }
+              className="w-full resize-none bg-transparent px-5 py-4 text-sm leading-7 text-slate-800 outline-none placeholder:text-slate-400"
+              style={{ minHeight: "240px" }}
+            />
 
-              {/* Score Cards */}
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                {scores.map((s) => (
-                  <div key={s.label} className="rounded-2xl border border-white/40 bg-white/60 px-5 py-5 text-center shadow-sm" style={{ animation: "fadeUp 0.3s ease both", animationDelay: `${scores.indexOf(s) * 0.06}s` }}>
-                    <p className="text-[10px] uppercase tracking-wider text-slate-500">{s.label}</p>
-                    <p className={`mt-2 text-3xl font-semibold ${s.color}`}>
-                      {s.value}
-                    </p>
-                  </div>
+            <div className="flex flex-wrap items-center gap-3 border-t border-white/30 px-5 py-3">
+              <label className="flex items-center gap-2 text-[11px] text-slate-500">
+                目标岗位
+                <select
+                  value={position}
+                  onChange={(e) => setPosition(e.target.value)}
+                  className="rounded-xl border border-slate-200/60 bg-white/80 px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:border-sky-300"
+                >
+                  {positionOptions.map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              {kind === "interview" ? (
+                <label className="flex items-center gap-2 text-[11px] text-slate-500">
+                  回答类型
+                  <select
+                    value={answerType}
+                    onChange={(e) => setAnswerType(e.target.value)}
+                    className="rounded-xl border border-slate-200/60 bg-white/80 px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:border-sky-300"
+                  >
+                    {answerTypes.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              <div className="flex items-center gap-1.5">
+                {["校招", "社招"].map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRecruitType(r)}
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-medium transition ${
+                      recruitType === r
+                        ? r === "校招" ? "bg-violet-100 text-violet-700" : "bg-amber-100 text-amber-700"
+                        : "bg-white/70 text-slate-500 hover:bg-white"
+                    }`}
+                  >
+                    {r}
+                  </button>
                 ))}
               </div>
 
-              {/* Optimization Suggestions */}
-              {suggestions.length > 0 && (
-                <div className="mt-6 rounded-2xl border border-white/40 bg-white/60 px-6 py-5 shadow-sm" style={{ animation: "fadeUp 0.3s ease both", animationDelay: "0.1s" }}>
-                  <div className="mb-4 flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4 text-amber-500" />
-                    <p className="text-sm font-semibold text-slate-800">AI优化建议</p>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {suggestions.map((s, i) => (
-                      <div key={i} className="flex items-start gap-2.5 rounded-xl bg-white/60 px-4 py-3">
-                        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                        <span className="text-xs leading-5 text-slate-600">{s}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={runOptimize}
+                disabled={loading || !draft.trim()}
+                className={`ml-auto inline-flex h-[44px] items-center justify-center gap-2 rounded-2xl px-6 text-sm font-medium text-white transition ${
+                  loading || !draft.trim()
+                    ? "cursor-not-allowed bg-slate-300 shadow-none"
+                    : "bg-gradient-to-r from-sky-500 to-violet-500 shadow-lg hover:brightness-110"
+                }`}
+              >
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                {loading ? "正在深度分析…" : "开始深度诊断"}
+              </button>
+            </div>
+          </GlassPanel>
 
-              {/* Comparison */}
-              <div className="mt-6 grid gap-4 md:grid-cols-2" style={{ animation: "fadeUp 0.3s ease both", animationDelay: "0.15s" }}>
-                <div className="rounded-2xl border border-white/40 bg-white/60 px-5 py-4 shadow-sm">
-                  <p className="mb-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400">原内容</p>
-                  <div className="max-h-[300px] overflow-y-auto whitespace-pre-wrap text-xs leading-6 text-slate-600">{draft}</div>
-                </div>
-                <div className="rounded-2xl border border-sky-100 bg-white px-5 py-4 shadow-sm">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-500">AI优化版</p>
-                    <button type="button" onClick={copyResult}
-                      className="inline-flex items-center gap-1 rounded-full bg-white/60 px-3 py-1 text-[10px] text-slate-500 transition hover:bg-white/80">
-                      <Copy className="h-3 w-3" />复制
-                    </button>
-                  </div>
-                  <div className="prose prose-slate max-h-[300px] max-w-none overflow-y-auto text-xs leading-6 [&_strong]:text-slate-900">
-                    <ReactMarkdown>{optimizedVersion || result}</ReactMarkdown>
-                  </div>
-                </div>
+          {error ? (
+            <div className="mx-auto mt-4 max-w-4xl rounded-2xl bg-rose-50 px-5 py-3 text-center text-xs text-rose-600">
+              {error}
+            </div>
+          ) : null}
+
+          {loading ? (
+            <p className="mx-auto mt-3 max-w-4xl text-center text-[11px] text-slate-400">
+              深度诊断需要逐句比对与追问推演，通常 15-30 秒，请勿关闭页面
+            </p>
+          ) : null}
+
+          {history.length > 0 ? (
+            <div className="mx-auto mt-6 max-w-4xl">
+              <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-slate-500">
+                <History className="h-3.5 w-3.5" />最近分析（点击可回看）
               </div>
-
-
-
-              {/* Re-optimize */}
-              <div className="mt-10 flex justify-center">
-                <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                  className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-5 py-2.5 text-xs font-medium text-slate-600 shadow-sm transition hover:bg-white/80">
-                  <RotateCcw className="h-3.5 w-3.5" />继续优化
-                </button>
+              <div className="flex flex-wrap gap-2">
+                {history.map((h) => (
+                  <button
+                    key={h.id}
+                    type="button"
+                    onClick={() => restoreHistory(h)}
+                    className="max-w-[240px] truncate rounded-full border border-white/50 bg-white/60 px-3 py-1.5 text-[11px] text-slate-600 shadow-sm transition hover:bg-white"
+                    title={h.content.slice(0, 60)}
+                  >
+                    {h.kind === "resume" ? "简历" : h.answerType} · {h.positionLabel} · {h.analysis.score}分
+                  </button>
+                ))}
               </div>
             </div>
-          )}
+          ) : null}
+
+          {!analysis && !loading && !fallbackText ? (
+            <div className="mx-auto mt-12 grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { icon: BarChart3, title: "五维评分", desc: dimensionNames.join(" · ") },
+                { icon: Lightbulb, title: "逐句改写", desc: "指出原句问题，给出可直接替换的句子" },
+                { icon: Target, title: "追问预测", desc: "预测面试官会追问什么，怎么答" },
+                { icon: AlertTriangle, title: "扣分点排查", desc: "明确哪些表达会被扣分以及原因" },
+              ].map((card) => {
+                const Icon = card.icon;
+                return (
+                  <div key={card.title} className="rounded-2xl border border-white/50 bg-white/60 px-4 py-4 shadow-sm">
+                    <Icon className="h-4 w-4 text-sky-500" />
+                    <p className="mt-2 text-xs font-semibold text-slate-700">{card.title}</p>
+                    <p className="mt-1 text-[11px] leading-5 text-slate-400">{card.desc}</p>
+                  </div>
+                );
+              })}
+              <p className="col-span-full text-center text-[11px] text-slate-400">
+                提示：越具体的内容（真实经历、数据、岗位术语）分析越有价值。
+              </p>
+            </div>
+          ) : null}
+
+          {analysis ? (
+            <div ref={resultRef} className="mx-auto mt-10 max-w-4xl">
+              <div className="rounded-[24px] border border-white/50 bg-white/70 px-6 py-5 shadow-sm backdrop-blur-xl">
+                <div className="flex flex-wrap items-center gap-6">
+                  <div className="text-center">
+                    <p className="text-[10px] uppercase tracking-wider text-slate-400">综合评分</p>
+                    <p className={`mt-1 text-5xl font-semibold ${scoreColor(analysis.score)}`}>{analysis.score}</p>
+                    <p className="mt-1 text-[11px] text-slate-500">{analysis.level}</p>
+                  </div>
+                  <div className="min-w-[240px] flex-1">
+                    <p className="text-sm font-medium text-slate-800">{analysis.summary || "已完成诊断"}</p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      目标岗位：{positionLabel} · {recruitType}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyText(analysis.optimized)}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
+                  >
+                    {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copied ? "已复制优化稿" : "复制优化稿"}
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-white/40 bg-white/60 p-1.5">
+                {tabs.map((t) => {
+                  const Icon = t.icon;
+                  const active = tab === t.key;
+                  return (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => setTab(t.key)}
+                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition ${
+                        active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {t.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {tab === "overview" ? (
+                <div className="mt-5 space-y-4">
+                  <div className="rounded-2xl border border-white/50 bg-white/60 px-5 py-4 shadow-sm">
+                    <p className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                      <BarChart3 className="h-4 w-4 text-sky-500" />五维评分
+                    </p>
+                    <div className="space-y-3">
+                      {analysis.dimensions.map((d) => (
+                        <div key={d.name}>
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-medium text-slate-600">{d.name}</span>
+                            <span className={`font-semibold ${scoreColor(d.score)}`}>{d.score}</span>
+                          </div>
+                          <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                            <div className={`h-full rounded-full ${scoreBg(d.score)}`} style={{ width: `${d.score}%` }} />
+                          </div>
+                          {d.comment ? <p className="mt-1 text-[11px] leading-5 text-slate-400">{d.comment}</p> : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 px-5 py-4">
+                      <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                        <CheckCircle2 className="h-4 w-4" />可以保留的亮点
+                      </p>
+                      <ul className="space-y-2">
+                        {analysis.highlights.length > 0 ? analysis.highlights.map((h, i) => (
+                          <li key={i} className="flex gap-2 text-[11px] leading-5 text-emerald-900">
+                            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-emerald-500" />{h}
+                          </li>
+                        )) : <li className="text-[11px] text-emerald-700">暂未识别到突出亮点</li>}
+                      </ul>
+                    </div>
+
+                    <div className="rounded-2xl border border-rose-100 bg-rose-50/50 px-5 py-4">
+                      <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-rose-800">
+                        <AlertTriangle className="h-4 w-4" />会被扣分的地方
+                      </p>
+                      <div className="space-y-3">
+                        {analysis.risks.length > 0 ? analysis.risks.map((r, i) => (
+                          <div key={i} className="text-[11px] leading-5 text-rose-900">
+                            <p className="font-medium">{r.issue}</p>
+                            {r.why ? <p className="text-rose-700">为什么：{r.why}</p> : null}
+                            {r.fix ? <p className="text-rose-700">怎么改：{r.fix}</p> : null}
+                          </div>
+                        )) : <p className="text-[11px] text-rose-700">暂未发现明显扣分点</p>}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/50 bg-white/60 px-5 py-4 shadow-sm">
+                    <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
+                      <Target className="h-4 w-4 text-violet-500" />岗位关键词覆盖
+                    </p>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="mb-1.5 text-[11px] text-slate-500">已覆盖</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {analysis.keywords.hit.length > 0 ? analysis.keywords.hit.map((k) => (
+                            <span key={k} className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] text-emerald-700">{k}</span>
+                          )) : <span className="text-[11px] text-slate-400">未识别到明确关键词</span>}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="mb-1.5 text-[11px] text-slate-500">建议补充</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {analysis.keywords.missing.length > 0 ? analysis.keywords.missing.map((k) => (
+                            <span key={k} className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] text-amber-700">{k}</span>
+                          )) : <span className="text-[11px] text-slate-400">关键词覆盖较完整</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {tab === "rewrites" ? (
+                <div className="mt-5 space-y-3">
+                  {analysis.rewrites.length > 0 ? analysis.rewrites.map((r, i) => (
+                    <div key={i} className="rounded-2xl border border-white/50 bg-white/60 px-5 py-4 shadow-sm">
+                      <p className="text-[11px] font-medium text-slate-500">原句</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600">{r.original}</p>
+                      {r.problem ? (
+                        <p className="mt-3 flex items-start gap-2 text-[11px] leading-5 text-amber-700">
+                          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />{r.problem}
+                        </p>
+                      ) : null}
+                      <div className="mt-3 flex items-start gap-2 rounded-xl bg-emerald-50/70 px-4 py-3">
+                        <ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />
+                        <p className="text-sm leading-6 text-emerald-900">{r.improved}</p>
+                      </div>
+                    </div>
+                  )) : <p className="rounded-2xl bg-white/60 px-5 py-6 text-center text-xs text-slate-400">本次未生成逐句改写</p>}
+                </div>
+              ) : null}
+
+              {tab === "followups" ? (
+                <div className="mt-5 space-y-3">
+                  {analysis.followups.length > 0 ? analysis.followups.map((f, i) => (
+                    <div key={i} className="rounded-2xl border border-white/50 bg-white/60 px-5 py-4 shadow-sm">
+                      <p className="flex items-start gap-2 text-sm font-medium text-slate-800">
+                        <Target className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />{f.question}
+                      </p>
+                      {f.answerTip ? (
+                        <p className="mt-2 rounded-xl bg-slate-50 px-4 py-3 text-[12px] leading-6 text-slate-600">
+                          应答要点：{f.answerTip}
+                        </p>
+                      ) : null}
+                    </div>
+                  )) : <p className="rounded-2xl bg-white/60 px-5 py-6 text-center text-xs text-slate-400">本次未生成追问预测</p>}
+                </div>
+              ) : null}
+
+              {tab === "optimized" ? (
+                <div className="mt-5 rounded-2xl border border-sky-100 bg-white px-6 py-5 shadow-sm">
+                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                    <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+                      <FileText className="h-4 w-4 text-sky-500" />优化稿（可直接使用）
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => copyText(analysis.optimized)}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] text-slate-600 transition hover:bg-slate-200"
+                      >
+                        <Copy className="h-3 w-3" />复制
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => downloadText(analysis.optimized)}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] text-slate-600 transition hover:bg-slate-200"
+                      >
+                        <Download className="h-3 w-3" />下载
+                      </button>
+                    </div>
+                  </div>
+                  <div className="prose prose-slate max-w-none text-sm leading-7 [&_strong]:text-slate-900">
+                    <ReactMarkdown>{analysis.optimized || "（本次未生成优化稿）"}</ReactMarkdown>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {fallbackText ? (
+            <div className="mx-auto mt-6 max-w-4xl rounded-2xl border border-amber-200 bg-amber-50/60 px-5 py-4">
+              <p className="mb-2 text-xs font-medium text-amber-800">AI 原始分析（格式解析失败，内容仍可参考）</p>
+              <div className="max-h-[420px] overflow-y-auto whitespace-pre-wrap text-xs leading-6 text-amber-900">{fallbackText}</div>
+            </div>
+          ) : null}
         </div>
       </main>
       <LoginModal
         open={showLogin}
         onClose={() => setShowLogin(false)}
-        message="登录后即可使用 AI 优化（资料中心与 AI 优化对已登录用户免费）"
+        message="登录后即可使用 AI 深度诊断（对已登录用户免费）"
       />
     </AppFrame>
   );

@@ -13,11 +13,21 @@ type DeepSeekCallOptions = {
   timeoutMs?: number;
 };
 
-export async function callDeepSeek(
+export type DeepSeekRawResult = {
+  /** 模型返回的原始正文 */
+  content: string;
+  /** 解析出的 JSON（失败为 null） */
+  parsed: unknown | null;
+  /** 是否因为 token 用尽被截断 */
+  truncated: boolean;
+};
+
+/** 与 callDeepSeek 相同，但额外返回原始正文，便于调用方做兜底展示 */
+export async function callDeepSeekRaw(
   apiKey: string,
   prompt: string,
   options: DeepSeekCallOptions = {}
-) {
+): Promise<DeepSeekRawResult> {
   const {
     maxTokens = 16000,
     reasoningEffort = "low",
@@ -90,7 +100,21 @@ export async function callDeepSeek(
     );
   }
 
-  return parseJsonResponse(content);
+  return {
+    content,
+    parsed: parseJsonResponse(content),
+    truncated: finishReason === "length",
+  };
+}
+
+/** 便捷版：只返回解析后的 JSON（调用方自行断言类型） */
+export async function callDeepSeek<T = any>(
+  apiKey: string,
+  prompt: string,
+  options: DeepSeekCallOptions = {}
+): Promise<T | null> {
+  const { parsed } = await callDeepSeekRaw(apiKey, prompt, options);
+  return parsed as T | null;
 }
 
 function parseJsonResponse(text: string) {
