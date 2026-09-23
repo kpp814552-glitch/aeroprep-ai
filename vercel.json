@@ -1,4 +1,10 @@
 {
   "framework": "nextjs",
-  "nodeVersion": "20.x"
+  "nodeVersion": "20.x",
+  "crons": [
+    {
+      "path": "/api/keepalive",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }
