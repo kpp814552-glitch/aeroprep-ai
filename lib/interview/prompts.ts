@@ -560,9 +560,7 @@ ${turns
   "improvementPlan": "六、未来提升方案（含7天快速提升计划和30天能力提升计划，每天具体可执行任务）",
   "nextPrediction": "七、下一次面试预测（保持现状的成功概率和风险，完成训练后的预计提升）",
   "growthMessage": "八、成长寄语（像航空培训老师面对学生说话，专业且有温度）",
-  "competitiveLevel": "A/B/C/D",
-  "competitiveScore": 0,
-  "competitiveRange": "80%-90%",
+  ⚠️ 不要输出 competitiveLevel / competitiveScore / competitiveRange，系统会根据各维度得分自动计算。
   "competitiveStrengths": ["优势因素1", "优势因素2"],
   "competitiveWeaknesses": ["限制因素1", "限制因素2"],
   "interviewerPerspective": "四、如果我是航空公司面试官，我会关注...",

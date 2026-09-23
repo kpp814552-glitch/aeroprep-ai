@@ -1,10 +1,33 @@
 import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
 
-export async function callDeepSeek(apiKey: string, prompt: string) {
-  // // console.log('[LLM Request] action=' + (prompt.includes('"action":"report"') ? 'report' : prompt.includes('"action":"next"') ? 'next' : 'start') + ' prompt_length=' + prompt.length);
+type DeepSeekCallOptions = {
+  /**
+   * 输出上限。注意：deepseek-v4-flash 是推理模型，
+   * token 预算同时包含"思考过程"和"正文"，报告生成需要预留充足空间
+   * （实测 6 题报告：思考约 4400 + 正文约 2400 tokens）。
+   */
+  maxTokens?: number;
+  /** 思考强度。low 在质量与耗时之间取得平衡；none 关闭思考（最快）。 */
+  reasoningEffort?: "none" | "low" | "medium" | "high";
+  /** 请求超时（毫秒） */
+  timeoutMs?: number;
+};
+
+export async function callDeepSeek(
+  apiKey: string,
+  prompt: string,
+  options: DeepSeekCallOptions = {}
+) {
+  const {
+    maxTokens = 16000,
+    reasoningEffort = "low",
+    timeoutMs = 110000,
+  } = options;
+
   const startTime = Date.now();
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
   const response = await fetch("https://api.deepseek.com/v1/chat/completions", {
     signal: controller.signal,
     method: "POST",
@@ -26,7 +49,8 @@ export async function callDeepSeek(apiKey: string, prompt: string) {
         },
       ],
       temperature: 0.45,
-      max_tokens: 4096,
+      max_tokens: maxTokens,
+      reasoning_effort: reasoningEffort,
     }),
   });
 
@@ -38,6 +62,8 @@ export async function callDeepSeek(apiKey: string, prompt: string) {
   }
 
   const data = await response.json();
+  const choice = data?.choices?.[0];
+  const finishReason = choice?.finish_reason;
 
   // Log token usage
   const usage = data?.usage;
@@ -55,12 +81,14 @@ export async function callDeepSeek(apiKey: string, prompt: string) {
     }).catch(() => {});
   }
 
-  const content =
-    data?.choices?.[0]?.message?.content ||
-    data?.choices?.[0]?.text ||
-    "";
-  const elapsed = Date.now() - startTime;
-  // // console.log('[LLM Response] elapsed=' + elapsed + 'ms content_length=' + content.length);
+  const content = choice?.message?.content || choice?.text || "";
+
+  // 截断是静默降级的根源，必须显式告警
+  if (finishReason === "length") {
+    console.error(
+      `[LLM] 回复被截断 finish_reason=length（${Date.now() - startTime}ms, 正文长度=${content.length}）。请提高 max_tokens。`
+    );
+  }
 
   return parseJsonResponse(content);
 }
@@ -71,5 +99,10 @@ function parseJsonResponse(text: string) {
     const end = text.lastIndexOf("}");
     if (idx === -1 || end === -1) throw new Error("No JSON found");
     return JSON.parse(text.slice(idx, end + 1));
-  } catch { return null; }
+  } catch (e) {
+    console.error(
+      `[LLM] JSON 解析失败（正文长度=${text.length}）: ${e instanceof Error ? e.message : String(e)}`
+    );
+    return null;
+  }
 }

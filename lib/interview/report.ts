@@ -276,6 +276,45 @@ function buildRecommendedTraining(role: InterviewRole, mode?: string) {
   ];
 }
 
+/**
+ * 竞争等级映射（唯一事实来源）。
+ * 本地兜底与 AI 报告路径共用，避免两套阈值打架。
+ */
+export function deriveCompetitiveTier(competitveScore: number): { level: string; range: string } {
+  if (competitveScore >= 60) return { level: 'A', range: '60%-85%' };
+  if (competitveScore >= 40) return { level: 'B', range: '40%-60%' };
+  if (competitveScore >= 20) return { level: 'C', range: '20%-40%' };
+  return { level: 'D', range: '20%以下' };
+}
+
+/**
+ * 由七个维度分数计算竞争力总分（5 维度加权模型）。
+ * AI 报告的竞争分数也走这套公式，保证可解释、可复现。
+ */
+export function computeCompetitiveScore(
+  scores: { expressionAbility: number; logicalThinking: number; professionalKnowledge: number; roleFit: number; articulation: number; adaptability: number; serviceAwareness: number },
+  turns: InterviewTurn[]
+): number {
+  const avgLen = turns.reduce((s, t) => s + t.answer.trim().length, 0) / Math.max(1, turns.length);
+
+  const dimInterview = normalizeScore(
+    scores.expressionAbility * 0.30 + scores.articulation * 0.25 + scores.logicalThinking * 0.25 +
+    (avgLen >= 60 ? 15 : avgLen >= 30 ? 8 : 3)
+  );
+  const dimFit = normalizeScore(scores.roleFit * 0.50 + scores.serviceAwareness * 0.50 + 5);
+  const dimProfessional = normalizeScore(scores.professionalKnowledge * 0.50 +
+    (turns.filter(t => t.stage === 'professional' || t.stage === 'scenario').length >= 2 ? 20 : 10));
+  const dimComprehensive = normalizeScore(scores.adaptability * 0.35 + scores.articulation * 0.30 + scores.expressionAbility * 0.35 + 5);
+  const dimGrowth = normalizeScore(clamp(
+    100 - (scores.expressionAbility + scores.logicalThinking + scores.professionalKnowledge + scores.roleFit) / 4,
+    10, 85
+  ));
+
+  return normalizeScore(
+    dimInterview * 0.40 + dimFit * 0.20 + dimProfessional * 0.15 + dimComprehensive * 0.15 + dimGrowth * 0.10
+  );
+}
+
 function buildOverallEvaluation(
   totalScore: number,
   role: InterviewRole,
@@ -326,7 +365,20 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
     )
   );
 
-  // ─── 民航岗位竞争力评估（5维度加权） ───
+  // ─── 民航岗位竞争力评估（5维度加权，与 AI 路径共用同一公式） ───
+  const scoresForCompetitive = {
+    expressionAbility,
+    logicalThinking,
+    professionalKnowledge,
+    roleFit,
+    articulation,
+    adaptability,
+    serviceAwareness,
+  };
+  const competitiveScore = computeCompetitiveScore(scoresForCompetitive, options.turns);
+  const { level: competitiveLevel, range: competitiveRange } = deriveCompetitiveTier(competitiveScore);
+
+  // 各维度明细（用于生成优势/短板描述）
   const avgLen = options.turns.reduce((s,t) => s + t.answer.trim().length, 0) / Math.max(1, options.turns.length);
   const dimInterview = normalizeScore(
     expressionAbility * 0.30 + articulation * 0.25 + logicalThinking * 0.25 +
@@ -336,20 +388,6 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
   const dimProfessional = normalizeScore(professionalKnowledge * 0.50 +
     (options.turns.filter(t => t.stage === 'professional' || t.stage === 'scenario').length >= 2 ? 20 : 10));
   const dimComprehensive = normalizeScore(adaptability * 0.35 + articulation * 0.30 + expressionAbility * 0.35 + 5);
-  const dimGrowth = normalizeScore(clamp(
-    100 - (expressionAbility + logicalThinking + professionalKnowledge + roleFit) / 4,
-    10, 85
-  ));
-
-  const competitiveScore = normalizeScore(
-    dimInterview * 0.40 + dimFit * 0.20 + dimProfessional * 0.15 + dimComprehensive * 0.15 + dimGrowth * 0.10
-  );
-
-  let competitiveLevel: string, competitiveRange: string;
-  if (competitiveScore >= 60) { competitiveLevel = 'A'; competitiveRange = '60%-85%'; }
-  else if (competitiveScore >= 40) { competitiveLevel = 'B'; competitiveRange = '40%-60%'; }
-  else if (competitiveScore >= 20) { competitiveLevel = 'C'; competitiveRange = '20%-40%'; }
-  else { competitiveLevel = 'D'; competitiveRange = '20%以下'; }
 
   const competitiveStrengths: string[] = [];
   if (dimInterview >= 45) competitiveStrengths.push('面试表达流畅，回答有基本结构和层次');

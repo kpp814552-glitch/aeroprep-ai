@@ -6,7 +6,7 @@ import {
   interviewStageLabels,
   interviewStages,
 } from "@/lib/interview/config";
-import { analyzeInterviewReport } from "@/lib/interview/report";
+import { analyzeInterviewReport, computeCompetitiveScore, deriveCompetitiveTier } from "@/lib/interview/report";
 import { getAirlineProfile } from "@/lib/interview/airline-profiles";
 import { getRoleModel } from "@/lib/interview/role-models";
 import type {
@@ -20,6 +20,10 @@ import type {
 // ===== Mode-Specific Configurations =====
 import { buildStartQuestionPrompt, buildNextQuestionPrompt, buildReportPrompt, getModeInstruction, getStageByTurnCount, pickResumeAnchor, buildFallbackStartQuestion, buildFallbackNextQuestion, PersonaProfile, CompanyProfile, PERSONA_CONFIG, COMPANY_CONFIG } from "@/lib/interview/prompts";
 import { callDeepSeek } from "@/lib/interview/deepseek";
+
+// 报告生成需要 30-60 秒（推理模型思考 + 长 JSON 输出），
+// 必须显式声明函数最长执行时间，否则 Vercel 默认超时会中途掐断。
+export const maxDuration = 60;
 
 // ===== Route Helpers =====
 function getPersonaConfig(persona?: string): PersonaProfile {
@@ -60,13 +64,13 @@ function normalizeModelQuestion(
   };
 }
 
-function normalizeReportPayload(payload: unknown, fallback: InterviewReport) {
+function normalizeReportPayload(payload: unknown, fallback: InterviewReport, turns: InterviewTurn[]) {
   if (!payload || typeof payload !== "object") return fallback;
 
   const candidate = payload as Partial<InterviewReport>;
 
   // Strict score cap: max 68 for totalScore, max 75 for individual scores
-  return {
+  const normalized = {
     scores: {
       expressionAbility:
         Math.min(
@@ -190,18 +194,6 @@ function normalizeReportPayload(payload: unknown, fallback: InterviewReport) {
       typeof candidate.growthMessage === "string" && candidate.growthMessage.trim()
         ? candidate.growthMessage.trim()
         : fallback.growthMessage,
-    competitiveLevel:
-      typeof candidate.competitiveLevel === "string" && ['A','B','C','D'].includes(candidate.competitiveLevel)
-        ? candidate.competitiveLevel
-        : fallback.competitiveLevel,
-    competitiveScore:
-      typeof candidate.competitiveScore === "number"
-        ? candidate.competitiveScore
-        : fallback.competitiveScore,
-    competitiveRange:
-      typeof candidate.competitiveRange === "string" && candidate.competitiveRange.trim()
-        ? candidate.competitiveRange.trim()
-        : fallback.competitiveRange,
     competitiveStrengths:
       Array.isArray(candidate.competitiveStrengths) && candidate.competitiveStrengths.length
         ? candidate.competitiveStrengths.filter((item): item is string => typeof item === "string")
@@ -223,6 +215,13 @@ function normalizeReportPayload(payload: unknown, fallback: InterviewReport) {
         ? candidate.trainingProjection.trim()
         : fallback.trainingProjection,
   };
+
+  // 竞争分数/等级/区间一律由代码按统一公式计算，不采信模型自由发挥的结果，
+  // 避免出现"等级 B 但区间写 65%-75%"这类自相矛盾
+  const competitiveScore = computeCompetitiveScore(normalized.scores, turns);
+  const { level: competitiveLevel, range: competitiveRange } = deriveCompetitiveTier(competitiveScore);
+
+  return { ...normalized, competitiveScore, competitiveLevel, competitiveRange };
 }
 
 export async function POST(request: Request) {
@@ -268,7 +267,8 @@ export async function POST(request: Request) {
     try {
       const result = await callDeepSeek(
         apiKey,
-        buildStartQuestionPrompt(body.role, body.company, body.mode, body.persona)
+        buildStartQuestionPrompt(body.role, body.company, body.mode, body.persona),
+        { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000 }
       );
 
       return NextResponse.json({
@@ -300,7 +300,8 @@ export async function POST(request: Request) {
     try {
       const result = await callDeepSeek(
         apiKey,
-        buildNextQuestionPrompt(body.role, turns, body.company, body.mode, body.persona, body.resumeText)
+        buildNextQuestionPrompt(body.role, turns, body.company, body.mode, body.persona, body.resumeText),
+        { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000 }
       );
 
       return NextResponse.json(normalizeModelQuestion(result, fallback));
@@ -335,11 +336,12 @@ export async function POST(request: Request) {
          body.persona,
           body.resumeText,
          fallbackReport
-        )
+        ),
+        { maxTokens: 16000, reasoningEffort: "low", timeoutMs: 110000 }
       );
 
       return NextResponse.json({
-        report: normalizeReportPayload(result, fallbackReport),
+        report: normalizeReportPayload(result, fallbackReport, turns),
       });
     } catch {
       return NextResponse.json({ report: fallbackReport });
