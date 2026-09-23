@@ -1,6 +1,5 @@
 {
   "framework": "nextjs",
-  "nodeVersion": "20.x",
   "crons": [
     {
       "path": "/api/keepalive",
