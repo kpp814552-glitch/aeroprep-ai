@@ -7,6 +7,7 @@ import { BarChart3, Clock3, FileSearch, LineChart, TrendingUp, X } from "lucide-
 import { useAuth } from "@/hooks/useAuth";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
+import LoginModal from "@/components/auth/LoginModal";
 import {
   readGrowthEvents,
   subscribeGrowthEvents,
@@ -28,10 +29,11 @@ function formatMeta(value: string) {
 export default function ProfilePage() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  useEffect(() => { if (!loading && !user) { const t = setTimeout(() => router.replace('/login?redirect=/profile'), 300); return () => clearTimeout(t); } }, [loading, user, router]);
+  // 未登录也可以预览成长中心；登录后才能保存 / 查看属于自己的记录
   const [sessions, setSessions] = useState(() => readInterviewSessions());
   const [growthEvents, setGrowthEvents] = useState(() => readGrowthEvents());
   const [selectedSession, setSelectedSession] = useState<InterviewSessionRecord | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
 
   // ESC 关闭报告弹窗
   useEffect(() => {
@@ -125,12 +127,33 @@ export default function ProfilePage() {
   // ⚠️ 所有 hook 必须在这两个 return 之前，否则会触发
   // "Rendered more hooks than during the previous render" 白屏
   if (loading) return null;
-  if (!user) return null;
 
   return (
     <AppFrame backHref="/" backLabel="返回首页">
       <main className="relative z-10 px-5 pb-16 pt-8 md:px-8">
         <div className="mx-auto max-w-7xl space-y-6">
+          {!user && (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200/70 bg-sky-50/70 px-5 py-3.5">
+              <p className="text-xs leading-5 text-sky-800">
+                当前为游客预览 · 登录后可保存并查看属于你的面试记录、成绩趋势与成长曲线
+              </p>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLogin(true)}
+                  className="rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-1.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110"
+                >
+                  登录
+                </button>
+                <Link
+                  href="/register"
+                  className="rounded-full border border-sky-200 bg-white px-4 py-1.5 text-xs text-sky-700 transition hover:bg-sky-50"
+                >
+                  注册
+                </Link>
+              </div>
+            </div>
+          )}
           <GlassPanel className="soft-enter overflow-hidden px-6 py-8 md:px-8 md:py-10">
             <div className="absolute inset-x-18 top-0 h-24 rounded-full bg-cyan-100/70 blur-3xl" />
             <div className="relative grid gap-6 lg:grid-cols-[1fr_0.95fr]">
@@ -419,6 +442,7 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} message="登录后即可保存并查看成长数据" />
     </AppFrame>
   );
 }

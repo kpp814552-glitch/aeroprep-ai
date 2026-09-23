@@ -10,7 +10,8 @@ import { learningCategories } from "@/lib/learning-center/data";
 import { getFavorites, toggleFavorite, addHistory } from "@/lib/learning-center/storage";
 import { getUserMaterials, saveUserMaterial, checkQuality, checkViolation, type UserMaterial } from "@/lib/learning-center/user-storage";
 import type { LearningItem } from "@/lib/learning-center/types";
-import AuthGate from "@/components/auth/AuthGate";
+import LoginModal from "@/components/auth/LoginModal";
+import { useLoginPrompt } from "@/hooks/useLoginPrompt";
 
 const positionLabels: Record<string, { label: string; icon: any; color: string }> = {
   pilot: { label: "飞行员", icon: Plane, color: "text-blue-600 bg-blue-50" },
@@ -31,6 +32,7 @@ const categoryButtons = learningCategories
 
 
 export default function LearningCenterClient() {
+  const { isLoggedIn, requireLogin, loginModalProps } = useLoginPrompt();
   const [contentFilter, setContentFilter] = useState("all");
   const [positionFilter, setPositionFilter] = useState("all");
   const [recruitFilter, setRecruitFilter] = useState("all");
@@ -198,6 +200,8 @@ export default function LearningCenterClient() {
   };
 
   const handleToggleFav = (item: LearningItem, catLabel: string, subLabel: string) => {
+    // 收藏属于"操作"：游客先引导登录 / 注册
+    if (!requireLogin("登录后即可收藏题目与案例")) return;
     const newFavs = toggleFavorite({
       itemId: item.id,
       categoryLabel: catLabel,
@@ -313,8 +317,22 @@ export default function LearningCenterClient() {
   ) : null;
 
   return (
-    <AuthGate blurContent={true} blockInteraction={true}>
+    <>
     <div className="mx-auto max-w-6xl">
+      {!isLoggedIn && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200/70 bg-sky-50/70 px-5 py-3">
+          <p className="text-xs leading-5 text-sky-800">
+            游客预览模式 · 全部题目与案例都可免费阅读，登录后即可收藏、上传面经并同步学习记录
+          </p>
+          <button
+            type="button"
+            onClick={() => requireLogin("登录后即可收藏、上传面经并同步学习记录")}
+            className="shrink-0 rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-1.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110"
+          >
+            登录 / 注册
+          </button>
+        </div>
+      )}
       {/* ====== Search Bar + 快捷入口 ====== */}
       <div className="mb-2 flex items-center gap-3">
         <div className="relative flex-1">
@@ -634,12 +652,13 @@ export default function LearningCenterClient() {
           {UploadModal}
 
       {/* 上传浮动按钮 */}
-      <button type="button" onClick={() => setShowUpload(true)}
+      <button type="button" onClick={() => { if (!requireLogin("登录后即可上传你的面经")) return; setShowUpload(true); }}
         className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-white shadow-lg transition hover:bg-sky-600 active:scale-95"
         title="上传面试经验">
         <Plus className="h-5 w-5" />
       </button>
         </div>
-  </AuthGate>
+      <LoginModal {...loginModalProps} />
+    </>
   );
 }

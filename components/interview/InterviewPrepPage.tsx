@@ -81,9 +81,7 @@ export default function InterviewPrepPage() {
     syncServerMember().catch(() => {});
   }, [user]);
 
-  useEffect(() => {
-    if (!loading && !user) { const t = setTimeout(() => router.replace('/login?redirect=/interview'), 300); return () => clearTimeout(t); }
-  }, [loading, user, router]);
+  // 未登录也可以预览整个准备页，具体操作（上传简历 / 开始面试）由登录弹窗拦截
 
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [resume, setResume] = useState<UploadState>(null);
@@ -103,6 +101,13 @@ export default function InterviewPrepPage() {
   function handleResumeChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    // 上传简历属于"操作"，游客先引导登录
+    if (!user) {
+      setShowLoginModal(true);
+      event.target.value = "";
+      return;
+    }
 
     const isAccepted =
       file.type === "application/pdf" ||
@@ -183,7 +188,6 @@ export default function InterviewPrepPage() {
   // ⚠️ 所有 hook 必须在这两个 return 之前调用，否则会出现
   // "Rendered more hooks than during the previous render" 白屏
   if (loading) return null;
-  if (!user) return null;
 
   return (
     <AppFrame backHref="/" backLabel="返回首页">

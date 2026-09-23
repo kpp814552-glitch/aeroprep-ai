@@ -11,6 +11,8 @@ import {
   X,
 } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
+import LoginModal from "@/components/auth/LoginModal";
+import { useAuth } from "@/hooks/useAuth";
 import {
   CREDIT_PACKS,
   PRICE_PER_INTERVIEW,
@@ -57,7 +59,9 @@ const FAQS = [
 ];
 
 export default function MembershipPage() {
+  const { user } = useAuth();
   const [selected, setSelected] = useState<CreditPack | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [step, setStep] = useState<"pay" | "result">("pay");
@@ -127,6 +131,11 @@ export default function MembershipPage() {
 
   const handlePay = async (pack: CreditPack) => {
     setSelected(pack);
+    // 游客可以先浏览；真正下单前引导登录 / 注册
+    if (!user) {
+      setShowLogin(true);
+      return;
+    }
     setShowPayment(true);
     setStep("pay");
     setSubmitted(false);
@@ -497,6 +506,12 @@ export default function MembershipPage() {
             </div>
           </div>
         )}
+
+        <LoginModal
+          open={showLogin}
+          onClose={() => setShowLogin(false)}
+          message="登录后即可购买面试次数（新账号首次面试免费）"
+        />
       </main>
     </AppFrame>
   );

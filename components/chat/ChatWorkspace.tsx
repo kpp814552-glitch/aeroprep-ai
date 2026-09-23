@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import { WandSparkles, Loader2, FileText, MessageSquare, CheckCircle2, Lightbulb, Copy, BarChart3, Sparkles, RotateCcw, Clipboard, Target, Shield, Zap, Star, TrendingUp, Brain, Users } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassPanel } from "@/components/ui/glass";
+import LoginModal from "@/components/auth/LoginModal";
+import { useAuth } from "@/hooks/useAuth";
 
 // ====== CountUp Hook ======
 function useCountUp(target: number, duration = 1200): number {
@@ -83,7 +85,9 @@ const answerTypes = [
 ];
 
 export default function ChatWorkspace() {
+  const { user } = useAuth();
   const [type, setType] = useState<"resume" | "interview" | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
   const [position, setPosition] = useState("pilot");
   const [answerType, setAnswerType] = useState("自我介绍");
   const [recruitType, setRecruitType] = useState("校招");
@@ -119,6 +123,11 @@ export default function ChatWorkspace() {
 
   const handleOptimize = async () => {
     if (!draft.trim() || loading || !type) return;
+    // 游客可以浏览和试填，真正提交优化前先引导登录 / 注册
+    if (!user) {
+      setShowLogin(true);
+      return;
+    }
     setLoading(true); setError(""); setResult(""); setShowResult(false);
 
     const typeLabel = type === "resume" ? "简历" : "面试回答";
@@ -429,6 +438,11 @@ ${draft.trim()}`;
           )}
         </div>
       </main>
+      <LoginModal
+        open={showLogin}
+        onClose={() => setShowLogin(false)}
+        message="登录后即可使用 AI 优化（资料中心与 AI 优化对已登录用户免费）"
+      />
     </AppFrame>
   );
 }

@@ -11,6 +11,7 @@ type LoginModalProps = {
   open: boolean;
   onClose: () => void;
   message?: string;
+  /** 登录成功后跳回的地址；不传则停留在当前页面 */
   redirectAfterLogin?: string;
 };
 
@@ -18,7 +19,7 @@ export default function LoginModal({
   open,
   onClose,
   message = "请先登录后继续操作",
-  redirectAfterLogin = "/login",
+  redirectAfterLogin,
 }: LoginModalProps) {
   const router = useRouter();
   const { signIn } = useAuth();
@@ -48,9 +49,12 @@ export default function LoginModal({
     }
 
     onClose();
+    const target =
+      redirectAfterLogin ||
+      (typeof window !== "undefined" ? window.location.pathname + window.location.search : "/");
     // Small delay to let auth state propagate before navigation
     await new Promise(r => setTimeout(r, 200));
-    router.push(redirectAfterLogin);
+    router.push(target || "/");
   }
 
   return (

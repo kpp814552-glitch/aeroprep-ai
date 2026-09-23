@@ -20,13 +20,8 @@ export async function middleware(request: NextRequest) {
   // API 路由 —— 由各 route handler 自己校验
   if (pathname.startsWith("/api/")) return NextResponse.next();
 
-  // 检查是否有 Supabase auth cookie（无需 import @supabase/ssr，避免 Edge 运行时崩溃）
-  const hasAuthCookie = request.cookies.getAll().some(c => c.name.startsWith("sb-"));
-  if (!hasAuthCookie) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
-  }
+  // 其余页面一律允许"游客预览"：内容可以看，具体操作由页面内的登录弹窗拦截
+  // （历史上这里会把未登录用户直接踢回首页，导致连页面长什么样都看不到）
 
   // 管理后台：渲染前先向服务端确认管理员身份，非管理员直接 404
   if (pathname === "/admin" || pathname.startsWith("/admin/")) {

@@ -1,6 +1,8 @@
+import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
 import { chatExampleQA } from "@/lib/interview/examples";
+import { createClient } from "@/lib/supabase/server";
 
 type Message = {
   role: "system" | "user" | "assistant";
@@ -120,7 +122,14 @@ ${languagePrompts[language]}
 `;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // AI 优化接口对已登录用户免费，但不能对游客开放（防止被刷接口消耗额度）
+  const supabase = createClient(request);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "请先登录后使用 AI 优化" }, { status: 401 });
+  }
+
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
