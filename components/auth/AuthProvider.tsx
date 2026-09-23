@@ -24,8 +24,18 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
    if (data) {
      setProfile(data as UserProfile);
+      // 本地标记仅作兜底展示
       setIsAdmin((data as UserProfile).is_admin === true);
    }
+
+    // 真正的管理员判定以服务端白名单为准（users.is_admin 用户自己也能改）
+    try {
+      const res = await fetch("/api/member/status", { cache: "no-store" });
+      if (res.ok) {
+        const status = await res.json();
+        if (typeof status?.isAdmin === "boolean") setIsAdmin(status.isAdmin);
+      }
+    } catch { /* 忽略：保留兜底值 */ }
   }, [supabase]);
 
   const refreshProfile = useCallback(async () => {

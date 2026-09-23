@@ -75,14 +75,18 @@ export function emptyRegistry(): GrantRegistry {
   return { v: 3, granted: 0, entries: [] };
 }
 
-/** 余额 = 管理端核发 + 旧版遗留 - 已消耗 */
+/**
+ * 余额 = 管理端核发 − 已消耗
+ * 注意：doc.legacyGranted 只用于历史兼容展示，**不参与余额计算**，
+ * 因为它写在"用户自己也能改"的行里，不能作为发次数的依据。
+ * 旧版遗留次数统一走"迁移申请 → 管理员核发"的链路进入 registry。
+ */
 export function walletBalance(doc: WalletDoc, registry?: GrantRegistry): number {
-  const granted = Math.floor(doc.legacyGranted) + Math.floor(registry?.granted || 0);
-  return Math.max(0, granted - Math.floor(doc.used));
+  return Math.max(0, Math.floor(registry?.granted || 0) - Math.floor(doc.used));
 }
 
 export function totalGranted(doc: WalletDoc, registry?: GrantRegistry): number {
-  return Math.max(0, Math.floor(doc.legacyGranted) + Math.floor(registry?.granted || 0));
+  return Math.max(0, Math.floor(registry?.granted || 0));
 }
 
 function toInt(value: unknown, fallback = 0): number {

@@ -4,13 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { GlassPanel } from "@/components/ui/glass";
 import { ORDER_STATUS_LABEL, type CreditOrder, type OrderStatus } from "@/lib/member/wallet";
 import {
-  AlertTriangle,
   Check,
   Coins,
   CreditCard,
   Loader2,
   RefreshCw,
   Search,
+  ShieldCheck,
   Undo2,
   Upload,
   Wallet,
@@ -359,15 +359,14 @@ export default function AdminOrders() {
         </div>
       )}
 
-      {allowlistEnforced === false && (
-        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-[11px] leading-5 text-amber-800">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>
-            建议在 Vercel 配置环境变量 <span className="font-mono">ADMIN_EMAILS</span>（逗号分隔的管理员邮箱）。
-            配置后，即使有人把自己账号的 <span className="font-mono">is_admin</span> 改成 true，也无法进入管理后台。
-          </span>
-        </div>
-      )}
+      <div className="flex items-start gap-2 rounded-xl border border-slate-200/70 bg-white/50 px-4 py-2.5 text-[11px] leading-5 text-slate-500">
+        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+        <span>
+          管理后台已开启服务端鉴权：仅白名单管理员可访问，非管理员访问 /admin 与全部管理接口都会被拒绝。
+          建议在 Supabase 再执行一次 <span className="font-mono">lib/supabase/security-hardening.sql</span>，锁死权限字段。
+          {allowlistEnforced === false ? "如需新增管理员，在 Vercel 配置 ADMIN_EMAILS。" : ""}
+        </span>
+      </div>
 
       {/* ================= 订单管理 ================= */}
       {tab === "orders" && (

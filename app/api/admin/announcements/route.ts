@@ -1,20 +1,11 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/admin/guard";
 
 export async function GET(request: NextRequest) {
-  const supabase = createClient(request);
-  // Check auth — skip separate admin check; rely on RLS + the fact only admins can see this UI
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  // Check admin status in the same query we fetch announcements
-  const { data: profile } = await supabase
-    .from("users")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-  if (!profile?.is_admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const guard = await requireAdmin(request);
+  if (!guard.ok) return guard.response;
+  const supabase = guard.ctx.db;
 
   // Reuse the same supabase client for the data query
   const { data, error } = await supabase
@@ -26,11 +17,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const supabase = createClient(request);
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const { data: profile } = await supabase.from("users").select("is_admin").eq("id", user.id).single();
-  if (!profile?.is_admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const guard = await requireAdmin(request);
+  if (!guard.ok) return guard.response;
+  const { db: supabase, user } = guard.ctx;
 
   let body;
   try { body = await request.json(); } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }); }

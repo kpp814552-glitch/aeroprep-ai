@@ -11,6 +11,7 @@ import type { NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient, hasServiceRole } from "@/lib/supabase/admin";
+import { adminEmailAllowlist, isPlatformAdmin } from "@/lib/admin/auth";
 
 export type AdminContext = {
   /** 带用户会话的客户端（身份校验用） */
@@ -36,22 +37,9 @@ export async function requireAdmin(request: NextRequest): Promise<AdminGuardResu
     return { ok: false, response: NextResponse.json({ error: "请先登录" }, { status: 401 }) };
   }
 
-  const { data: profile } = await session
-    .from("users")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single();
-
-  // 第二道闸：如果配置了 ADMIN_EMAILS（逗号分隔），只有名单内的邮箱才算管理员。
-  // 目的是防止"用户把自己 is_admin 改成 true"这条提权路径。
-  const allowlist = (process.env.ADMIN_EMAILS || "")
-    .split(",")
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  const email = (user.email || "").toLowerCase();
-  const allowlistOk = allowlist.length === 0 || allowlist.includes(email);
-
-  if (!profile?.is_admin || !allowlistOk) {
+  // 管理员身份必须来自不可伪造的白名单（user id / 邮箱 / app_metadata），
+  // 不能只信 users.is_admin —— 那一列用户自己也能改。
+  if (!(await isPlatformAdmin(session, user))) {
     return { ok: false, response: NextResponse.json({ error: "无权限" }, { status: 403 }) };
   }
 
@@ -65,7 +53,7 @@ export async function requireAdmin(request: NextRequest): Promise<AdminGuardResu
       db,
       user: { id: user.id, email: user.email ?? null },
       serviceRole,
-      allowlistEnforced: allowlist.length > 0,
+      allowlistEnforced: adminEmailAllowlist().length > 0,
     },
   };
 }

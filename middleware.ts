@@ -28,6 +28,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // 管理后台：渲染前先向服务端确认管理员身份，非管理员直接 404
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) {
+    try {
+      const check = await fetch(new URL("/api/admin/check", request.nextUrl.origin), {
+        headers: { cookie: request.headers.get("cookie") || "" },
+        cache: "no-store",
+      });
+      if (!check.ok) {
+        return new NextResponse("Not Found", { status: 404 });
+      }
+    } catch {
+      // 校验服务异常时按拒绝处理
+      return new NextResponse("Not Found", { status: 404 });
+    }
+  }
+
   return NextResponse.next();
 }
 

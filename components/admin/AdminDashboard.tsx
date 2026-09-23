@@ -176,9 +176,6 @@ export default function AdminDashboard() {
 
   useEffect(() => { const t = setTimeout(() => fetchStats(), 0); return () => clearTimeout(t); }, [fetchStats]);
 
-  const [settingUp, setSettingUp] = useState(false);
-  const [setupMsg, setSetupMsg] = useState("");
-
   if (!user) {
     return (
       <div className="flex min-h-64 items-center justify-center">
@@ -187,39 +184,12 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!isAdmin && !setupMsg) {
+  // 非管理员：服务端已经拦截（404），这里只做兜底展示，不提供任何自助提权入口
+  if (!isAdmin) {
     return (
       <div className="mx-auto mt-16 max-w-md text-center">
-        <h2 className="text-xl font-semibold text-slate-900">管理员权限验证</h2>
-        <p className="mt-2 text-sm text-slate-500">
-          当前账号 {user.email} 尚未设置为管理员。
-        </p>
-        <button
-          type="button"
-          disabled={settingUp}
-          onClick={async () => {
-            setSettingUp(true);
-            setSetupMsg("");
-            try {
-              const res = await fetch("/api/admin/setup", { method: "POST" });
-              const data = await res.json();
-              if (res.ok) {
-                setSetupMsg("✅ 设置成功！请刷新页面。");
-                setTimeout(() => location.reload(), 2000);
-              } else {
-                setSetupMsg("❌ " + (data.error || "设置失败"));
-              }
-            } catch {
-              setSetupMsg("❌ 网络错误，请重试");
-            } finally {
-              setSettingUp(false);
-            }
-          }}
-          className="mt-6 rounded-full bg-gradient-to-r from-[#5BA8FF] to-[#8B5CF6] px-8 py-3 text-sm font-medium text-white shadow-lg transition hover:brightness-110 disabled:opacity-50"
-        >
-          {settingUp ? "设置中..." : "点击设置为管理员"}
-        </button>
-        {setupMsg && <p className="mt-4 text-sm">{setupMsg}</p>}
+        <h2 className="text-xl font-semibold text-slate-900">无访问权限</h2>
+        <p className="mt-2 text-sm text-slate-500">当前账号没有管理后台权限。</p>
       </div>
     );
   }

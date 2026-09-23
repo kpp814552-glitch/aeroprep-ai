@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mergeOrders, totalGranted, walletBalance } from "@/lib/member/wallet";
 import { loadRegistry, loadWallet } from "@/lib/member/wallet-server";
+import { isPlatformAdmin } from "@/lib/admin/auth";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -14,8 +15,7 @@ export async function GET(request: NextRequest) {
   if (all) {
     // Return all members (for admin panel)
     if (!user) return NextResponse.json({ members: [] });
-    const { data: adminCheck } = await supabase.from("users").select("is_admin").eq("id", user.id).single();
-    if (!adminCheck?.is_admin) return NextResponse.json({ members: [] });
+    if (!(await isPlatformAdmin(supabase, user))) return NextResponse.json({ members: [] });
 
     const { data: members } = await supabase
       .from("users")
@@ -83,6 +83,8 @@ export async function GET(request: NextRequest) {
     isMember,
     memberUntil: memberUntil || null,
     planId,
+    // 管理后台入口依据：与 /api/admin/* 使用同一套白名单判定
+    isAdmin: await isPlatformAdmin(supabase, user),
     // 兼容旧客户端字段：次数已改为服务端账本，不再走"领取"握手
     grantedCredits: 0,
     wallet,
