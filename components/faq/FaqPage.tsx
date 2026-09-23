@@ -50,8 +50,25 @@ const FAQS = [
 export default function FaqPage() {
   const [openId, setOpenId] = useState<number | null>(null);
 
+  const faqJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: FAQS.map((faq) => ({
+      "@type": "Question",
+      name: faq.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: faq.a,
+      },
+    })),
+  };
+
   return (
     <AppFrame>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <main className="relative z-10 min-h-screen">
         <div className="pointer-events-none fixed inset-0" aria-hidden="true">
           <div className="absolute left-1/2 top-0 h-[1000px] w-[1000px] -translate-x-1/2 rounded-full bg-gradient-to-b from-sky-50/40 via-sky-50/15 to-transparent blur-3xl" />
@@ -87,11 +104,13 @@ export default function FaqPage() {
                     }`}
                   />
                 </button>
-                {openId === i && (
-                  <div className="pb-5">
-                    <p className="text-xs leading-6 text-slate-500">{faq.a}</p>
-                  </div>
-                )}
+                <div
+                  className={`overflow-hidden transition-all duration-200 ease-out ${
+                    openId === i ? "max-h-96 pb-5 opacity-100" : "max-h-0 pb-0 opacity-0"
+                  }`}
+                >
+                  <p className="text-xs leading-6 text-slate-500">{faq.a}</p>
+                </div>
               </div>
             ))}
           </div>

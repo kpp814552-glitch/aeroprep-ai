@@ -1208,7 +1208,7 @@ const resumeQualityRef = useRef<any>(
   // ── Save dialog (shown when API fails) ──
   return showSaveDialog ? (
     <main className="relative min-h-screen overflow-hidden bg-[#1f140f] text-white">
-      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("/session-background.png")' }} />
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: 'url("/session-background.webp")' }} />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,10,7,0.08),rgba(24,13,10,0.18)_34%,rgba(14,8,6,0.42)_100%)]" />
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4">
         <div className="w-full max-w-md rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,15,10,0.85),rgba(8,6,6,0.85))] px-6 py-8 shadow-[0_24px_64px_rgba(0,0,0,0.4)] backdrop-blur-xl">
@@ -1240,7 +1240,7 @@ const resumeQualityRef = useRef<any>(
     <main className="relative min-h-screen overflow-hidden bg-[#1f140f] text-white">
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url("/session-background.png")' }}
+        style={{ backgroundImage: 'url("/session-background.webp")' }}
       />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(17,10,7,0.08),rgba(24,13,10,0.18)_34%,rgba(14,8,6,0.42)_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(32,17,11,0.18),rgba(32,17,11,0.04)_18%,rgba(32,17,11,0.02)_82%,rgba(32,17,11,0.14))]" />
