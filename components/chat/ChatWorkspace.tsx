@@ -250,64 +250,70 @@ export default function ChatWorkspace() {
 
   return (
     <AppFrame>
-      <main className="relative z-10 min-h-dvh-safe px-5 pb-24 pt-12 md:px-8 md:pt-16">
+      <main className="relative z-10 min-h-dvh-safe px-5 pb-20 pt-8 md:px-8 md:pt-10">
         <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
           <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-sky-100/25 blur-3xl" />
           <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-violet-100/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-6xl">
-          <div className="mx-auto max-w-2xl text-center">
-            <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500 shadow-sm backdrop-blur-md">
-              <WandSparkles className="h-3 w-3 text-violet-500" />AI 优化
+        <div className="relative mx-auto max-w-7xl">
+          {/* ====== 顶部：紧凑标题栏（不再是巨幅 hero） ====== */}
+          <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500 shadow-sm backdrop-blur-md">
+                <WandSparkles className="h-3 w-3 text-violet-500" />AI 优化
+              </div>
+              <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-slate-950 md:text-3xl">
+                <span className="bg-gradient-to-r from-sky-500 to-violet-500 bg-clip-text text-transparent">面试官视角</span>的深度诊断
+              </h1>
+              <p className="mt-2 max-w-xl text-xs leading-6 text-slate-500 md:text-sm">
+                按目标岗位输出五维评分、逐句改写、追问预测与可直接使用的优化稿。
+              </p>
             </div>
-            <h1 className="text-3xl font-semibold tracking-[-0.04em] md:text-5xl">
-              <span className="bg-gradient-to-r from-sky-500 to-violet-500 bg-clip-text text-transparent">面试官视角</span>
-              的深度诊断
-            </h1>
-            <p className="mx-auto mt-4 max-w-xl text-sm leading-7 text-slate-500 md:text-base">
-              不是简单润色——按目标岗位给出五维评分、逐句改写、追问预测和可直接使用的优化稿。
-            </p>
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] text-slate-500">
+            <div className="flex flex-wrap gap-1.5 text-[11px] text-slate-500">
               {["五维真实评分", "逐句改写对照", "面试追问预测", "岗位关键词覆盖"].map((item) => (
-                <span key={item} className="rounded-full border border-white/50 bg-white/60 px-3 py-1.5 shadow-sm">
+                <span key={item} className="rounded-full border border-white/50 bg-white/60 px-2.5 py-1 shadow-sm">
                   {item}
                 </span>
               ))}
             </div>
-          </div>
+          </header>
 
-          <div className="mx-auto mt-10 grid max-w-2xl gap-4 sm:grid-cols-2">
-            {[
-              { id: "interview" as const, icon: MessageSquare, title: "面试回答优化", desc: "自我介绍 / STAR / 岗位认知 / 情景题" },
-              { id: "resume" as const, icon: FileText, title: "简历诊断优化", desc: "结构 / 量化成果 / 岗位关键词" },
-            ].map((card) => {
-              const Icon = card.icon;
-              const active = kind === card.id;
-              return (
-                <button
-                  key={card.id}
-                  type="button"
-                  onClick={() => { setKind(card.id); resetResult(); }}
-                  className={`relative flex items-center gap-3 rounded-2xl border px-5 py-4 text-left transition ${
-                    active ? "border-sky-200 bg-white shadow-md" : "border-white/50 bg-white/50 shadow-sm hover:bg-white/70"
-                  }`}
-                >
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-xl ${
-                    active ? "bg-gradient-to-br from-sky-500 to-violet-500 text-white" : "bg-white/70 text-slate-500"
-                  }`}>
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className={`block text-sm font-semibold ${active ? "text-slate-900" : "text-slate-600"}`}>{card.title}</span>
-                    <span className="mt-0.5 block truncate text-[11px] text-slate-400">{card.desc}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          {/* ====== 两栏工作区：左输入 / 右结果 ====== */}
+          <div className="grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+            {/* ---------- 左：输入 ---------- */}
+            <section className="space-y-4 lg:sticky lg:top-6">
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: "interview" as const, icon: MessageSquare, title: "面试回答", desc: "自我介绍 / STAR / 情景题" },
+                  { id: "resume" as const, icon: FileText, title: "简历诊断", desc: "结构 / 量化 / 关键词" },
+                ].map((card) => {
+                  const Icon = card.icon;
+                  const active = kind === card.id;
+                  return (
+                    <button
+                      key={card.id}
+                      type="button"
+                      onClick={() => { setKind(card.id); resetResult(); }}
+                      className={`flex items-center gap-2.5 rounded-2xl border px-3.5 py-3 text-left transition ${
+                        active ? "border-sky-200 bg-white shadow-md" : "border-white/50 bg-white/50 shadow-sm hover:bg-white/70"
+                      }`}
+                    >
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
+                        active ? "bg-gradient-to-br from-sky-500 to-violet-500 text-white" : "bg-white/70 text-slate-500"
+                      }`}>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className={`block text-xs font-semibold ${active ? "text-slate-900" : "text-slate-600"}`}>{card.title}</span>
+                        <span className="mt-0.5 block truncate text-[10px] text-slate-400">{card.desc}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
 
-          <GlassPanel className="mx-auto mt-6 max-w-4xl overflow-hidden rounded-[24px] border border-white/40 bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
+              <GlassPanel className="overflow-hidden rounded-[22px] border border-white/40 bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/30 px-5 py-3">
               <div className="flex items-center gap-3">
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
@@ -420,14 +426,38 @@ export default function ChatWorkspace() {
             </div>
           </GlassPanel>
 
+              {history.length > 0 ? (
+                <div className="rounded-2xl border border-white/50 bg-white/60 px-4 py-3">
+                  <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-slate-500">
+                    <History className="h-3.5 w-3.5" />最近分析（点击回看）
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {history.map((h) => (
+                      <button
+                        key={h.id}
+                        type="button"
+                        onClick={() => restoreHistory(h)}
+                        className="max-w-[200px] truncate rounded-full border border-white/60 bg-white/70 px-2.5 py-1 text-[10px] text-slate-600 shadow-sm transition hover:bg-white"
+                        title={h.content.slice(0, 60)}
+                      >
+                        {h.kind === "resume" ? "简历" : h.answerType} · {h.positionLabel} · {h.analysis.score}分
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </section>
+
+            {/* ---------- 右：诊断结果 ---------- */}
+            <section className="min-w-0 space-y-4">
           {error ? (
-            <div className="mx-auto mt-4 max-w-4xl rounded-2xl bg-rose-50 px-5 py-3 text-center text-xs text-rose-600">
+            <div className="rounded-2xl bg-rose-50 px-5 py-3 text-center text-xs text-rose-600">
               {error}
             </div>
           ) : null}
 
           {loading ? (
-            <div className="mx-auto mt-4 max-w-4xl rounded-2xl border border-sky-100 bg-sky-50/60 px-5 py-4">
+            <div className="rounded-2xl border border-sky-100 bg-sky-50/60 px-5 py-4">
               <div className="flex items-center gap-2 text-xs font-medium text-sky-800">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 {PROGRESS_STEPS[progressStep]}
@@ -444,52 +474,74 @@ export default function ChatWorkspace() {
             </div>
           ) : null}
 
-          {history.length > 0 ? (
-            <div className="mx-auto mt-6 max-w-4xl">
-              <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-slate-500">
-                <History className="h-3.5 w-3.5" />最近分析（点击可回看）
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {history.map((h) => (
-                  <button
-                    key={h.id}
-                    type="button"
-                    onClick={() => restoreHistory(h)}
-                    className="max-w-[240px] truncate rounded-full border border-white/50 bg-white/60 px-3 py-1.5 text-[11px] text-slate-600 shadow-sm transition hover:bg-white"
-                    title={h.content.slice(0, 60)}
-                  >
-                    {h.kind === "resume" ? "简历" : h.answerType} · {h.positionLabel} · {h.analysis.score}分
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
           {!analysis && !loading && !fallbackText ? (
-            <div className="mx-auto mt-12 grid max-w-4xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {[
-                { icon: BarChart3, title: "五维评分", desc: dimensionNames.join(" · ") },
-                { icon: Lightbulb, title: "逐句改写", desc: "指出原句问题，给出可直接替换的句子" },
-                { icon: Target, title: "追问预测", desc: "预测面试官会追问什么，怎么答" },
-                { icon: AlertTriangle, title: "扣分点排查", desc: "明确哪些表达会被扣分以及原因" },
-              ].map((card) => {
-                const Icon = card.icon;
-                return (
-                  <div key={card.title} className="rounded-2xl border border-white/50 bg-white/60 px-4 py-4 shadow-sm">
-                    <Icon className="h-4 w-4 text-sky-500" />
-                    <p className="mt-2 text-xs font-semibold text-slate-700">{card.title}</p>
-                    <p className="mt-1 text-[11px] leading-5 text-slate-400">{card.desc}</p>
+            <div className="space-y-4">
+              {/* 结果示意：让空状态也能看出产品形态，避免右栏过空 */}
+              <div className="rounded-[22px] border border-white/50 bg-white/60 px-5 py-5 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <p className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                    <BarChart3 className="h-3.5 w-3.5 text-sky-500" />诊断结果示意
+                  </p>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] text-slate-500">示例</span>
+                </div>
+                <div className="mt-5 flex items-center gap-6">
+                  <div className="text-center">
+                    <p className="text-[10px] text-slate-400">综合评分</p>
+                    <p className="mt-1 text-4xl font-semibold text-slate-300">62</p>
+                    <p className="mt-0.5 text-[10px] text-slate-400">中等</p>
                   </div>
-                );
-              })}
-              <p className="col-span-full text-center text-[11px] text-slate-400">
-                提示：越具体的内容（真实经历、数据、岗位术语）分析越有价值。
+                  <div className="flex-1 space-y-2.5">
+                    {[
+                      { n: "逻辑结构", w: 62 },
+                      { n: "岗位匹配度", w: 48 },
+                      { n: "专业与安全素养", w: 35 },
+                      { n: "表达感染力", w: 70 },
+                      { n: "案例支撑度", w: 42 },
+                    ].map((d) => (
+                      <div key={d.n}>
+                        <div className="flex items-center justify-between text-[10px] text-slate-400">
+                          <span>{d.n}</span>
+                          <span className="text-slate-300">—</span>
+                        </div>
+                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                          <div className="h-full rounded-full bg-slate-200" style={{ width: `${d.w}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="mt-5 flex flex-wrap gap-1.5">
+                  {["诊断总览", "逐句改写 4", "追问预测 4", "优化稿"].map((t) => (
+                    <span key={t} className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] text-slate-400">{t}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[
+                  { icon: BarChart3, title: "五维评分", desc: dimensionNames.join(" · ") },
+                  { icon: Lightbulb, title: "逐句改写", desc: "指出原句问题，给出可直接替换的句子" },
+                  { icon: Target, title: "追问预测", desc: "预测面试官会追问什么，怎么答" },
+                  { icon: AlertTriangle, title: "扣分点排查", desc: "明确哪些表达会被扣分以及原因" },
+                ].map((card) => {
+                  const Icon = card.icon;
+                  return (
+                    <div key={card.title} className="rounded-2xl border border-white/50 bg-white/60 px-4 py-4 shadow-sm">
+                      <Icon className="h-4 w-4 text-sky-500" />
+                      <p className="mt-2 text-xs font-semibold text-slate-700">{card.title}</p>
+                      <p className="mt-1 text-[11px] leading-5 text-slate-400">{card.desc}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-center text-[11px] text-slate-400">
+                越具体的内容（真实经历、数据、岗位术语）分析越有价值。
               </p>
             </div>
           ) : null}
 
           {analysis ? (
-            <div ref={resultRef} className="mx-auto mt-10 max-w-4xl">
+            <div ref={resultRef} className="space-y-4">
               <div className="rounded-[24px] border border-white/50 bg-white/70 px-6 py-5 shadow-sm backdrop-blur-xl">
                 <div className="flex flex-wrap items-center gap-6">
                   <div className="text-center">
@@ -681,11 +733,13 @@ export default function ChatWorkspace() {
           ) : null}
 
           {fallbackText ? (
-            <div className="mx-auto mt-6 max-w-4xl rounded-2xl border border-amber-200 bg-amber-50/60 px-5 py-4">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/60 px-5 py-4">
               <p className="mb-2 text-xs font-medium text-amber-800">AI 原始分析（格式解析失败，内容仍可参考）</p>
               <div className="max-h-[420px] overflow-y-auto whitespace-pre-wrap text-xs leading-6 text-amber-900">{fallbackText}</div>
             </div>
           ) : null}
+            </section>
+          </div>
         </div>
       </main>
       <LoginModal
