@@ -18,7 +18,14 @@ import {
   type InterviewMode,
   type InterviewerPersona,
 } from "@/lib/site";
-import { isMember, canStartInterview, getRemainingFreeInterviews, getCredits, subscribeCredits } from "@/lib/member/member-storage";
+import {
+  isMember,
+  canStartInterview,
+  getRemainingFreeInterviews,
+  getCredits,
+  subscribeCredits,
+  syncServerMember,
+} from "@/lib/member/member-storage";
 import { cn } from "@/lib/utils";
 
 type UploadState = {
@@ -67,6 +74,12 @@ export default function InterviewPrepPage() {
 
   // 次数到账/扣减时刷新额度文案
   useEffect(() => subscribeCredits(() => setQuotaTick((t) => t + 1)), []);
+
+  // 进入页面先同步一次服务端钱包，避免本地缓存过期导致额度判断错误
+  useEffect(() => {
+    if (!user) return;
+    syncServerMember().catch(() => {});
+  }, [user]);
 
   useEffect(() => {
     if (!loading && !user) { const t = setTimeout(() => router.replace('/login?redirect=/interview'), 300); return () => clearTimeout(t); }

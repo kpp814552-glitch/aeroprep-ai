@@ -3,31 +3,16 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * 原子核销管理员核发标记：WHERE pending_plan = 'granted:N' 才会清空。
- * 并发请求只有一个能匹配成功，从而保证次数只入账一次。
+ * @deprecated
+ * 旧版"客户端领取次数"握手已废弃：次数现在由服务端钱包直接下发，
+ * 客户端无需（也不应）再回写 pending_plan。
+ * 保留该接口只为兼容仍在运行的旧页面，永远返回 cleared:false，
+ * 避免旧客户端把服务端账本覆盖掉。
  */
 export async function POST(request: NextRequest) {
   const supabase = createClient(request);
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 
-  let credits = 0;
-  try {
-    const body = await request.json();
-    credits = Math.floor(Number(body?.credits) || 0);
-  } catch { /* ignore */ }
-
-  if (!credits || credits <= 0) {
-    return NextResponse.json({ success: true, cleared: false });
-  }
-
-  const { data: updated } = await supabase
-    .from("users")
-    .update({ pending_plan: null })
-    .eq("id", user.id)
-    .eq("pending_plan", `granted:${credits}`)
-    .select("id");
-
-  const cleared = Array.isArray(updated) && updated.length > 0;
-  return NextResponse.json({ success: true, cleared, credits: cleared ? credits : 0 });
+  return NextResponse.json({ success: true, cleared: false, credits: 0 });
 }

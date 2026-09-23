@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { mergeOrders, totalGranted, walletBalance } from "@/lib/member/wallet";
+import { loadRegistry, loadWallet } from "@/lib/member/wallet-server";
 
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
@@ -25,7 +27,14 @@ export async function GET(request: NextRequest) {
   }
 
   // Normal: return current user status
-  if (!user) return NextResponse.json({ isMember: false, grantedCredits: 0 });
+  if (!user) {
+    return NextResponse.json({
+      isMember: false,
+      grantedCredits: 0,
+      wallet: { granted: 0, used: 0, left: 0 },
+      orders: [],
+    });
+  }
 
   const { data: profile } = await supabase
     .from("users")
@@ -33,16 +42,33 @@ export async function GET(request: NextRequest) {
     .eq("id", user.id)
     .single();
 
-  if (!profile) return NextResponse.json({ isMember: false, grantedCredits: 0 });
+  if (!profile) {
+    return NextResponse.json({
+      isMember: false,
+      grantedCredits: 0,
+      wallet: { granted: 0, used: 0, left: 0 },
+      orders: [],
+    });
+  }
 
-  const pending = profile.pending_plan ? String(profile.pending_plan) : "";
   const memberUntil = profile.member_until;
   const now = new Date().toISOString();
   const isMember = !!memberUntil && memberUntil > now;
 
-  // 管理员已核发、等待客户端领取的次数（granted:N）
-  const grantedMatch = pending.match(/^granted:(\d+)$/);
-  const grantedCredits = grantedMatch ? parseInt(grantedMatch[1], 10) : 0;
+  // 服务端权威钱包 = 用户账本（已用/申请） + 管理端核发账本
+  const walletRow = await loadWallet(supabase, user.id);
+  const registryRow = await loadRegistry(supabase, user.id);
+
+  const doc = "error" in walletRow ? { v: 3 as const, used: 0, legacyGranted: 0, orders: [] } : walletRow.doc;
+  const registry = "error" in registryRow ? undefined : registryRow.registry;
+
+  const wallet = {
+    granted: totalGranted(doc, registry),
+    used: doc.used,
+    left: walletBalance(doc, registry),
+    legacyGranted: doc.legacyGranted,
+  };
+  const orders = mergeOrders(doc.orders, registry).slice(0, 20);
 
   // 遗留限时会员的套餐推断
   let planId: string | null = null;
@@ -57,6 +83,10 @@ export async function GET(request: NextRequest) {
     isMember,
     memberUntil: memberUntil || null,
     planId,
-    grantedCredits: Number.isFinite(grantedCredits) ? grantedCredits : 0,
+    // 兼容旧客户端字段：次数已改为服务端账本，不再走"领取"握手
+    grantedCredits: 0,
+    wallet,
+    orders,
+    legacyPlan: doc.legacy || null,
   });
 }

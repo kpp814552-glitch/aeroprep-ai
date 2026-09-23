@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CheckCircle as CheckCircleIcon,
   ChevronDown,
@@ -16,10 +16,22 @@ import {
   PRICE_PER_INTERVIEW,
   getCredits,
   getQuotaSummary,
+  submitCreditOrder,
   subscribeCredits,
   syncServerMember,
   type CreditPack,
 } from "@/lib/member/member-storage";
+import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/member/wallet";
+
+type MyOrder = {
+  id: string;
+  credits: number;
+  amount: number;
+  status: OrderStatus;
+  appliedAt: string;
+  reviewedAt?: string;
+  note?: string;
+};
 
 const FAQS = [
   {
@@ -55,10 +67,24 @@ export default function MembershipPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [quota, setQuota] = useState<{ freeLeft: number; credits: number; isMember: boolean } | null>(null);
   const [creditedBanner, setCreditedBanner] = useState<number | null>(null);
+  const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
 
   useEffect(() => {
-    setQrSrc("/qr-payment.jpg");
     setQuota(getQuotaSummary());
+    // 收款码（管理员可在后台更换，存数据库）
+    fetch("/api/site-config?key=payment_qr", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setQrSrc(typeof d?.value === "string" && d.value ? d.value : "/qr-payment.jpg"))
+      .catch(() => setQrSrc("/qr-payment.jpg"));
+  }, []);
+
+  const loadMyOrders = useCallback(async () => {
+    try {
+      const res = await fetch("/api/member/status", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setMyOrders(Array.isArray(data.orders) ? data.orders : []);
+    } catch { /* 忽略网络异常 */ }
   }, []);
 
   const refreshQuota = () => setQuota(getQuotaSummary());
@@ -82,6 +108,7 @@ export default function MembershipPage() {
         setQuota(getQuotaSummary());
         window.setTimeout(() => setCreditedBanner(null), 8000);
       }
+      loadMyOrders();
     };
     const onVisible = () => {
       if (document.visibilityState === "visible") tick();
@@ -96,7 +123,7 @@ export default function MembershipPage() {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("focus", onVisible);
     };
-  }, []);
+  }, [loadMyOrders]);
 
   const handlePay = async (pack: CreditPack) => {
     setSelected(pack);
@@ -121,6 +148,16 @@ export default function MembershipPage() {
   const handleSubmitPaid = async () => {
     if (!selected) return;
     setSubmitted(true);
+    setPayError("");
+
+    // 生成服务端订单：管理员审核通过后次数直接写入服务端钱包
+    const result = await submitCreditOrder(selected.id, currentOrderId);
+    if (!result.ok) {
+      setSubmitted(false);
+      setPayError(result.error || "提交失败，请稍后重试");
+      return;
+    }
+
     try {
       const records = JSON.parse(localStorage.getItem("aeroprep_payments") || "[]");
       records.unshift({
@@ -134,13 +171,7 @@ export default function MembershipPage() {
       localStorage.setItem("aeroprep_payments", JSON.stringify(records.slice(0, 50)));
     } catch { /* ignore */ }
 
-    try {
-      await fetch("/api/member/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: currentOrderId, packId: selected.id }),
-      });
-    } catch { /* ignore */ }
+    loadMyOrders();
   };
 
   return (
@@ -200,16 +231,63 @@ export default function MembershipPage() {
             </div>
           )}
 
+          {/* ===== 我的订单 ===== */}
+          {myOrders.length > 0 && (
+            <div className="mx-auto mt-10 max-w-2xl">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-800">我的购买记录</h2>
+                <span className="text-[10px] text-slate-400">审核通过后次数自动到账，本页无需刷新</span>
+              </div>
+              <div className="space-y-2">
+                {myOrders.slice(0, 6).map((o) => (
+                  <div
+                    key={o.id}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-white/50 bg-white/60 px-4 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-slate-700">
+                        {o.credits} 次面试 · ¥{o.amount}
+                      </p>
+                      <p className="mt-0.5 truncate font-mono text-[10px] text-slate-400">{o.id}</p>
+                      {o.reviewedAt ? (
+                        <p className="mt-0.5 text-[10px] text-slate-400">处理时间 {new Date(o.reviewedAt).toLocaleString("zh-CN")}</p>
+                      ) : null}
+                      {o.note ? <p className="mt-0.5 text-[10px] text-slate-400">{o.note}</p> : null}
+                    </div>
+                    <span
+                      className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[10px] ${
+                        o.status === "approved"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          : o.status === "pending"
+                            ? "border-amber-200 bg-amber-50 text-amber-700"
+                            : "border-slate-200 bg-slate-100 text-slate-500"
+                      }`}
+                    >
+                      {ORDER_STATUS_LABEL[o.status]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* ===== PACK CARDS ===== */}
           <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-3">
             {CREDIT_PACKS.map((pack) => {
               const isActive = selected?.id === pack.id;
               return (
-                <button
+                <div
                   key={pack.id}
-                  type="button"
+                  role="button"
+                  tabIndex={0}
                   onClick={() => setSelected(pack)}
-                  className={`group relative flex flex-col rounded-2xl border px-5 py-7 text-left transition-all duration-300 active:scale-[0.98] ${
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelected(pack);
+                    }
+                  }}
+                  className={`group relative flex cursor-pointer flex-col rounded-2xl border px-5 py-7 text-left outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-amber-300 active:scale-[0.98] ${
                     isActive
                       ? "border-amber-300 bg-white shadow-xl ring-2 ring-amber-200/50"
                       : pack.recommended
@@ -246,7 +324,7 @@ export default function MembershipPage() {
                   >
                     立即购买 · ¥{pack.price}
                   </button>
-                </button>
+                </div>
               );
             })}
           </div>

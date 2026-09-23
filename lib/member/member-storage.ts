@@ -48,7 +48,35 @@ export const CREDIT_PACKS: CreditPack[] = [
 const MEMBER_KEY = "aeroprep_member";
 const COUNT_KEY = "aeroprep_free_count";
 const CREDIT_KEY = "aeroprep_credits";
+const CREDITS_MIGRATED_KEY = "aeroprep_credits_migrated";
 const CREDITS_EVENT = "aeroprep-credits-updated";
+
+function wasCreditsMigrated(): boolean {
+  if (typeof window === "undefined") return false;
+  try { return localStorage.getItem(CREDITS_MIGRATED_KEY) === "1"; } catch { return false; }
+}
+
+function markCreditsMigrated(): void {
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(CREDITS_MIGRATED_KEY, "1"); } catch { /* ignore */ }
+}
+
+/** 把本地剩余次数搬到服务端钱包，返回服务端余额（失败返回 null） */
+async function migrateLocalCredits(credits: number): Promise<number | null> {
+  try {
+    const res = await fetch("/api/member/migrate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credits }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data?.success) return null;
+    return typeof data.left === "number" ? Math.max(0, Math.floor(data.left)) : credits;
+  } catch {
+    return null;
+  }
+}
 
 /** 订阅次数变化（到账/扣减都会触发），用于页面实时刷新 */
 export function subscribeCredits(onChange: () => void): () => void {
@@ -223,27 +251,35 @@ export function syncServerMember(): Promise<boolean> {
 
 async function syncServerMemberInternal(): Promise<boolean> {
   try {
-    const res = await fetch("/api/member/status");
+    const res = await fetch("/api/member/status", { cache: "no-store" });
     if (!res.ok) return false;
     const data = await res.json();
     let changed = false;
 
-    // 管理员核发的次数：先把服务端标记原子核销，成功后再本地入账。
-    // 核销失败（含并发被其他请求抢先）则不入账，由下一轮轮询重试。
-    if (typeof data.grantedCredits === "number" && data.grantedCredits > 0) {
-      try {
-        const ackRes = await fetch("/api/member/ack-grant", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ credits: data.grantedCredits }),
-        });
-        const ackData = await ackRes.json().catch(() => ({}));
-        if (ackRes.ok && ackData?.cleared === true) {
-          const granted = Number(ackData.credits) || data.grantedCredits;
-          addCredits(granted);
-          changed = true;
+    // 服务端权威钱包：直接对齐本地缓存。
+    // 这样管理员核发后用户端自动看到新余额，跨设备 / 清缓存都不会丢次数。
+    if (data?.wallet && typeof data.wallet.left === "number") {
+      let serverLeft = Math.max(0, Math.floor(data.wallet.left));
+      const localLeft = getCredits();
+      const hasServerLedger =
+        (Number(data.wallet.granted) || 0) > 0 ||
+        (Number(data.wallet.used) || 0) > 0 ||
+        (Array.isArray(data.orders) && data.orders.length > 0);
+
+      // 一次性迁移：老版本次数只存在浏览器里，服务端账本还是空的，
+      // 先搬到服务端再对齐，避免升级后老用户次数"清零"。
+      if (!hasServerLedger && localLeft > 0 && !wasCreditsMigrated()) {
+        const migrated = await migrateLocalCredits(localLeft);
+        if (migrated !== null) {
+          markCreditsMigrated();
+          serverLeft = migrated;
         }
-      } catch { /* 网络异常：保持标记，下轮重试 */ }
+      }
+
+      if (getCredits() !== serverLeft) {
+        setCredits(serverLeft);
+        changed = true;
+      }
     }
 
     if (data.isMember && data.memberUntil) {
@@ -258,5 +294,48 @@ async function syncServerMemberInternal(): Promise<boolean> {
     return changed;
   } catch {
     return false;
+  }
+}
+
+/**
+ * 上报"消耗 1 次已购次数"到服务端（服务端权威扣减）。
+ * key 传面试会话 ID，保证同一场面试重复上报只扣一次。
+ */
+export async function consumeServerCredit(key: string): Promise<boolean> {
+  try {
+    const res = await fetch("/api/member/consume", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (data?.wallet && typeof data.wallet.left === "number") {
+      setCredits(Math.max(0, Math.floor(data.wallet.left)));
+    }
+    return data?.ok === true;
+  } catch {
+    return false;
+  }
+}
+
+/** 提交购买申请（生成服务端订单，等待管理员审核） */
+export async function submitCreditOrder(
+  packId: string,
+  orderId?: string,
+): Promise<{ ok: boolean; error?: string; orderId?: string }> {
+  try {
+    const res = await fetch("/api/member/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ packId, orderId }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.success) {
+      return { ok: false, error: data?.error || "提交失败，请稍后重试" };
+    }
+    return { ok: true, orderId: data?.order?.id };
+  } catch {
+    return { ok: false, error: "网络异常，请稍后重试" };
   }
 }

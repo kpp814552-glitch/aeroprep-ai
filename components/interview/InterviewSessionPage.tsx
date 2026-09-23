@@ -30,7 +30,7 @@ import type {
   InterviewStage,
   InterviewTurn,
 } from "@/lib/interview/types";
-import { canStartInterview, consumeInterviewQuota } from "@/lib/member/member-storage";
+import { canStartInterview, consumeInterviewQuota, consumeServerCredit } from "@/lib/member/member-storage";
 import {
 
   createInterviewVoiceSession,
@@ -441,7 +441,13 @@ const resumeQualityRef = useRef<any>(
         interviewFinishedRef.current = true;
         successPathRef.current = true;
         // 完成一场：优先扣免费额度，再扣已购次数（限时会员不扣）
-        consumeInterviewQuota();
+        {
+          const quota = consumeInterviewQuota();
+          // 扣的是已购次数时，同步上报服务端钱包（服务端权威 + 幂等）
+          if (quota.ok && !quota.usedFree) {
+            consumeServerCredit(sessionIdRef.current).catch(() => {});
+          }
+        }
         setIsGeneratingReport(false);
         setPhase('completed');
 
@@ -511,7 +517,12 @@ const resumeQualityRef = useRef<any>(
         interviewFinishedRef.current = true;
         successPathRef.current = false;
         // 完成一场（本地兜底报告同样计入）
-        consumeInterviewQuota();
+        {
+          const quota = consumeInterviewQuota();
+          if (quota.ok && !quota.usedFree) {
+            consumeServerCredit(sessionIdRef.current).catch(() => {});
+          }
+        }
         setIsGeneratingReport(false);
         setPhase('completed');
         setStatusText('面试已完成');
