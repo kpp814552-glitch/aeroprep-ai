@@ -64,12 +64,26 @@ function StatCard({ label, value, suffix, icon: Icon }: { label: string; value: 
 function AIDemoCard() {
   const [phase, setPhase] = useState(0);
   const [timer, setTimer] = useState(0);
+  const [inView, setInView] = useState(false);
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   const phases = [
     { label: "正在准备面试内容...", duration: 3 },
     { label: "AI 面试官正在分析你的回答...", duration: 4 },
     { label: "综合评估中...", duration: 3 },
   ];
+
+  // Only animate while the card is visible on screen
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const tags = [
     { label: "安全意识", active: phase >= 1, delay: 0 },
@@ -79,20 +93,21 @@ function AIDemoCard() {
   ];
 
   useEffect(() => {
-    if (phase >= phases.length) return;
+    if (!inView || phase >= phases.length) return;
     const t = setTimeout(() => setPhase((p) => p + 1), phases[phase].duration * 1000);
     return () => clearTimeout(t);
-  }, [phase, phases]);
+  }, [phase, phases, inView]);
 
   useEffect(() => {
+    if (!inView) return;
     const iv = setInterval(() => setTimer((t) => t + 1), 1000);
     return () => clearInterval(iv);
-  }, []);
+  }, [inView]);
 
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   return (
-    <div className="glass-card relative overflow-hidden rounded-[28px] border border-white/40 bg-white/60 p-5 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_16px_48px_rgba(37,113,255,0.1)]">
+    <div ref={cardRef} className="glass-card relative overflow-hidden rounded-[28px] border border-white/40 bg-white/60 p-5 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_16px_48px_rgba(37,113,255,0.1)]">
       {/* Shimmer */}
       <div className="glass-shimmer" />
 
@@ -168,15 +183,29 @@ const modules = [
 ];
 
 export default function HomePage() {
-  const [scrollY, setScrollY] = useState(0);
+  const heroRef = useRef<HTMLElement | null>(null);
 
+  // Parallax via direct DOM mutation + rAF throttle (avoids a React re-render per scroll frame)
   useEffect(() => {
-    const onScroll = () => setScrollY(window.scrollY);
+    if (typeof window === "undefined") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        ticking = false;
+        const el = heroRef.current;
+        if (!el) return;
+        const y = Math.min(window.scrollY * 0.15, 40);
+        el.style.transform = y === 0 ? "" : `translateY(${y}px)`;
+      });
+    };
+
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-
-  const heroParallax = Math.min(scrollY * 0.15, 40);
 
   return (
     <AppFrame>
@@ -208,8 +237,8 @@ export default function HomePage() {
       <main className="relative z-10 px-5 pb-14 pt-8 md:px-8 md:pb-20 md:pt-10">
         {/* ====== Hero Section ====== */}
         <section
-          className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[1.18fr_0.82fr]"
-          style={{ transform: `translateY(${heroParallax}px)`, transition: "transform 0.1s ease-out" }}
+          ref={heroRef}
+          className="mx-auto grid max-w-7xl gap-6 will-change-transform lg:grid-cols-[1.18fr_0.82fr]"
         >
           {/* Left Hero */}
           <GlassPanel className="stagger-section soft-enter overflow-hidden px-6 py-8 md:px-10 md:py-12">

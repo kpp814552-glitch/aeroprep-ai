@@ -174,7 +174,7 @@ export default function AdminOrders() {
             <div className="flex items-start gap-4">
               <div className="w-40 shrink-0">
                 {qrCodeData ? (
-                  <img src={qrCodeData} alt="收款码" className="w-full rounded-xl border border-slate-200" />
+                  <img src={qrCodeData} alt="收款码" loading="lazy" decoding="async" className="w-full rounded-xl border border-slate-200" />
                 ) : (
                   <div className="flex h-40 w-40 items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-white">
                     <CreditCard className="h-8 w-8 text-slate-300" />

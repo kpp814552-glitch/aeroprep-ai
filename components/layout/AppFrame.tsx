@@ -28,7 +28,7 @@ export default function AppFrame({
   return (
     <div className={cn("relative z-10", className)}>
       <header className="px-5 pt-5 md:px-8 md:pt-7">
-        <div className="mx-auto flex max-w-7xl items-center justify-between rounded-full border border-white/35 bg-white/55 px-4 py-3 shadow-[0_10px_28px_rgba(21,43,74,0.08)] md:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2.5 rounded-[26px] border border-white/35 bg-white/55 px-4 py-3 shadow-[0_10px_28px_rgba(21,43,74,0.08)] md:flex-row md:items-center md:justify-between md:gap-0 md:rounded-full md:px-6">
           <div className="flex items-center gap-3">
             {backHref ? (
               <Link
@@ -51,15 +51,15 @@ export default function AppFrame({
             </Link>
           </div>
 
-          <nav className="flex items-center gap-1 sm:gap-2 rounded-full bg-white/30 p-1 overflow-x-auto [-webkit-overflow-scrolling:touch] scrollbar-none md:overflow-visible">
+          <nav className="flex w-full items-center gap-1 overflow-x-auto rounded-full bg-white/30 p-1 [-webkit-overflow-scrolling:touch] scrollbar-none sm:gap-2 md:w-auto md:overflow-visible">
             {[
               { href: "/", label: "首页" },
               { href: "/interview", label: "AI面试" },
               { href: "/chat", label: "AI优化" },
-             { href: "/learning", label: "资料中心" },
-           { href: "/member", label: "会员" },
+              { href: "/learning", label: "资料中心" },
+              { href: "/member", label: "会员" },
               { href: "/faq", label: "常见问题" },
-             { href: "/profile", label: "成长中心" },
+              { href: "/profile", label: "成长中心" },
             ].map((item) => (
               <Link
                 key={item.href}

@@ -33,7 +33,6 @@ export async function GET(request: NextRequest) {
     { count: totalInterviews },
     { data: todayUsers },
     { data: weeklyInterviews },
-    { data: allScores },
     { data: usageLogsToday },
     { data: usageLogs7d },
     { data: usageLogs30d },
@@ -41,21 +40,43 @@ export async function GET(request: NextRequest) {
     supabase.from("users").select("*", { count: "exact", head: true }),
     supabase.from("interviews").select("*", { count: "exact", head: true }),
     supabase.from("users").select("id").gte("last_login", todayStart),
-    supabase.from("interviews").select("total_turns, score, duration_seconds").gte("created_at", sevenDaysAgo),
-    supabase.from("interviews").select("score, total_turns, duration_seconds"),
+    supabase.from("interviews").select("total_turns, score").gte("created_at", sevenDaysAgo),
     supabase.from("api_usage_logs").select("model, input_tokens, output_tokens, total_tokens, characters, cost").gte("created_at", todayStart),
     supabase.from("api_usage_logs").select("model, input_tokens, output_tokens, total_tokens, characters, cost").gte("created_at", sevenDaysAgo),
     supabase.from("api_usage_logs").select("model, input_tokens, output_tokens, total_tokens, characters, cost").gte("created_at", thirtyDaysAgo),
   ]);
 
-  // 4. Compute aggregates
-  const avgScore = allScores && allScores.length > 0
-    ? allScores.reduce((sum: number, r: { score: number }) => sum + (r.score || 0), 0) / allScores.length
-    : 0;
+  // 4. Compute all-time averages.
+  // Prefer server-side aggregates (single row, no full-table transfer);
+  // fall back to row fetching if PostgREST aggregates are unavailable.
+  let avgScore = 0;
+  let avgTurns = 0;
 
-  const avgTurns = allScores && allScores.length > 0
-    ? allScores.reduce((sum: number, r: { total_turns: number }) => sum + (r.total_turns || 0), 0) / allScores.length
-    : 0;
+  const aggRes = await supabase
+    .from("interviews")
+    .select("avg_score:score.avg(),avg_turns:total_turns.avg()")
+    .maybeSingle();
+
+  if (!aggRes.error && aggRes.data) {
+    const row = aggRes.data as unknown as {
+      avg_score: number | string | null;
+      avg_turns: number | string | null;
+    };
+    avgScore = Number(row.avg_score ?? 0) || 0;
+    avgTurns = Number(row.avg_turns ?? 0) || 0;
+  } else {
+    const { data: allScores } = await supabase
+      .from("interviews")
+      .select("score, total_turns");
+    if (allScores && allScores.length > 0) {
+      avgScore =
+        allScores.reduce((sum: number, r: { score: number }) => sum + (r.score || 0), 0) /
+        allScores.length;
+      avgTurns =
+        allScores.reduce((sum: number, r: { total_turns: number }) => sum + (r.total_turns || 0), 0) /
+        allScores.length;
+    }
+  }
 
   const weeklyAvgTurns = weeklyInterviews && weeklyInterviews.length > 0
     ? weeklyInterviews.reduce((sum: number, r: { total_turns: number }) => sum + (r.total_turns || 0), 0) / weeklyInterviews.length
