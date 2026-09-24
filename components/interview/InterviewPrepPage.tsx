@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { FileText, Loader2, Mic, MoveRight, ShieldCheck, Sparkles, Upload } from "lucide-react";
+import { FileText, Loader2, Mic, MoveRight, ShieldCheck, Sparkles, Target, Upload } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
 import { GlassLinkButton } from "@/components/ui/glass-link";
@@ -27,6 +27,8 @@ import {
   syncServerMember,
 } from "@/lib/member/member-storage";
 import { cn } from "@/lib/utils";
+import { getRoleModel } from "@/lib/interview/role-models";
+import { getAirlineProfile } from "@/lib/interview/airline-profiles";
 
 type UploadState = {
   name: string;
@@ -96,6 +98,17 @@ export default function InterviewPrepPage() {
   const selectedRoleLabel = useMemo(
     () => prepRoleOptions.find((item) => item.value === selectedRole)?.label ?? "飞行员",
     [selectedRole]
+  );
+
+  // 本场考察重点 / 航司侧重：直接来自该岗位与航司的能力模型，
+  // 让"选了哪一类就按哪一类面"这件事在界面上可见
+  const roleAbilities = useMemo(
+    () => getRoleModel(selectedRole).abilities.slice(0, 5),
+    [selectedRole],
+  );
+  const airlineFocus = useMemo(
+    () => getAirlineProfile(selectedCompany).keyAreas.slice(0, 3),
+    [selectedCompany],
   );
 
   function handleResumeChange(event: ChangeEvent<HTMLInputElement>) {
@@ -392,11 +405,60 @@ export default function InterviewPrepPage() {
                     </p>
                   </div>
 
-                  <div className="mt-6 space-y-3 text-sm text-slate-200">
-                    <p>航司：{selectedCompany}</p>
-                    <p>岗位：{selectedRoleLabel}</p>
-                    <p>模式：{selectedMode}</p>
-                    <p>面试官：{selectedPersona}</p>
+                  <div className="mt-6 grid gap-2 text-xs sm:grid-cols-2">
+                    {[
+                      ["航司", selectedCompany],
+                      ["岗位", selectedRoleLabel],
+                      ["模式", selectedMode],
+                      ["面试官", selectedPersona],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2"
+                      >
+                        <span className="text-slate-400">{label}</span>
+                        <span className="font-medium text-white">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* 岗位能力权重：证明面试是按所选岗位模型出题的 */}
+                  <div className="mt-3 rounded-2xl border border-sky-300/20 bg-sky-400/[0.08] px-4 py-3">
+                    <p className="flex items-center gap-2 text-[11px] font-medium text-sky-200">
+                      <Target className="h-3.5 w-3.5" />
+                      本场考察重点 · {selectedRoleLabel}
+                    </p>
+                    <div className="mt-2.5 space-y-1.5">
+                      {roleAbilities.map((ability) => (
+                        <div key={ability.name} className="flex items-center gap-2">
+                          <span className="w-24 shrink-0 truncate text-[11px] text-slate-300">{ability.name}</span>
+                          <span className="h-1 flex-1 overflow-hidden rounded-full bg-white/10">
+                            <span
+                              className="block h-full rounded-full bg-gradient-to-r from-sky-400 to-violet-400"
+                              style={{ width: `${ability.weight}%` }}
+                            />
+                          </span>
+                          <span className="w-10 text-right text-[10px] text-slate-400">{ability.weight}%</span>
+                        </div>
+                      ))}
+                    </div>
+                    {airlineFocus.length > 0 && (
+                      <p className="mt-2.5 border-t border-white/10 pt-2 text-[10px] leading-5 text-slate-400">
+                        {selectedCompany} 面试更看重：
+                        {airlineFocus.map((area) => `${area.name}（${area.weight}%）`).join(" · ")}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 简历状态：让"上传了会不会用上"一目了然 */}
+                  <div className={`mt-3 rounded-2xl border px-4 py-2.5 text-[11px] leading-5 ${
+                    resume
+                      ? "border-emerald-300/25 bg-emerald-400/[0.08] text-emerald-100"
+                      : "border-white/10 bg-white/[0.05] text-slate-400"
+                  }`}>
+                    {resume
+                      ? `已上传简历：${resume.name} · ${resume.chars} 字 —— 面试官会结合简历内容提问`
+                      : "未上传简历：将按岗位通用问题面试；上传简历后面试官会针对你的经历追问"}
                   </div>
 
                   <div className="mt-8 flex flex-col gap-3">

@@ -30,7 +30,12 @@ import type {
   InterviewStage,
   InterviewTurn,
 } from "@/lib/interview/types";
-import { canStartInterview, consumeInterviewQuota, consumeServerCredit } from "@/lib/member/member-storage";
+import {
+  canStartInterview,
+  consumeInterviewQuota,
+  consumeServerCredit,
+  syncServerMember,
+} from "@/lib/member/member-storage";
 import {
 
   createInterviewVoiceSession,
@@ -1177,20 +1182,24 @@ const resumeQualityRef = useRef<any>(
     }
   }, [isGeneratingReport, router]);
 
-  // ── Quota guard：无免费额度且无已购次数时，直接进入购买页 ──
+  // ── Quota guard：无免费额度且无已购次数时才去购买页 ──
+  // 注意：本地缓存可能尚未同步（直接打开 / 刷新面试页时），必须先用服务端结果确认，
+  // 否则有额度的用户刷新页面会被误踢到购买页。
   useEffect(() => {
-    if (!canStartInterview()) {
-      router.replace('/member');
-    }
+    let cancelled = false;
+    const check = async () => {
+      if (canStartInterview()) return;
+      await syncServerMember().catch(() => {});
+      if (!cancelled && !canStartInterview()) router.replace('/member');
+    };
+    check();
+    return () => { cancelled = true; };
   }, [router]);
 
   // ── Auth guard ──
   useEffect(() => {
     if (!loading && !user) { const t = setTimeout(() => router.replace('/login?redirect=/interview/session'), 300); return () => clearTimeout(t); }
   }, [loading, user, router]);
-
-  if (loading) return null;
-  if (!user) return null;
 
   // ── Auto-navigate to report after completion ──
   useEffect(() => {
@@ -1214,6 +1223,11 @@ const resumeQualityRef = useRef<any>(
       }
     };
   }, [stopRecognition, voiceSession]);
+
+  // ⚠️ 所有 hook 必须在这两个 return 之前，否则会出现
+  // "Rendered more hooks than during the previous render" 白屏（面试间无法进入）
+  if (loading) return null;
+  if (!user) return null;
 
   // ── Computed UI values ──
   const activeVoiceState = voiceStateMeta[voiceActivityState] ?? voiceStateMeta.Silent;
@@ -1270,6 +1284,22 @@ const resumeQualityRef = useRef<any>(
 
           {/* ── Header: Transcript + Timer (playing/listening only) ── */}
           {showHeader && (
+            <>
+            {/* 本场配置：让"选了哪一类就按哪一类面"在面试过程中一直可见 */}
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] text-white/55">
+              {[company, roleLabel, mode, persona].filter(Boolean).map((item) => (
+                <span key={item} className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-0.5">
+                  {item}
+                </span>
+              ))}
+              <span className={`rounded-full border px-2.5 py-0.5 ${
+                resumeTextRef.current
+                  ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100/80"
+                  : "border-white/10 bg-white/[0.05]"
+              }`}>
+                {resumeTextRef.current ? "已结合简历提问" : "岗位通用提问"}
+              </span>
+            </div>
             <div className="flex max-sm:flex-col max-sm:gap-3 items-start justify-between gap-4">
               <div className="w-full max-sm:max-w-full max-w-[13.2rem] rounded-[16px] border border-white/6 bg-[linear-gradient(180deg,rgba(26,15,10,0.42),rgba(8,6,6,0.3))] px-2.5 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.12)] backdrop-blur-md">
                 <div className="flex items-center gap-2.5">
@@ -1317,6 +1347,7 @@ const resumeQualityRef = useRef<any>(
                 </p>
               </div>
             </div>
+            </>
           )}
 
           {/* ── Preparing State ── */}
@@ -1338,6 +1369,17 @@ const resumeQualityRef = useRef<any>(
               </p>
               <p className="mt-2 text-sm text-white/85">
                 已准备好 {roleLabel} 岗位的模拟面试
+              </p>
+              {/* 本场配置：航司 / 岗位 / 模式 / 面试官 + 简历是否参与 */}
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] text-white/70">
+                {[company, roleLabel, mode, persona].filter(Boolean).map((item) => (
+                  <span key={item} className="rounded-full border border-white/10 bg-white/[0.06] px-3 py-1">
+                    {item}
+                  </span>
+                ))}
+              </div>
+              <p className="mt-3 text-[11px] text-white/45">
+                {resumeTextRef.current ? "已结合你上传的简历提问" : "未上传简历 · 将按岗位通用问题面试"}
               </p>
               <button
                 type="button"

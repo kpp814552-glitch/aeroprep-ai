@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 /**
  * Parses a PDF or DOCX resume and returns extracted text.
  */
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // 解析后会调用大模型做简历质量分析，必须先登录
+  const supabase = createClient(request);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "请先登录后再上传简历" }, { status: 401 });
+  }
+
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -14,6 +23,11 @@ export async function POST(request: Request) {
   const file = formData.get("file");
   if (!file || !(file instanceof File)) {
     return NextResponse.json({ error: "请上传简历文件" }, { status: 400 });
+  }
+
+  // 限制 5MB，避免超大文件拖垮解析
+  if (file.size > 5 * 1024 * 1024) {
+    return NextResponse.json({ error: "文件过大，请上传 5MB 以内的简历" }, { status: 413 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -135,4 +149,3 @@ async function analyzeResumeQuality(
     return { score: 50, deductions: ["简历质量分析服务异常"], comment: "分析服务异常" };
   }
 }
-

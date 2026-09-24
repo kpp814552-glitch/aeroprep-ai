@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
+import { createClient } from "@/lib/supabase/server";
 import type { InterviewMode } from "@/lib/site";
 import {
   getRoleConfig,
@@ -36,6 +38,7 @@ type InterviewRequestBody = {
   company?: string;
   mode?: string;
   resumeText?: string;
+  resumeQuality?: { score: number; deductions: string[]; comment: string };
   persona?: string;
 };
 
@@ -224,7 +227,14 @@ function normalizeReportPayload(payload: unknown, fallback: InterviewReport, tur
   return { ...normalized, competitiveScore, competitiveLevel, competitiveRange };
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // 面试出题 / 报告都会调用付费大模型，必须先登录（防止接口被匿名刷）
+  const supabase = createClient(request);
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "请先登录后再开始面试" }, { status: 401 });
+  }
+
   let body: InterviewRequestBody;
 
   try {
@@ -267,7 +277,14 @@ export async function POST(request: Request) {
     try {
       const result = await callDeepSeek(
         apiKey,
-        buildStartQuestionPrompt(body.role, body.company, body.mode, body.persona),
+        buildStartQuestionPrompt(
+          body.role,
+          body.company,
+          body.mode,
+          body.persona,
+          body.resumeText,
+          body.resumeQuality
+        ),
         { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000 }
       );
 
@@ -300,7 +317,15 @@ export async function POST(request: Request) {
     try {
       const result = await callDeepSeek(
         apiKey,
-        buildNextQuestionPrompt(body.role, turns, body.company, body.mode, body.persona, body.resumeText),
+        buildNextQuestionPrompt(
+          body.role,
+          turns,
+          body.company,
+          body.mode,
+          body.persona,
+          body.resumeText,
+          body.resumeQuality
+        ),
         { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000 }
       );
 
@@ -335,7 +360,8 @@ export async function POST(request: Request) {
          body.mode,
          body.persona,
           body.resumeText,
-         fallbackReport
+         fallbackReport,
+         body.resumeQuality
         ),
         { maxTokens: 16000, reasoningEffort: "low", timeoutMs: 110000 }
       );

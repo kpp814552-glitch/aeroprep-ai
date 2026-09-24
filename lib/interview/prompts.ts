@@ -285,10 +285,11 @@ export function buildStartQuestionPrompt(
   company?: string,
   mode?: string,
   persona?: string,
-  resumeText?: string
+  resumeText?: string,
+  resumeQuality?: { score: number; deductions: string[]; comment: string }
 ) {
   const roleConfig = getRoleConfig(role);
-  const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
+  const modeInstruction = getModeInstruction(mode || "校招", resumeText || "", resumeQuality);
 
   return `
 你现在是一家真实航空公司的招聘面试官。请严格遵循以下【岗位能力模型】的指导，围绕岗位要求展开面试。
@@ -323,11 +324,16 @@ ${(() => { const p = getAirlineProfile(company); return `
 - 岗位：${roleConfig.label}
 - 面试官人格：${persona || "成熟专业HR"}
 ${modeInstruction}
+${resumeText?.trim() ? `
+【已收到候选人简历，开场必须让候选人感到你读过简历】
+- 开场白里先用一句话点到简历中的一个具体信息（例如"我看到你在首都机场做过地服实习""你是航空服务专业"），但不要逐条复述简历
+- 然后再请他做自我介绍；后续提问要围绕简历里的具体经历展开
+- 严禁编造简历中没有的经历、学校、公司或数据
+` : ""}
 
 要求：
 - 这是全新的一场面试，请严格遵循上方航空公司画像的风格
-- 这是全新的一场面试
-- 第一题必须永远是自我介绍
+- 第一题永远是自我介绍（若上方提供了简历，则按上面的开场要求，带着简历语境提出）
 - 必须明确要求候选人介绍：姓名、年龄、学校、专业、相关经历
 - 要像真人HR在电话中说话
 - 允许自然停顿，允许“好的”“那我们先从一个简单的问题开始”
@@ -352,14 +358,15 @@ export function buildNextQuestionPrompt(
   company?: string,
   mode?: string,
   persona?: string,
-  resumeText?: string
+  resumeText?: string,
+  resumeQuality?: { score: number; deductions: string[]; comment: string }
 ) {
   const roleConfig = getRoleConfig(role);
   const companyCfg = getCompanyConfig(company);
   const nextStage = getStageByTurnCount(turns);
   const lastTurn = turns.at(-1);
   const personaCfg = getPersonaConfig(persona);
-  const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
+  const modeInstruction = getModeInstruction(mode || "校招", resumeText || "", resumeQuality);
 
   // Only include last 5 turns to keep prompt size bounded and reduce latency
   const recentTurns = turns.slice(-5);
@@ -459,12 +466,13 @@ export function buildReportPrompt(
   mode?: string,
   persona?: string,
   resumeText?: string,
-  fallbackReport?: InterviewReport
+  fallbackReport?: InterviewReport,
+  resumeQuality?: { score: number; deductions: string[]; comment: string }
 ) {
   const roleConfig = getRoleConfig(role);
   const companyCfg = getCompanyConfig(company);
   const personaCfg = getPersonaConfig(persona);
-  const modeInstruction = getModeInstruction(mode || "校招", resumeText || "");
+  const modeInstruction = getModeInstruction(mode || "校招", resumeText || "", resumeQuality);
 
   return `
 你是一名拥有15年经验的民航招聘培训专家，曾参与国内大型航司乘务员、地勤、航空服务岗位招聘与培训。请根据以下面试记录，以"航空公司招聘面试官 + 民航职业培训导师"双重视角，生成一份专业的《民航求职成长报告》。
@@ -596,5 +604,3 @@ function getCompanyConfig(company?: string): CompanyProfile {
 function getPersonaConfig(persona?: string): PersonaProfile {
   return PERSONA_CONFIG[persona || "专业型HR"] || PERSONA_CONFIG["专业型HR"];
 }
-
-
