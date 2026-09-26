@@ -1,6 +1,7 @@
 import type { InterviewMode } from "@/lib/site";
 import {
   getRoleConfig,
+  getTotalRoundsForMode,
   interviewStageLabels,
   interviewStages,
 } from "@/lib/interview/config";
@@ -222,13 +223,50 @@ export const COMPANY_CONFIG: Record<string, CompanyProfile> = {
   },
 };
 
-export function getStageByTurnCount(turns: InterviewTurn[]) {
-  // Each stage gets at least 2 rounds for main question + follow-up
-  const stageIndex = Math.min(
-    Math.floor(turns.length / 2),
-    interviewStages.length - 1
-  );
-  return interviewStages[stageIndex] ?? "summary";
+/**
+ * 按"已进行轮次 / 总轮次"把阶段均匀铺开。
+ *
+ * 之前的算法是"每阶段固定 2 轮"，而实际面试只有 7-8 轮，导致
+ * 情景题、职业规划、收尾阶段永远走不到。现在按比例映射，
+ * 保证最后一轮一定落在 summary（收尾提问）上。
+ */
+/**
+ * 生成这一场面试的阶段计划。
+ *
+ * 真实面试只有 7-8 轮，但完整阶段有 9 个，必须取舍：
+ * 优先保证「自我介绍 → 岗位认知 → 专业知识 → 情景题 → 职业规划 → 收尾」，
+ * 轮次不足时先砍教育背景、再砍实习经历、最后砍项目经历。
+ */
+export function planStages(maxRounds: number): InterviewStage[] {
+  const core: InterviewStage[] = [
+    "self-intro",
+    "education",
+    "project",
+    "internship",
+    "role-fit",
+    "professional",
+    "scenario",
+    "career",
+    "summary",
+  ];
+  const target = Math.max(4, Math.min(maxRounds, core.length));
+  if (target >= core.length) return core;
+
+  const dropOrder: InterviewStage[] = ["education", "internship", "project"];
+  const result = [...core];
+  for (const stage of dropOrder) {
+    if (result.length <= target) break;
+    const index = result.indexOf(stage);
+    if (index >= 0) result.splice(index, 1);
+  }
+  return result;
+}
+
+/** 第几轮该问哪个阶段（一轮一个阶段，同一阶段内允许一次追问） */
+export function getStageByTurnCount(turns: InterviewTurn[], maxRounds = 8) {
+  const plan = planStages(maxRounds);
+  const index = Math.min(turns.length, plan.length - 1);
+  return plan[index] ?? "summary";
 }
 
 export function pickResumeAnchor(answer: string) {
@@ -367,7 +405,8 @@ export function buildNextQuestionPrompt(
 ) {
   const roleConfig = getRoleConfig(role);
   const companyCfg = getCompanyConfig(company);
-  const nextStage = getStageByTurnCount(turns);
+  const maxRounds = getTotalRoundsForMode(mode);
+  const nextStage = getStageByTurnCount(turns, maxRounds);
   const lastTurn = turns.at(-1);
   const personaCfg = getPersonaConfig(persona);
   const modeInstruction = getModeInstruction(mode || "校招", resumeText || "", resumeQuality);
@@ -428,7 +467,7 @@ ${modeInstruction}
 - 面试考察重点：${companyCfg.interviewFocus}
 
 当前面试进度：
-- 下一阶段必须是：${interviewStageLabels[nextStage]}
+- 本轮主要方向：${interviewStageLabels[nextStage]}（若上一轮回答明显含糊，可以先追问一次再转入该方向；同一件事不要连续追问超过两轮）
 - 面试顺序必须遵循：
 自我介绍 -> 教育背景 -> 项目经历 -> 实习经历 -> 岗位能力 -> 专业知识 -> 情景问题 -> 职业规划 -> 总结
 
@@ -441,18 +480,28 @@ ${recentTurns
   )
   .join("\n\n")}
 
+本场进度：第 ${turns.length + 1} 题 / 共 ${maxRounds} 题（面试官心里有时间感，接近尾声时要收束）
+
+已经问过的问题（严禁重复提问，也不要换汤不换药地问同一件事）：
+${turns.map((t, i) => `${i + 1}. ${t.question}`).join("\n")}
+
 必须遵守：
-- 按照上面面试官人格指令来组织追问，语气和风格必须保持一致性
-- 基于候选人上一轮回答进行追问，抓住具体细节深入挖掘
-- 如果候选人回答过于简短（少于20字）或答非所问，先温和地说"我理解你的意思"，然后通过具体例子或换一种角度重新引导：
-  例："我理解你的意思，那你能否举个具体的例子来说明？"
-  例："我换个问法，如果当时的情况是XX，你会怎么处理？"
-- 候选人提到关键经历、技能或项目时，必须追问具体细节（"你当时具体做了什么？""结果如何？"）
-- 先自然回应一句再进入核心问题，对话要有真实交流感
-- 允许在同一阶段内连续追问2-3轮，充分挖掘后再进入下一阶段
-- 如果候选人回答充分且有深度，按正常进度继续下一阶段
-- 只问一个问题，问题要基于候选人的个人经历展开
-- 像真实面试官一样自然交流，用2到5个短句
+1. 一次只问一个问题。不要把两个问题塞进一句话里。
+2. 先用一句自然回应接住候选人的话（可以是"好的""我了解了""这个经历挺有意思"），再提问；回应要短，不要复述对方原话，也不要给评价性总结。
+3. 追问要抓具体：候选人说了经历，就问到"你具体做了什么、怎么做的、结果如何"；说了能力，就要求给例子。
+4. 同一处细节最多追问两轮。如果对方已经讲清楚，就往下推进；不要在同一点上反复纠缠。
+5. 回答少于 20 字、答非所问、或明显背模板时，换一个更具体的小切口重新问，例如"那我换个角度问"或给一个具体场景让他判断。
+6. 说人话：用口语短句，2-4 句以内；不要用"首先其次"、不要用书面考题腔、不要用括号补充说明、不要罗列要点。
+7. 语气必须与上面的人格设定一致（温和型要多鼓励，压力型可以质疑和打断，专业型保持中立体面）。
+8. 问题要落在候选人的真实经历或岗位真实场景上，不要问空泛的"你怎么看待人生"这类题。
+9. 不要把岗位能力名称直接念出来（例如"请谈谈你的服务意识"），要换成具体的场景或行为问题。
+${nextStage === "summary" ? `
+【本轮是最后一题，必须收尾】
+- 用真实面试的收尾方式提问，参照这个思路（可自然改写，不要机械照读）：
+  "好的，今天就先聊到这里。感谢你的到来，后续有结果我们会通过邮箱通知你。你还有什么想问我们的吗？"
+- 不要说"面试结束""面试流程终止"这类系统口吻。
+- 收尾语气要有温度，符合该航司的面试官人格。
+` : ""}
 
 候选人上一轮：
 问：${lastTurn?.question || ""}
