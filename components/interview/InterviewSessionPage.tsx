@@ -14,6 +14,9 @@ const REPORT_STEPS = [
   "即将完成，请稍候…",
 ];
 
+/** 候选人完全没有作答时，面试官最多像真人那样重问几次（不占题号） */
+const MAX_SILENT_RETRIES = 2;
+
 // ── 面试中断恢复：把进度存在 sessionStorage，刷新/误关页面后可以接着答 ──
 const PROGRESS_KEY = "aeroprep_interview_progress";
 const PROGRESS_MAX_AGE_MS = 30 * 60 * 1000; // 30 分钟内有效
@@ -287,6 +290,10 @@ const resumeQualityRef = useRef<any>(
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const finalTranscriptRef = useRef("");
   const interimTranscriptRef = useRef("");
+  // 空回答重问计数 + 本轮静默提醒计数（会写进面试记录，供报告判断"未作答"）
+  const silentRetryRef = useRef(0);
+  const silenceWarningCountRef = useRef(0);
+  const silenceWarningFlaggedRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const microphoneStreamRef = useRef<MediaStream | null>(null);
@@ -717,11 +724,16 @@ const resumeQualityRef = useRef<any>(
         }
 
         // ─── Silence detection (3s) ───
-        if (silenceWarningRef.current && voiceActivityState === "Listening") {
+        // 注意：这里不能用 voiceActivityState 判断——它在 useCallback 里是闭包旧值，
+        // 会导致提示永远不出现。监控循环本身只在录音期间运行，因此直接用时长判断。
+        if (silenceWarningRef.current) {
           const silenceDuration = Date.now() - lastSoundTimeRef.current;
-          silenceWarningRef.current.style.display = silenceDuration > 3000 ? "block" : "none";
-        } else if (silenceWarningRef.current) {
-          silenceWarningRef.current.style.display = "none";
+          const isSilent = silenceDuration > 3000;
+          silenceWarningRef.current.style.display = isSilent ? "block" : "none";
+          if (isSilent && !silenceWarningFlaggedRef.current) {
+            silenceWarningFlaggedRef.current = true;
+            silenceWarningCountRef.current += 1;
+          }
         }
 
         // ─── Update recording timer ───
@@ -761,6 +773,7 @@ const resumeQualityRef = useRef<any>(
     setLiveTranscript("");
     setInterimTranscript("");
     setVoiceActivityState("Listening");
+    silenceWarningFlaggedRef.current = false;
     setStatusText("请开始回答，系统正在实时识别");
     timer.turnStartedAtRef.current = Date.now();
     setIsAnswering(true);
@@ -1103,14 +1116,48 @@ const resumeQualityRef = useRef<any>(
       ? Math.max(1, Math.round((Date.now() - timer.turnStartedAtRef.current) / 1000))
       : 0;
 
+    // ── 完全没说话（转写为空，或只有"嗯/啊"这类语气词）──
+    // 真实面试官不会当作已经答过，会先确认是不是没听清，再把同一道题问一遍。
+    // 重问不占题号，也不会生成新问题。
+    const effectiveAnswer = answerText
+      .replace(/[\s\p{P}\p{S}]/gu, "")
+      .replace(/(嗯|呃|啊|哦|噢|唉|额|唔|那个|就是|然后)+/g, "");
+
+    if (!effectiveAnswer && silentRetryRef.current < MAX_SILENT_RETRIES) {
+      silentRetryRef.current += 1;
+      const pending = pendingQuestionRef.current;
+      const originalQuestion = activeQuestionRef.current || pending?.text || "";
+      const reaskPrefix =
+        silentRetryRef.current === 1
+          ? "不好意思，我这边没有听到你的回答，可能是我没听清。我再说一遍——"
+          : "还是没收到你的声音，麻烦你确认一下麦克风是否正常，我们再来一次——";
+      // console.log('[Interview] Empty answer -> re-ask ' + silentRetryRef.current + '/' + MAX_SILENT_RETRIES);
+      setStatusText("没有听到你的回答，面试官正在重新提问...");
+      setVoiceActivityState("Processing");
+      setPhase('playing');
+      await playCurrentQuestion({
+        text: `${reaskPrefix}${originalQuestion}`,
+        stage: pending?.stage ?? currentStage,
+        interviewer: pending?.interviewer ?? interviewerLabel,
+        roleLabel: pending?.roleLabel ?? roleLabel,
+      });
+      return;
+    }
+
     const turn: InterviewTurn = {
       question: activeQuestionRef.current,
       answer: answerText,
       stage: currentStage,
       answerDurationSeconds,
       transcriptChars: answerText.length,
+      silenceWarnings: silenceWarningCountRef.current,
       createdAt: new Date().toISOString(),
     };
+
+    // 这道题已经翻篇，下一题重新计数
+    silentRetryRef.current = 0;
+    silenceWarningCountRef.current = 0;
+    silenceWarningFlaggedRef.current = false;
 
     saveGrowthEvent({
       type: 'question_answered',
