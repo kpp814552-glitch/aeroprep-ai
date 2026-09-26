@@ -95,6 +95,30 @@ export default function InterviewPrepPage() {
   const [uploadError, setUploadError] = useState("");
   const [showProcess, setShowProcess] = useState(false);
 
+  // 首页快捷入口带入目标岗位和招聘模式
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      try {
+        const raw = sessionStorage.getItem("aeroprep_interview_intent");
+        if (!raw) return;
+        const intent = JSON.parse(raw) as { role?: unknown; mode?: unknown };
+        const matchedRole = prepRoleOptions.find((item) => item.value === intent.role);
+        if (matchedRole) setSelectedRole(matchedRole.value);
+        if (
+          typeof intent.mode === "string" &&
+          interviewModes.includes(intent.mode as InterviewMode)
+        ) {
+          setSelectedMode(intent.mode as InterviewMode);
+        }
+      } catch {
+        // 忽略损坏的本地快捷配置
+      } finally {
+        sessionStorage.removeItem("aeroprep_interview_intent");
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const selectedRoleLabel = useMemo(
     () => prepRoleOptions.find((item) => item.value === selectedRole)?.label ?? "飞行员",
     [selectedRole]
