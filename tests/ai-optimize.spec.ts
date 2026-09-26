@@ -4,7 +4,7 @@ test.describe("AI优化", () => {
   test("页面和模式切换正常", async ({ page }) => {
     await page.goto("/chat");
     await expect(page.getByText("面试官视角", { exact: false }).first()).toBeVisible();
-    await expect(page.getByText("面试回答", { exact: true })).toBeVisible();
+    await expect(page.getByText("面试回答", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("简历诊断", { exact: true }).first()).toBeVisible();
     await page.getByText("简历诊断", { exact: true }).first().click();
     await expect(page.getByText("简历诊断", { exact: true }).first()).toBeVisible();

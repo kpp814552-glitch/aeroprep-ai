@@ -107,9 +107,10 @@ export default function HomePage() {
             <div className="mt-9 w-full max-w-[590px]">
               <div
                 ref={heroPanelRef}
-                className="liquid-hero-panel rounded-[28px] p-3 backdrop-blur-[20px] backdrop-saturate-[1.45]"
+                className="liquid-hero-panel liquid-hero-panel-shape p-3 backdrop-blur-[20px] backdrop-saturate-[1.45]"
               >
-                <div className="flex flex-col items-center px-6 py-7 text-center">
+                <div className="pointer-events-none absolute inset-x-10 top-0 h-28 rounded-full bg-white/45 blur-3xl" />
+                <div className="relative flex flex-col items-center px-6 py-7 text-center">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/60 bg-white/32 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">
                     <Mic className="h-5 w-5" />
                   </span>
