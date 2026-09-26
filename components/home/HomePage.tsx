@@ -33,6 +33,7 @@ export default function HomePage() {
   const [selectedRole, setSelectedRole] = useState<InterviewRole>("pilot");
   const [selectedMode, setSelectedMode] = useState<InterviewMode>("校招");
   const pageRef = useRef<HTMLElement | null>(null);
+  const heroPanelRef = useRef<HTMLDivElement | null>(null);
 
   const currentRole =
     prepRoleOptions.find((item) => item.value === selectedRole) || prepRoleOptions[0];
@@ -55,10 +56,20 @@ export default function HomePage() {
     const handlePointerMove = (event: PointerEvent) => {
       if (frame) cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        const x = ((event.clientX / window.innerWidth) - 0.5) * 28;
-        const y = ((event.clientY / window.innerHeight) - 0.5) * 20;
+        const normalizedX = event.clientX / window.innerWidth;
+        const normalizedY = event.clientY / window.innerHeight;
+        const x = (normalizedX - 0.5) * 28;
+        const y = (normalizedY - 0.5) * 20;
         pageRef.current?.style.setProperty("--water-x", `${x.toFixed(2)}px`);
         pageRef.current?.style.setProperty("--water-y", `${y.toFixed(2)}px`);
+        heroPanelRef.current?.style.setProperty(
+          "--glass-light-x",
+          `${(16 + normalizedX * 68).toFixed(1)}%`,
+        );
+        heroPanelRef.current?.style.setProperty(
+          "--glass-light-y",
+          `${(2 + normalizedY * 40).toFixed(1)}%`,
+        );
       });
     };
 
@@ -88,15 +99,21 @@ export default function HomePage() {
               <ChevronRight className="h-3.5 w-3.5 shrink-0 transition group-hover:translate-x-0.5" />
             </Link>
 
-            <h1 className="mt-6 text-center text-4xl font-normal tracking-[0.035em] text-[#152443] sm:text-5xl md:text-[58px] md:leading-[1.12]">
-              探索民航求职新可能
-            </h1>
+            <div className="relative mt-6 flex w-full justify-center">
+              <div className="pointer-events-none absolute top-1/2 h-16 w-[72%] max-w-[620px] -translate-y-1/2 rounded-full bg-white/42 blur-3xl" />
+              <h1 className="relative text-center text-4xl font-normal tracking-[0.055em] text-[#14213d] sm:text-5xl md:text-[58px] md:leading-[1.12]">
+                探索民航求职新可能
+              </h1>
+            </div>
             <p className="mt-5 max-w-2xl text-center text-sm leading-7 text-slate-600 md:text-base">
               不是刷题，而是进入真实航空公司语境，完成一次完整的岗位面试训练。
             </p>
 
             <div className="mt-10 w-full max-w-[880px]">
-              <div className="liquid-hero-panel rounded-[24px] p-3 backdrop-blur-2xl backdrop-saturate-150">
+              <div
+                ref={heroPanelRef}
+                className="liquid-hero-panel rounded-[24px] p-3 backdrop-blur-[30px] backdrop-saturate-[1.65]"
+              >
                 <div className="px-3 pb-2 pt-2">
                   <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
                     我想面试的岗位

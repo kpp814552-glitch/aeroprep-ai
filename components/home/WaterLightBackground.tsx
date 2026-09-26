@@ -27,6 +27,7 @@ export default function WaterLightBackground() {
         <div className="water-orb water-orb-c" />
         <div className="water-orb water-orb-d" />
         <div className="water-caustics" />
+        <div className="water-light-sheen" />
       </div>
       <div className="water-light-mist" />
       <div className="water-light-vignette" />
