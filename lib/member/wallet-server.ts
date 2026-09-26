@@ -22,8 +22,8 @@ import {
 
 export const PACKS: Record<string, { credits: number; amount: number; label: string }> = {
   c1: { credits: 1, amount: 2, label: "1 次面试" },
-  c5: { credits: 5, amount: 10, label: "5 次面试" },
-  c10: { credits: 10, amount: 20, label: "10 次面试" },
+  c5: { credits: 5, amount: 9, label: "5 次面试" },
+  c10: { credits: 10, amount: 16, label: "10 次面试" },
 };
 
 export const PRICE_PER_INTERVIEW = 2;

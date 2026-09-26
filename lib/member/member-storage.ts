@@ -40,12 +40,16 @@ export type CreditPack = {
   label: string;
   desc: string;
   recommended?: boolean;
+  /** 相比按次原价的优惠金额（元），仅用于界面展示 */
+  save?: number;
 };
 
+// 价格以 lib/member/wallet-server.ts 的 PACKS 为准（服务端下单金额取自那里），
+// 这里同步展示；改动价格时两处都要改。
 export const CREDIT_PACKS: CreditPack[] = [
   { id: "c1", credits: 1, price: 2, label: "1 次面试", desc: "单次体验，随时开练" },
-  { id: "c5", credits: 5, price: 10, label: "5 次面试", desc: "适合面试前集中突击", recommended: true },
-  { id: "c10", credits: 10, price: 20, label: "10 次面试", desc: "完整备战周期，长期陪伴" },
+  { id: "c5", credits: 5, price: 9, label: "5 次面试", desc: "适合面试前集中突击", recommended: true, save: 1 },
+  { id: "c10", credits: 10, price: 16, label: "10 次面试", desc: "完整备战周期，长期陪伴", save: 4 },
 ];
 
 const MEMBER_KEY = "aeroprep_member";

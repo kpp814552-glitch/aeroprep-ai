@@ -38,7 +38,7 @@ type MyOrder = {
 const FAQS = [
   {
     q: "面试如何计费？",
-    a: `按次收费：每次 AI 模拟面试 ¥${PRICE_PER_INTERVIEW}，每个账号可免费体验 1 次（与账号绑定，换设备不重置）。购买的次数长期有效，用完为止。`,
+    a: `按次收费：单次 ¥${PRICE_PER_INTERVIEW}，每个账号可免费体验 1 次（与账号绑定，换设备不重置）。买 5 次 ¥9（省 ¥1）、10 次 ¥16（省 ¥4），最低 ¥1.6/次。购买的次数长期有效，用完为止。`,
   },
   {
     q: "购买后次数如何到账？",
@@ -208,10 +208,10 @@ export default function MembershipPage() {
               <Coins className="h-3 w-3 text-amber-500" /> 面试次数
             </div>
             <h1 className="text-4xl font-semibold tracking-[-0.04em] md:text-5xl">
-              按次付费，<span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">¥{PRICE_PER_INTERVIEW} / 次</span>
+              按次付费，<span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">¥{PRICE_PER_INTERVIEW} / 次起</span>
             </h1>
             <p className="mt-4 text-sm leading-6 text-slate-500">
-              每个账号首次面试免费，之后每次 AI 模拟面试 ¥{PRICE_PER_INTERVIEW}。次数长期有效，用完为止。
+              每个账号首次面试免费。单次 ¥{PRICE_PER_INTERVIEW}，买 5 次或 10 次有优惠（最低 ¥1.6/次），次数长期有效。
             </p>
           </div>
 
@@ -329,9 +329,16 @@ export default function MembershipPage() {
                   <p className="mt-4 text-center">
                     <span className="text-4xl font-bold text-slate-900">¥{pack.price}</span>
                     <span className="ml-1 text-xs text-slate-400">
-                      （¥{PRICE_PER_INTERVIEW}/次）
+                      （¥{(pack.price / pack.credits).toFixed(1).replace(/\.0$/, "")}/次）
                     </span>
                   </p>
+                  {pack.save ? (
+                    <p className="mt-1.5 text-center">
+                      <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-medium text-rose-600">
+                        比单次购买省 ¥{pack.save}
+                      </span>
+                    </p>
+                  ) : null}
                   <p className="mt-2 text-center text-xs text-slate-400">{pack.desc}</p>
 
                   <button

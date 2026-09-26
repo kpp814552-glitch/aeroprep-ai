@@ -772,7 +772,7 @@ export default function AdminOrders() {
               <div className="rounded-xl border border-slate-200/70 bg-white/60 px-4 py-3 text-[11px] leading-5 text-slate-500">
                 <p className="mb-1 font-medium text-slate-700">当前售卖方式</p>
                 <p>
-                  按次收费：1 次 ¥2 · 5 次 ¥10 · 10 次 ¥20。用户扫码支付时需备注订单号，你在「订单管理」核对到账后点「通过」，
+                  按次收费：1 次 ¥2 · 5 次 ¥9（省 ¥1）· 10 次 ¥16（省 ¥4）。用户扫码支付时需备注订单号，你在「订单管理」核对到账后点「通过」，
                   次数会立即写入该用户的服务端钱包，用户端无需刷新即可看到。
                 </p>
               </div>
