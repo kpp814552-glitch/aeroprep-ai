@@ -299,6 +299,9 @@ ${(() => { const r = getRoleModel(role); return `
 岗位：${r.label}
 核心能力权重：${r.abilities.map(a => `${a.name}${a.weight}%`).join("、")}
 问题方向示例：${r.abilities.slice(0,4).map(a => `【${a.name}】${a.questionExamples[0]}`).join("\n")}
+真实招聘流程（提问可结合流程，考察候选人是否了解岗位）：${r.hiringProcess.join(" → ")}
+该岗位标志性问题（作为方向参考，不要逐字照抄）：${r.signatureQuestions.slice(0, 3).join("；")}
+常见扣分红线（候选人出现这类表述，必须继续追问）：${r.redFlags.slice(0, 3).join("；")}
 `; })()}
 
 【问题生成优先级规则】
@@ -333,6 +336,7 @@ ${resumeText?.trim() ? `
 
 要求：
 - 这是全新的一场面试，请严格遵循上方航空公司画像的风格
+- 开场先用一句话说明你的身份与该岗位本场的考察侧重（结合上方"该岗位标志性问题"，例如"我是负责机务维修方向面试的，今天会重点了解你对维修规范和手册的理解"），再请他做自我介绍
 - 第一题永远是自我介绍（若上方提供了简历，则按上面的开场要求，带着简历语境提出）
 - 必须明确要求候选人介绍：姓名、年龄、学校、专业、相关经历
 - 要像真人HR在电话中说话
@@ -380,6 +384,9 @@ ${(() => { const r = getRoleModel(role); return `
 核心能力：${r.abilities.map(a => `${a.name}`).join("、")}
 关键信息采集：${r.keyInfoToCollect.join("、")}
 没有相关经历的候选人：${r.fallbackDirection}
+真实追问方向（优先覆盖尚未问到的核心能力）：${r.signatureQuestions.slice(0, 3).join("；")}
+扣分红线（候选人命中以下表述要立刻追问细节）：${r.redFlags.slice(0, 3).join("；")}
+高分特征（追问要往这些方向引导）：${r.highScoreSignals.slice(0, 2).join("；")}
 `; })()}
 
 【动态追问规则】
@@ -503,6 +510,9 @@ ${(() => { const r = getRoleModel(role); return `
 岗位：${r.label}
 核心评价维度权重：${(r.scoringModel || r.abilities).map(a => `${a.name}${a.weight}%`).join("、")}
 评分维度：${(r.scoringModel || r.abilities).map(a => a.name).join("、")}
+该岗位高分回答特征：${r.highScoreSignals.join("；")}
+该岗位常见扣分红线（逐条核对候选人是否命中，命中要在"不足"中点名）：${r.redFlags.slice(0, 4).join("；")}
+岗位硬性条件（用于判断职业认知是否到位，不作为唯一录取标准）：${r.hardRequirements.slice(0, 3).join("；")}
 禁止：对非核心能力（如与岗位无关的专业背景）进行过度评价。
 `; })()}
 

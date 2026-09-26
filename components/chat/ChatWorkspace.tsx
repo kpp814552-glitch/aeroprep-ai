@@ -49,8 +49,9 @@ const positionOptions = [
   { value: "maintenance", label: "机务维修" },
   { value: "dispatcher", label: "签派员" },
   { value: "atc", label: "空中交通管制员" },
-  { value: "airport-ops", label: "机场运行" },
-  { value: "terminal-service", label: "地服/安检" },
+  { value: "civil-aviation-electronics", label: "航电工程师" },
+  { value: "aviation-meteorology", label: "航空气象员" },
+  { value: "terminal-service", label: "航站楼服务/地服" },
 ];
 
 const answerTypes = ["自我介绍", "STAR案例", "职业规划", "岗位认知", "情景应变", "综合问题"];

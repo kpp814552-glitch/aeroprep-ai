@@ -94,6 +94,7 @@ export default function InterviewPrepPage() {
     useState<InterviewerPersona>("专业型HR");
   const [uploadError, setUploadError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [showProcess, setShowProcess] = useState(false);
 
   const selectedRoleLabel = useMemo(
     () => prepRoleOptions.find((item) => item.value === selectedRole)?.label ?? "飞行员",
@@ -106,6 +107,7 @@ export default function InterviewPrepPage() {
     () => getRoleModel(selectedRole).abilities.slice(0, 5),
     [selectedRole],
   );
+  const roleModel = useMemo(() => getRoleModel(selectedRole), [selectedRole]);
   const airlineFocus = useMemo(
     () => getAirlineProfile(selectedCompany).keyAreas.slice(0, 3),
     [selectedCompany],
@@ -446,6 +448,36 @@ export default function InterviewPrepPage() {
                       <p className="mt-2.5 border-t border-white/10 pt-2 text-[10px] leading-5 text-slate-400">
                         {selectedCompany} 面试更看重：
                         {airlineFocus.map((area) => `${area.name}（${area.weight}%）`).join(" · ")}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 真实招聘流程 + 硬性条件：让每个岗位的特色可见 */}
+                  <div className="mt-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="flex items-center gap-2 text-[11px] font-medium text-slate-300">
+                        <ShieldCheck className="h-3.5 w-3.5 text-emerald-300" />
+                        {selectedRoleLabel} 真实招聘流程
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setShowProcess((v) => !v)}
+                        className="shrink-0 rounded-full border border-white/12 px-2.5 py-0.5 text-[10px] text-slate-300 transition hover:bg-white/10"
+                      >
+                        {showProcess ? "收起" : `查看 ${roleModel.hiringProcess.length} 步`}
+                      </button>
+                    </div>
+                    <div className={`mt-2 space-y-1 ${showProcess ? "" : "max-h-[3.6rem] overflow-hidden"}`}>
+                      {roleModel.hiringProcess.map((step, index) => (
+                        <p key={step} className="text-[10px] leading-5 text-slate-400">
+                          <span className="mr-1.5 text-slate-500">{index + 1}.</span>
+                          {step}
+                        </p>
+                      ))}
+                    </div>
+                    {showProcess && (
+                      <p className="mt-2 border-t border-white/10 pt-2 text-[10px] leading-5 text-slate-400">
+                        常见硬性条件：{roleModel.hardRequirements.join("；")}
                       </p>
                     )}
                   </div>
