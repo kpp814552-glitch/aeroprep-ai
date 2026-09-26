@@ -97,7 +97,7 @@ export default function HomePage() {
               {INTERVIEW_FACTS.map((fact) => (
                 <span
                   key={fact}
-                  className="rounded-full border border-white/52 bg-white/30 px-3 py-1.5 text-[11px] font-medium text-slate-600 backdrop-blur-xl"
+                  className="rounded-full border border-white/52 bg-white/30 px-3 py-1.5 text-[11px] font-medium text-slate-600"
                 >
                   {fact}
                 </span>
@@ -107,7 +107,7 @@ export default function HomePage() {
             <div className="mt-9 w-full max-w-[590px]">
               <div
                 ref={heroPanelRef}
-                className="liquid-hero-panel rounded-[28px] p-3 backdrop-blur-[26px] backdrop-saturate-[1.65]"
+                className="liquid-hero-panel rounded-[28px] p-3 backdrop-blur-[20px] backdrop-saturate-[1.45]"
               >
                 <div className="flex flex-col items-center px-6 py-7 text-center">
                   <span className="flex h-12 w-12 items-center justify-center rounded-full border border-white/60 bg-white/32 text-slate-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.72)]">

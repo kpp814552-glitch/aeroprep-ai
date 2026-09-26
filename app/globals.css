@@ -104,7 +104,7 @@ input[type="submit"] {
   position: absolute;
   inset: -5%;
   transform: translate3d(var(--water-x, 0px), var(--water-y, 0px), 0);
-  transition: transform 1800ms cubic-bezier(0.22, 0.75, 0.25, 1);
+  transition: transform 180ms ease-out;
   backface-visibility: hidden;
   will-change: transform;
 }
@@ -115,7 +115,6 @@ input[type="submit"] {
   filter: blur(78px);
   opacity: 0.44;
   transform-origin: center;
-  will-change: transform;
 }
 
 .water-orb-a {
@@ -171,12 +170,9 @@ input[type="submit"] {
     radial-gradient(ellipse 14% 7% at 62% 28%, rgba(226, 244, 255, 0.46), transparent 74%),
     radial-gradient(ellipse 11% 6% at 78% 64%, rgba(255, 255, 255, 0.36), transparent 72%),
     radial-gradient(ellipse 16% 8% at 48% 82%, rgba(198, 235, 255, 0.34), transparent 76%);
-  filter: blur(10px);
   mix-blend-mode: screen;
   opacity: 0.28;
   animation: waterCaustics 24s ease-in-out infinite alternate;
-  backface-visibility: hidden;
-  will-change: transform;
 }
 
 .water-light-sheen {
@@ -190,11 +186,9 @@ input[type="submit"] {
     rgba(184, 222, 255, 0.10) 63%,
     transparent 78%
   );
-  filter: blur(18px);
   mix-blend-mode: screen;
   opacity: 0.52;
   animation: waterSheen 31s ease-in-out infinite alternate;
-  will-change: transform;
 }
 
 .water-orb-c,
@@ -206,7 +200,7 @@ input[type="submit"] {
 
 @media (min-width: 768px) {
   .water-orb {
-    filter: blur(128px);
+    filter: blur(48px);
     opacity: 0.56;
   }
 
