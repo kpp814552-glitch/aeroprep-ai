@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   CheckCircle as CheckCircleIcon,
-  ChevronDown,
   Coins,
   CreditCard,
   Crown,
@@ -35,37 +34,6 @@ type MyOrder = {
   note?: string;
 };
 
-const FAQS = [
-  {
-    q: "面试如何计费？",
-    a: `按次收费：单次 ¥${PRICE_PER_INTERVIEW}，每个账号可免费体验 1 次（与账号绑定，换设备不重置）。买 5 次 ¥9（省 ¥1）、10 次 ¥16（省 ¥4），最低 ¥1.6/次。购买的次数长期有效，用完为止。`,
-  },
-  {
-    q: "购买后次数如何到账？",
-    a: "扫码支付时请备注订单号，支付完成后点击「我已完成付款」。管理员核对到账后将次数入账，重新进入本页即可看到剩余次数。",
-  },
-  {
-    q: "次数会过期吗？",
-    a: "不会。购买的面试次数长期有效，不设有效期，随时可以开始训练。",
-  },
-  {
-    q: "如何查看剩余次数？",
-    a: "本页顶部会显示你的剩余免费次数和已购次数，每次完成面试后自动扣减一次。",
-  },
-  {
-    q: "中途退出或刷新会扣次数吗？",
-    a: "不会。只有完整做完并生成面试报告才会扣 1 次；中途退出、刷新或网络中断都不扣次数。如果面试没做完，重新进入会自动恢复到上次进度，继续答完即可。",
-  },
-  {
-    q: "重新开始一场怎么算？",
-    a: "每次完整做完并生成报告算一场，扣 1 次。主动放弃当前进度、重新开始，不会被额外扣费——只有做完的那一场计费。",
-  },
-  {
-    q: "可以退款吗？",
-    a: "面试次数为数字虚拟商品，购买后不支持退款。建议先用免费额度完整体验一次，确认合适后再购买。",
-  },
-];
-
 export default function MembershipPage() {
   const { user } = useAuth();
   const [selected, setSelected] = useState<CreditPack | null>(null);
@@ -76,7 +44,6 @@ export default function MembershipPage() {
   const [qrSrc, setQrSrc] = useState<string | null>(null);
   const [currentOrderId, setCurrentOrderId] = useState("");
   const [payError, setPayError] = useState("");
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [quota, setQuota] = useState<{ freeLeft: number; credits: number; isMember: boolean } | null>(null);
   const [creditedBanner, setCreditedBanner] = useState<number | null>(null);
   const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
@@ -394,33 +361,6 @@ export default function MembershipPage() {
             ))}
           </div>
 
-          {/* ===== FAQ ===== */}
-          <div className="mx-auto mt-16 max-w-3xl">
-            <h2 className="text-center text-lg font-semibold text-slate-800">常见问题</h2>
-            <div className="mt-6 overflow-hidden rounded-2xl border border-white/50 bg-white/60">
-              {FAQS.map((faq, i) => (
-                <div key={faq.q} className="border-b border-slate-100 last:border-b-0">
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    className="flex w-full items-center justify-between px-5 py-4 text-left transition hover:bg-white/40"
-                  >
-                    <span className="text-sm font-medium text-slate-700">{faq.q}</span>
-                    <ChevronDown
-                      className={`h-4 w-4 shrink-0 text-slate-400 transition duration-200 ${openFaq === i ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  <div
-                    className={`overflow-hidden px-5 transition-all duration-200 ease-out ${
-                      openFaq === i ? "max-h-96 pb-4 opacity-100" : "max-h-0 pb-0 opacity-0"
-                    }`}
-                  >
-                    <p className="text-xs leading-6 text-slate-500">{faq.a}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* ===== PAYMENT MODAL ===== */}
