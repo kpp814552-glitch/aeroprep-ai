@@ -23,7 +23,7 @@ export function GlassLinkButton({
         variant === "primary" &&
           "shine-border accent-ring bg-[rgba(37,113,255,0.88)] text-white hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(37,113,255,0.22)]",
         variant === "secondary" &&
-          "glass-muted text-slate-800 hover:-translate-y-0.5 hover:bg-white/60",
+          "glass-muted backdrop-blur-xl backdrop-saturate-150 text-slate-800 hover:-translate-y-0.5 hover:bg-white/60",
         className
       )}
     >

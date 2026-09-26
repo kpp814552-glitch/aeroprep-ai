@@ -3,13 +3,13 @@
 :root {
   --background: #f3f6fb;
   --foreground: #09111f;
-  --surface: rgba(255, 255, 255, 0.72);
-  --surface-strong: rgba(255, 255, 255, 0.82);
-  --surface-soft: rgba(255, 255, 255, 0.46);
-  --border: rgba(255, 255, 255, 0.58);
-  --border-strong: rgba(188, 204, 226, 0.6);
-  --shadow: 0 18px 48px rgba(37, 66, 109, 0.12);
-  --shadow-soft: 0 10px 28px rgba(48, 77, 121, 0.1);
+  --surface: rgba(255, 255, 255, 0.48);
+  --surface-strong: rgba(255, 255, 255, 0.64);
+  --surface-soft: rgba(255, 255, 255, 0.30);
+  --border: rgba(255, 255, 255, 0.62);
+  --border-strong: rgba(188, 204, 226, 0.46);
+  --shadow: 0 24px 64px rgba(37, 66, 109, 0.13);
+  --shadow-soft: 0 14px 36px rgba(48, 77, 121, 0.10);
   --accent: #2571ff;
   --accent-soft: rgba(37, 113, 255, 0.12);
   --muted: #63748c;
@@ -69,12 +69,18 @@ textarea {
 
 .glass-panel {
   position: relative;
-  background: linear-gradient(180deg, var(--surface-strong), var(--surface));
+  isolation: isolate;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.12) 42%, rgba(255, 255, 255, 0.26)),
+    linear-gradient(180deg, var(--surface-strong), var(--surface));
   border: 1px solid var(--border);
   border-radius: 28px;
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(26px) saturate(170%);
+  -webkit-backdrop-filter: blur(26px) saturate(170%);
 }
 
 .glass-panel::before {
@@ -82,19 +88,40 @@ textarea {
   position: absolute;
   inset: 1px;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.06));
-  opacity: 0.9;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.03) 54%),
+    linear-gradient(115deg, rgba(255, 255, 255, 0.28), transparent 28%);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.glass-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 8% 4%, rgba(255, 255, 255, 0.42), transparent 26%),
+    linear-gradient(120deg, transparent 58%, rgba(173, 216, 255, 0.10) 74%, transparent 88%);
+  mix-blend-mode: soft-light;
+  opacity: 0.58;
   pointer-events: none;
 }
 
 .glass-card {
   position: relative;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.4));
+  isolation: isolate;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.10) 46%, rgba(255, 255, 255, 0.24)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.28));
   border: 1px solid var(--border);
   border-radius: 24px;
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  box-shadow:
+    var(--shadow-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.66),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
 }
 
 .glass-card::before {
@@ -102,15 +129,30 @@ textarea {
   position: absolute;
   inset: 1px;
   border-radius: inherit;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.04));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.38), transparent 58%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.22), transparent 30%);
+  opacity: 0.76;
+  pointer-events: none;
+}
+
+.glass-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.34), transparent 30%);
+  mix-blend-mode: soft-light;
+  opacity: 0.52;
   pointer-events: none;
 }
 
 .glass-muted {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.42), rgba(255, 255, 255, 0.2));
-  border: 1px solid rgba(255, 255, 255, 0.44);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.30), rgba(255, 255, 255, 0.12));
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
 }
 
 .shine-border {
@@ -260,13 +302,13 @@ textarea {
   :root {
     --background: #0c1220;
     --foreground: #d6dce8;
-    --surface: rgba(32, 45, 68, 0.72);
-    --surface-strong: rgba(42, 58, 82, 0.82);
-    --surface-soft: rgba(24, 36, 56, 0.6);
-    --border: rgba(82, 108, 144, 0.35);
-    --border-strong: rgba(70, 100, 140, 0.5);
-    --shadow: 0 18px 48px rgba(0, 0, 0, 0.35);
-    --shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.3);
+    --surface: rgba(32, 45, 68, 0.46);
+    --surface-strong: rgba(42, 58, 82, 0.58);
+    --surface-soft: rgba(24, 36, 56, 0.34);
+    --border: rgba(118, 151, 196, 0.34);
+    --border-strong: rgba(84, 120, 168, 0.46);
+    --shadow: 0 24px 64px rgba(0, 0, 0, 0.38);
+    --shadow-soft: 0 14px 36px rgba(0, 0, 0, 0.32);
     --accent: #3b82f6;
     --accent-soft: rgba(59, 130, 246, 0.18);
     --muted: #8896a8;
@@ -286,25 +328,41 @@ textarea {
   }
 
   .glass-panel {
-    background: linear-gradient(180deg, var(--surface-strong), var(--surface));
+    background:
+      linear-gradient(135deg, rgba(108, 148, 204, 0.18), rgba(22, 34, 54, 0.06) 42%, rgba(80, 118, 170, 0.12)),
+      linear-gradient(180deg, var(--surface-strong), var(--surface));
     border-color: var(--border);
+    box-shadow:
+      var(--shadow),
+      inset 0 1px 0 rgba(210, 231, 255, 0.18),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.12);
   }
 
   .glass-panel::before {
-    background: linear-gradient(180deg, rgba(68, 98, 148, 0.22), transparent);
+    background:
+      linear-gradient(180deg, rgba(128, 170, 224, 0.18), transparent 58%),
+      linear-gradient(115deg, rgba(120, 170, 235, 0.12), transparent 32%);
   }
 
   .glass-card {
-    background: linear-gradient(180deg, rgba(38, 56, 86, 0.72), rgba(28, 42, 66, 0.48));
+    background:
+      linear-gradient(135deg, rgba(104, 145, 205, 0.16), rgba(24, 36, 56, 0.06) 46%, rgba(68, 106, 160, 0.10)),
+      linear-gradient(180deg, rgba(38, 56, 86, 0.50), rgba(28, 42, 66, 0.32));
     border-color: var(--border);
+    box-shadow:
+      var(--shadow-soft),
+      inset 0 1px 0 rgba(210, 231, 255, 0.16),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.10);
   }
 
   .glass-card::before {
-    background: linear-gradient(180deg, rgba(68, 98, 148, 0.18), transparent);
+    background:
+      linear-gradient(180deg, rgba(114, 158, 216, 0.15), transparent 60%),
+      linear-gradient(120deg, rgba(100, 150, 220, 0.10), transparent 34%);
   }
 
   .glass-muted {
-    background: linear-gradient(180deg, rgba(38, 56, 86, 0.48), rgba(28, 42, 66, 0.28));
+    background: linear-gradient(180deg, rgba(38, 56, 86, 0.32), rgba(28, 42, 66, 0.16));
     border-color: var(--border);
   }
 
@@ -314,8 +372,8 @@ textarea {
   .glass-panel,
   .glass-card,
   .glass-muted {
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(12px) saturate(145%);
+    -webkit-backdrop-filter: blur(12px) saturate(145%);
   }
 
   .orbital-float {

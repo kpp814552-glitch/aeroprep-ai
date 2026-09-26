@@ -13,7 +13,7 @@ test.describe("资料中心", () => {
 
   test("搜索并打开训练内容", async ({ page }) => {
     await page.goto("/learning");
-    await page.getByPlaceholder("搜索知识与训练").fill("STAR");
+    await page.getByPlaceholder("搜索知识与训练").first().fill("STAR");
     await expect(page.getByText("STAR 案例法：让经历有证据")).toBeVisible();
     await page.getByText("STAR 案例法：让经历有证据").click();
     await expect(page.getByText("学完你要做到")).toBeVisible();

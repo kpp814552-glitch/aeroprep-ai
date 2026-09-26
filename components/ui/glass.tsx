@@ -7,11 +7,11 @@ type GlassSurfaceProps = {
 };
 
 export function GlassPanel({ children, className }: GlassSurfaceProps) {
-  return <div className={cn("glass-panel", className)}>{children}</div>;
+  return <div className={cn("glass-panel backdrop-blur-2xl backdrop-saturate-150", className)}>{children}</div>;
 }
 
 export function GlassCard({ children, className }: GlassSurfaceProps) {
-  return <div className={cn("glass-card", className)}>{children}</div>;
+  return <div className={cn("glass-card backdrop-blur-xl backdrop-saturate-150", className)}>{children}</div>;
 }
 
 type GlassButtonProps = {
@@ -33,7 +33,7 @@ export function GlassButton({
         variant === "primary" &&
           "accent-ring bg-[rgba(37,113,255,0.88)] text-white hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(37,113,255,0.22)]",
         variant === "secondary" &&
-          "glass-muted text-slate-800 hover:-translate-y-0.5 hover:bg-white/60",
+          "glass-muted backdrop-blur-xl backdrop-saturate-150 text-slate-800 hover:-translate-y-0.5 hover:bg-white/60",
         variant === "ghost" &&
           "bg-white/20 text-slate-700 hover:bg-white/36",
         className

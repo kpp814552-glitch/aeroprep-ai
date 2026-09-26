@@ -300,7 +300,7 @@ export default function FaqPage() {
 
           <div className="mt-10 grid gap-7 lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start">
             <aside className="lg:sticky lg:top-6">
-              <div className="glass-panel p-3">
+              <div className="glass-panel p-3 backdrop-blur-2xl backdrop-saturate-150">
                 <p className="px-2 pb-3 pt-1 text-[10px] font-medium uppercase tracking-[0.2em] text-slate-400">
                   问题分类
                 </p>

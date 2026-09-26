@@ -45,7 +45,7 @@ function useCountUp(target: number, duration = 2000): [number, React.RefObject<H
 function StatCard({ label, value, suffix, icon: Icon }: { label: string; value: number; suffix: string; icon: any }) {
   const [count, ref] = useCountUp(value);
   return (
-    <div className="glass-card rounded-[24px] border border-white/36 bg-white/34 px-5 py-5 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_12px_36px_rgba(0,0,0,0.06)]">
+    <div className="glass-card rounded-[24px] border border-white/36 bg-white/34 px-5 py-5 backdrop-blur-xl backdrop-saturate-150 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_12px_36px_rgba(0,0,0,0.06)]">
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/50">
           <Icon className="h-4 w-4 text-slate-600" />
@@ -107,7 +107,7 @@ function AIDemoCard() {
   const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
   return (
-    <div ref={cardRef} className="glass-card relative overflow-hidden rounded-[28px] border border-white/40 bg-white/60 p-5 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_16px_48px_rgba(37,113,255,0.1)]">
+    <div ref={cardRef} className="glass-card relative overflow-hidden rounded-[28px] border border-white/40 bg-white/60 p-5 backdrop-blur-xl backdrop-saturate-150 transition-all duration-500 hover:scale-[1.02] hover:shadow-[0_16px_48px_rgba(37,113,255,0.1)]">
       {/* Shimmer */}
       <div className="glass-shimmer" />
 

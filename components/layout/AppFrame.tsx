@@ -27,7 +27,7 @@ export default function AppFrame({
   return (
     <div className={cn("relative z-10", className)}>
       <header className="rise-in px-5 pt-5 md:px-8 md:pt-7">
-        <div className="mx-auto flex max-w-7xl flex-col gap-2.5 rounded-[26px] border border-white/35 bg-white/55 px-4 py-3 shadow-[0_10px_28px_rgba(21,43,74,0.08)] md:flex-row md:items-center md:justify-between md:gap-0 md:rounded-full md:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2.5 rounded-[26px] border border-white/42 bg-white/38 px-4 py-3 shadow-[0_18px_48px_rgba(21,43,74,0.10),inset_0_1px_0_rgba(255,255,255,0.72)] backdrop-blur-2xl backdrop-saturate-150 md:flex-row md:items-center md:justify-between md:gap-0 md:rounded-full md:px-6">
           <div className="flex items-center gap-3">
             {backHref ? (
               <Link
@@ -50,7 +50,7 @@ export default function AppFrame({
             </Link>
           </div>
 
-          <nav className="flex w-full items-center gap-1 overflow-x-auto rounded-full bg-white/30 p-1 [-webkit-overflow-scrolling:touch] scrollbar-none sm:gap-2 md:w-auto md:overflow-visible">
+          <nav className="flex w-full items-center gap-1 overflow-x-auto rounded-full border border-white/28 bg-white/22 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.42)] backdrop-blur-xl [-webkit-overflow-scrolling:touch] scrollbar-none sm:gap-2 md:w-auto md:overflow-visible">
             {[
               { href: "/", label: "首页" },
               { href: "/interview", label: "AI面试" },
