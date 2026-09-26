@@ -72,7 +72,7 @@ function formatFileSize(size: number) {
 export default function InterviewPrepPage() {
   const [, setQuotaTick] = useState(0);
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
 
   // 次数到账/扣减时刷新额度文案
   useEffect(() => subscribeCredits(() => setQuotaTick((t) => t + 1)), []);
@@ -197,9 +197,9 @@ export default function InterviewPrepPage() {
     selectedMode
   )}&persona=${encodeURIComponent(selectedPersona)}`;
 
-  // ⚠️ 所有 hook 必须在这两个 return 之前调用，否则会出现
-  // "Rendered more hooks than during the previous render" 白屏
-  if (loading) return null;
+  // 说明：这里不再因为 loading 而返回 null。
+  // 之前等待会话初始化（数据库查询 + 钱包接口）会让整个准备页白屏好几秒，
+  // 未登录样式本身就是可用的（点开始面试会弹登录框），拿到用户后会立即切换。
 
   return (
     <AppFrame backHref="/" backLabel="返回首页">

@@ -113,11 +113,14 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       // Safety timeout: force loading false after 8 seconds
       const safetyTimeout = setTimeout(() => { if (!cancelled) setLoading(false); }, 8000);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && !cancelled) {
           setUser(session.user);
           touchLastLogin(session.user.id);
-          await fetchProfile(session.user.id);
+          // 先结束 loading 再补资料：fetchProfile 要跑一次数据库查询 +
+          // 一次 /api/member/status，如果等它完成，整站首屏会白屏好几秒。
+          setLoading(false);
+          void fetchProfile(session.user.id);
         }
       } catch (err) {
         console.error('[Auth] init error:', err);
