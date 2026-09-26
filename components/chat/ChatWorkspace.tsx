@@ -138,7 +138,7 @@ export default function ChatWorkspace() {
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<OptimizeAnalysis | null>(null);
   const [fallbackText, setFallbackText] = useState("");
-  const [tab, setTab] = useState<"overview" | "rewrites" | "followups" | "optimized">("overview");
+  const [tab, setTab] = useState<"overview" | "compare" | "rewrites" | "followups" | "optimized">("overview");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
@@ -295,6 +295,7 @@ export default function ChatWorkspace() {
   const tabs = analysis
     ? [
         { key: "overview" as const, label: "诊断总览", icon: BarChart3 },
+        { key: "compare" as const, label: "原文对照", icon: ArrowRight },
         { key: "rewrites" as const, label: `逐句改写 ${analysis.rewrites.length}`, icon: Lightbulb },
         { key: "followups" as const, label: `追问预测 ${analysis.followups.length}`, icon: Target },
         { key: "optimized" as const, label: "优化稿", icon: FileText },
@@ -722,11 +723,56 @@ export default function ChatWorkspace() {
                 </div>
               ) : null}
 
+              {/* 原文 / 优化稿对照：方便逐段比对，也方便直接拷走改写结果 */}
+              {tab === "compare" ? (
+                <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-white/50 bg-white/60 px-5 py-4 shadow-sm">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">你的原文</p>
+                      <button
+                        type="button"
+                        onClick={() => copyText(draft)}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] text-slate-600 transition hover:bg-slate-200"
+                      >
+                        <Copy className="h-3 w-3" />复制
+                      </button>
+                    </div>
+                    <div className="max-h-[420px] overflow-y-auto whitespace-pre-wrap text-xs leading-6 text-slate-600">
+                      {draft}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-sky-100 bg-white px-5 py-4 shadow-sm">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-sky-500">优化后</p>
+                      <button
+                        type="button"
+                        onClick={() => copyText(analysis.optimized)}
+                        className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] text-slate-600 transition hover:bg-slate-200"
+                      >
+                        <Copy className="h-3 w-3" />复制
+                      </button>
+                    </div>
+                    <div className="prose prose-slate max-h-[420px] max-w-none overflow-y-auto text-xs leading-6">
+                      <ReactMarkdown>{analysis.optimized || "（本次未生成优化稿）"}</ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {tab === "rewrites" ? (
                 <div className="mt-5 space-y-3">
                   {analysis.rewrites.length > 0 ? analysis.rewrites.map((r, i) => (
                     <div key={i} className="rounded-2xl border border-white/50 bg-white/60 px-5 py-4 shadow-sm">
-                      <p className="text-[11px] font-medium text-slate-500">原句</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] font-medium text-slate-500">原句</p>
+                        <button
+                          type="button"
+                          onClick={() => copyText(r.improved)}
+                          className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-[10px] text-slate-600 transition hover:bg-slate-200"
+                        >
+                          <Copy className="h-3 w-3" />复制改写
+                        </button>
+                      </div>
                       <p className="mt-1 text-sm leading-6 text-slate-600">{r.original}</p>
                       {r.problem ? (
                         <p className="mt-3 flex items-start gap-2 text-[11px] leading-5 text-amber-700">
@@ -746,9 +792,18 @@ export default function ChatWorkspace() {
                 <div className="mt-5 space-y-3">
                   {analysis.followups.length > 0 ? analysis.followups.map((f, i) => (
                     <div key={i} className="rounded-2xl border border-white/50 bg-white/60 px-5 py-4 shadow-sm">
-                      <p className="flex items-start gap-2 text-sm font-medium text-slate-800">
-                        <Target className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />{f.question}
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="flex items-start gap-2 text-sm font-medium text-slate-800">
+                          <Target className="mt-0.5 h-4 w-4 shrink-0 text-violet-500" />{f.question}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => copyText(`${f.question}${f.answerTip ? `\n应答要点：${f.answerTip}` : ""}`)}
+                          className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-[10px] text-slate-600 transition hover:bg-slate-200"
+                        >
+                          复制
+                        </button>
+                      </div>
                       {f.answerTip ? (
                         <p className="mt-2 rounded-xl bg-slate-50 px-4 py-3 text-[12px] leading-6 text-slate-600">
                           应答要点：{f.answerTip}

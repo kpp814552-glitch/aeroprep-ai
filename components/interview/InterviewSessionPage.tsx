@@ -4,7 +4,15 @@ import {
   useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useRouter, useSearchParams } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, RotateCcw } from "lucide-react";
+
+/** 生成报告时的分阶段提示，避免长时间等待让人觉得卡死 */
+const REPORT_STEPS = [
+  "正在整理本场问答记录…",
+  "正在按岗位能力维度逐题评分…",
+  "正在撰写综合评价与成长建议…",
+  "即将完成，请稍候…",
+];
 import {
   
   getAnswerSecondsForStage,
@@ -272,6 +280,7 @@ const resumeQualityRef = useRef<any>(
   const [statusText, setStatusText] = useState("正在连接面试室");
   const [turns, setTurns] = useState<InterviewTurn[]>([]);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [reportStep, setReportStep] = useState(0);
   const [fatalError, setFatalError] = useState("");
   const [isAnswering, setIsAnswering] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
@@ -1224,6 +1233,37 @@ const resumeQualityRef = useRef<any>(
     };
   }, [stopRecognition, voiceSession]);
 
+  // ── 重听问题：暂停答题倒计时 → 重播题目语音（音频已缓存，秒播）→ 从剩余时间继续计时 ──
+  const handleReplayQuestion = useCallback(async () => {
+    const text = activeQuestionRef.current || currentQuestion;
+    if (!text || !voiceSession || isGeneratingReport) return;
+    const remaining = timer.answerCountdown;
+    timer.clearAnswerTimer();
+    setStatusText('正在重播题目...');
+    try {
+      await voiceSession.speakQuestion(text);
+    } catch {
+      /* 播放失败不阻塞答题 */
+    } finally {
+      if (remaining > 0) {
+        timer.startAnswerCountdown(remaining, () => endAnswerRef.current());
+        setStatusText('请继续作答');
+      }
+    }
+  }, [currentQuestion, isGeneratingReport, timer, voiceSession]);
+
+  // ── 报告生成时的分阶段提示：让等待可感知（报告通常 20-60 秒）──
+  useEffect(() => {
+    if (!isGeneratingReport) {
+      setReportStep(0);
+      return;
+    }
+    const id = window.setInterval(() => {
+      setReportStep((s) => Math.min(s + 1, REPORT_STEPS.length - 1));
+    }, 9000);
+    return () => window.clearInterval(id);
+  }, [isGeneratingReport]);
+
   // ⚠️ 所有 hook 必须在这两个 return 之前，否则会出现
   // "Rendered more hooks than during the previous render" 白屏（面试间无法进入）
   if (loading) return null;
@@ -1236,6 +1276,13 @@ const resumeQualityRef = useRef<any>(
   const showBottomCard = phase === 'playing' || phase === 'listening' || phase === 'processing';
   const isPlayingPhase = phase === 'playing';
   const isListeningPhase = phase === 'listening';
+  // 面试进度与答题时间可视化（让考生知道"现在第几题、还能说多久"）
+  const totalRounds = getTotalRoundsForMode(mode);
+  const roundLabel = `第 ${Math.min(turns.length + 1, totalRounds)} / ${totalRounds} 题`;
+  const answerTotalSeconds = currentStage ? getAnswerSecondsForStage(currentStage) : 0;
+  const answerProgress = answerTotalSeconds > 0
+    ? Math.max(0, Math.min(1, timer.answerCountdown / answerTotalSeconds))
+    : 0;
 
   // ── Save dialog (shown when API fails) ──
   return showSaveDialog ? (
@@ -1323,6 +1370,9 @@ const resumeQualityRef = useRef<any>(
                     <span className="text-white/56">{interviewerLabel}：</span>
                     {phase === 'processing' && isGeneratingReport ? '面试结束，正在生成面试报告...' : phase === 'processing' ? '正在分析问题内容...' : (currentQuestion || '请稍等，面试官正在进入面试室。')}
                   </p>
+                  {phase === 'processing' && isGeneratingReport ? (
+                    <p className="text-[0.66rem] leading-5 text-[#f5c689]/70">{REPORT_STEPS[reportStep]}</p>
+                  ) : null}
                   <p className="break-words">
                     <span className="text-white/56">考生：</span>
                     {transcriptPreview}
@@ -1501,15 +1551,29 @@ const resumeQualityRef = useRef<any>(
                     <p className="mt-2 text-pretty text-[0.9rem] sm:text-[1rem] leading-[1.42] tracking-[-0.01em] text-white/92 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)] md:text-[1.28rem]">
                       {phase === 'processing' && isGeneratingReport ? '面试结束，正在生成面试报告...' : phase === 'processing' ? '正在分析问题内容...' : currentQuestion}
                     </p>
+                    {phase === 'processing' && isGeneratingReport ? (
+                      <p className="mt-1 text-[0.7rem] tracking-[0.04em] text-[#f5c689]/70">
+                        {REPORT_STEPS[reportStep]}
+                      </p>
+                    ) : null}
                     <div className="mt-2 flex max-sm:flex-col max-sm:items-stretch items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
                         <div>
                           <p className="text-[0.64rem] uppercase tracking-[0.26em] text-white/42">
-                            {interviewStageLabels[currentStage] || "答题"}
+                            {roundLabel} · {interviewStageLabels[currentStage] || "答题"}
                           </p>
                           <p className="mt-1 font-light tabular-nums text-[1.18rem] tracking-[0.12em] text-white/84 md:text-[1.32rem]">
                             {answerCountdownLabel}
                           </p>
+                          {/* 答题时间可视化：剩余时间占比 */}
+                          {isListeningPhase ? (
+                            <div className="mt-1.5 h-0.5 w-24 overflow-hidden rounded-full bg-white/10">
+                              <div
+                                className="h-full rounded-full bg-[#f5c689]/70 transition-all duration-1000 ease-linear"
+                                style={{ width: `${Math.round(answerProgress * 100)}%` }}
+                              />
+                            </div>
+                          ) : null}
                         </div>
                         <p className="text-[0.72rem] text-white/48 md:text-[0.8rem]">
                           {isPlayingPhase
@@ -1529,15 +1593,28 @@ const resumeQualityRef = useRef<any>(
                           播放语音
                         </button>
                       ) : isListeningPhase ? (
-                        <button
-                          type="button"
-                          onClick={handleEndAnswer}
-                          aria-label="结束回答"
-                          disabled={!isAnswering || isGeneratingReport}
-                          className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-white/20 bg-white/14 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-white/88 transition hover:border-white/30 hover:bg-white/22 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35 max-sm:py-3"
-                        >
-                          End Answer
-                        </button>
+                        <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+                          {/* 没听清题时可以重听：真人线上面试也允许请面试官重复问题 */}
+                          <button
+                            type="button"
+                            onClick={handleReplayQuestion}
+                            aria-label="重听题目"
+                            disabled={!isAnswering || isGeneratingReport}
+                            className="pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-full border border-white/14 bg-white/8 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-white/70 transition hover:border-white/24 hover:bg-white/14 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35 max-sm:py-3"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                            重听题目
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleEndAnswer}
+                            aria-label="结束回答"
+                            disabled={!isAnswering || isGeneratingReport}
+                            className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-white/20 bg-white/14 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-white/88 transition hover:border-white/30 hover:bg-white/22 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35 max-sm:py-3"
+                          >
+                            End Answer
+                          </button>
+                        </div>
                       ) : null}
                     </div>
                   </div>
