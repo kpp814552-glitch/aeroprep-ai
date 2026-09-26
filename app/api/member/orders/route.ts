@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { findOrder, walletBalance, type CreditOrder } from "@/lib/member/wallet";
+import { findOrder, walletBalance, type CreditOrder, type OrderStatus } from "@/lib/member/wallet";
 import { PACKS, loadRegistry, loadWallet, makeOrderId, mutateWallet } from "@/lib/member/wallet-server";
 
 const MAX_PENDING = 5;
@@ -23,13 +23,31 @@ export async function POST(request: NextRequest) {
 
   const orderId = (body.orderId && String(body.orderId).trim()) || makeOrderId();
 
+  // 管理端核发账本：用户账本里可能残留"已审核但没同步"的订单，
+  // 必须先合并出真实状态，否则历史 pending 会一直占着待审核名额。
+  const registryRow = await loadRegistry(supabase, user.id);
+  const decidedById = new Map<string, OrderStatus>();
+  for (const entry of ("error" in registryRow ? [] : registryRow.registry.entries)) {
+    decidedById.set(entry.id, entry.status);
+  }
+
   const result = await mutateWallet(supabase, user.id, (doc) => {
+    // 自愈：把管理端已有结论的订单状态同步回用户账本
+    let healed = false;
+    for (const order of doc.orders) {
+      const decided = decidedById.get(order.id);
+      if (decided && decided !== order.status) {
+        order.status = decided;
+        healed = true;
+      }
+    }
+
     const existing = findOrder(doc, orderId);
-    if (existing) return { commit: false, value: existing };
+    if (existing) return { commit: healed, value: existing };
 
     const pendingCount = doc.orders.filter((o) => o.status === "pending").length;
     if (pendingCount >= MAX_PENDING) {
-      return { commit: false, value: null };
+      return { commit: healed, value: null };
     }
 
     const order: CreditOrder = {
@@ -53,7 +71,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "你有待审核的订单尚未处理，请等待管理员核对" }, { status: 429 });
   }
 
-  const registryRow = await loadRegistry(supabase, user.id);
   const registry = "error" in registryRow ? undefined : registryRow.registry;
   const row = await loadWallet(supabase, user.id);
   const left = "error" in row ? 0 : walletBalance(row.doc, registry);
