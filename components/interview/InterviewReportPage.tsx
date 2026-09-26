@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowRight,
   BarChart3,
+  ChevronDown,
   CircleGauge,
   Radar,
   TrendingUp,
+  WandSparkles,
 } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import {
@@ -150,7 +152,36 @@ export default function InterviewReportPage() {
   const [expandedQuestions, setExpandedQuestions] = useState<Record<number, boolean>>({});
   const toggleQuestion = (idx: number) => setExpandedQuestions(prev => ({ ...prev, [idx]: !prev[idx] }));
 
+  const router = useRouter();
   const levelMap: Record<string, string> = { A: '优秀', B: '较强', C: '中等', D: '待提升' };
+
+  // 把报告里的逐题分析与 AI 优化打通：带上原文与岗位上下文跳到优化页
+  const OPTIMIZE_SEED_KEY = "aeroprep_optimize_seed";
+  const answerTypeByStage: Record<string, string> = {
+    "self-intro": "自我介绍",
+    project: "STAR案例",
+    internship: "STAR案例",
+    career: "职业规划",
+    "role-fit": "岗位认知",
+    professional: "岗位认知",
+    scenario: "情景应变",
+  };
+
+  const optimizeAnswer = (answer: string, stage?: string) => {
+    if (!answer.trim()) return;
+    try {
+      sessionStorage.setItem(
+        OPTIMIZE_SEED_KEY,
+        JSON.stringify({
+          content: answer,
+          positionLabel: sessionRecord?.roleLabel || "民航岗位",
+          recruitType: sessionRecord?.mode || "校招",
+          answerType: (stage && answerTypeByStage[stage]) || "综合问题",
+        }),
+      );
+    } catch { /* ignore */ }
+    router.push("/chat");
+  };
 
   const radarItems = useMemo(() => {
     const report = sessionRecord?.report;
@@ -447,7 +478,79 @@ export default function InterviewReportPage() {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          {/* ===== 逐题分析（默认折叠，每题独立）===== */}
+          {report.perQuestionAnalysis?.length ? (
+            <section className="mt-8">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-sky-600" />
+                <h2 className="text-sm font-medium text-slate-950">逐题分析</h2>
+                <span className="text-[11px] text-slate-400">
+                  共 {report.perQuestionAnalysis.length} 题 · 每题独立分析，点击展开
+                </span>
+              </div>
+              <div className="space-y-3">
+                {report.perQuestionAnalysis.map((analysis, index) => {
+                  const turn = sessionRecord.turns?.[index];
+                  const expanded = !!expandedQuestions[index];
+                  return (
+                    <div
+                      key={`question-${index}`}
+                      className="overflow-hidden rounded-[24px] border border-white/44 bg-white/56 shadow-[0_12px_32px_rgba(75,54,31,0.05)]"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleQuestion(index)}
+                        aria-expanded={expanded}
+                        className="flex w-full items-start justify-between gap-3 px-5 py-4 text-left transition hover:bg-white/60"
+                      >
+                        <span className="min-w-0">
+                          <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-sky-600">
+                            第 {index + 1} 题
+                          </span>
+                          <span className="mt-1 block text-sm text-slate-800">
+                            {turn?.question || "（本场问题记录）"}
+                          </span>
+                        </span>
+                        <ChevronDown
+                          className={`mt-1 h-4 w-4 shrink-0 text-slate-400 transition duration-200 ${expanded ? "rotate-180" : ""}`}
+                        />
+                      </button>
+
+                      {expanded ? (
+                        <div className="border-t border-white/40 px-5 py-4">
+                          {turn?.answer ? (
+                            <div className="rounded-2xl bg-slate-50/80 px-4 py-3">
+                              <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">你的回答原文</p>
+                              <p className="mt-1.5 whitespace-pre-wrap text-sm leading-7 text-slate-600">
+                                {turn.answer}
+                              </p>
+                            </div>
+                          ) : null}
+
+                          <div className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">
+                            {analysis}
+                          </div>
+
+                          {turn?.answer ? (
+                            <button
+                              type="button"
+                              onClick={() => optimizeAnswer(turn.answer, turn.stage)}
+                              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-2 text-[11px] font-medium text-white shadow-sm transition hover:brightness-110"
+                            >
+                              <WandSparkles className="h-3.5 w-3.5" />
+                              用 AI 深入优化这段回答
+                            </button>
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          ) : null}
+
+          <div className="mt-8 flex justify-end">
             <Link
               href="/profile"
               className="inline-flex items-center gap-2 text-sm font-medium text-sky-700"

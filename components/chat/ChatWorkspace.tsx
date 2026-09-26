@@ -143,6 +143,7 @@ export default function ChatWorkspace() {
   const [copied, setCopied] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
   const [cachedHint, setCachedHint] = useState(false);
+  const [seedHint, setSeedHint] = useState(false);
 
   const resultRef = useRef<HTMLDivElement | null>(null);
   const positionLabel = useMemo(
@@ -155,6 +156,29 @@ export default function ChatWorkspace() {
     try {
       const raw = localStorage.getItem(HISTORY_KEY);
       if (raw) setHistory(JSON.parse(raw) as HistoryItem[]);
+    } catch { /* ignore */ }
+  }, []);
+
+  // 从面试报告「用 AI 深入优化这段回答」跳转过来时，自动带入原文与岗位上下文
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("aeroprep_optimize_seed");
+      if (!raw) return;
+      sessionStorage.removeItem("aeroprep_optimize_seed");
+      const seed = JSON.parse(raw) as {
+        content?: string;
+        positionLabel?: string;
+        recruitType?: string;
+        answerType?: string;
+      };
+      if (!seed?.content?.trim()) return;
+      setKind("interview");
+      setDraft(seed.content.slice(0, 5000));
+      if (seed.recruitType) setRecruitType(seed.recruitType);
+      if (seed.answerType) setAnswerType(seed.answerType);
+      const matchedPosition = positionOptions.find((p) => p.label === seed.positionLabel);
+      if (matchedPosition) setPosition(matchedPosition.value);
+      setSeedHint(true);
     } catch { /* ignore */ }
   }, []);
 
@@ -366,6 +390,13 @@ export default function ChatWorkspace() {
                   );
                 })}
               </div>
+
+              {seedHint ? (
+                <div className="flex items-start gap-2 rounded-2xl border border-sky-200/70 bg-sky-50/70 px-4 py-3 text-[11px] leading-5 text-sky-800">
+                  <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  <span>已从面试报告带入你的回答与岗位信息，确认无误后点「开始深度诊断」即可。</span>
+                </div>
+              ) : null}
 
               <GlassPanel className="overflow-hidden rounded-[22px] border border-white/40 bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/30 px-5 py-3">

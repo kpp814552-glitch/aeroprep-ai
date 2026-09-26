@@ -13,6 +13,46 @@ const REPORT_STEPS = [
   "正在撰写综合评价与成长建议…",
   "即将完成，请稍候…",
 ];
+
+// ── 面试中断恢复：把进度存在 sessionStorage，刷新/误关页面后可以接着答 ──
+const PROGRESS_KEY = "aeroprep_interview_progress";
+const PROGRESS_MAX_AGE_MS = 30 * 60 * 1000; // 30 分钟内有效
+
+type SavedProgress = {
+  key: string; // 岗位|航司|模式|面试官，配置变了就不恢复
+  turns: InterviewTurn[];
+  pending: { text: string; stage: InterviewStage; interviewer: string; roleLabel: string } | null;
+  savedAt: number;
+};
+
+function readSavedProgress(key: string): SavedProgress | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(PROGRESS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SavedProgress;
+    if (!parsed || parsed.key !== key) return null;
+    if (!parsed.pending?.text) return null;
+    if (Date.now() - (parsed.savedAt || 0) > PROGRESS_MAX_AGE_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeSavedProgress(progress: SavedProgress): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  } catch { /* ignore */ }
+}
+
+function clearSavedProgress(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(PROGRESS_KEY);
+  } catch { /* ignore */ }
+}
 import {
   
   getAnswerSecondsForStage,
@@ -281,6 +321,7 @@ const resumeQualityRef = useRef<any>(
   const [turns, setTurns] = useState<InterviewTurn[]>([]);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [reportStep, setReportStep] = useState(0);
+  const [restoredFromSaved, setRestoredFromSaved] = useState(false);
   const [fatalError, setFatalError] = useState("");
   const [isAnswering, setIsAnswering] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
@@ -448,6 +489,8 @@ const resumeQualityRef = useRef<any>(
         // console.log('[Report Save] sessionId=' + record.sessionId + ' score=' + payload.report?.totalScore);
         saveInterviewSession(record);
         saveInterviewCompletionGrowth(record);
+        // 本场已完成，清掉中断恢复用的进度
+        clearSavedProgress();
         // console.log('[Interview Finish] turns=' + finalTurns.length + ' elapsed=' + totalElapsedSeconds + 's score=' + payload.report?.totalScore);
         completedSessionIdRef.current = record.sessionId;
         completedScoreRef.current = payload.report?.totalScore ?? 0;
@@ -525,6 +568,7 @@ const resumeQualityRef = useRef<any>(
         // console.log('[Report Save] Saving fallback record (no report)', fallbackRecord.sessionId);
         saveInterviewSession(fallbackRecord);
         saveInterviewCompletionGrowth(fallbackRecord);
+        clearSavedProgress();
         completedSessionIdRef.current = fallbackRecord.sessionId;
         completedScoreRef.current = fallbackReport.totalScore || 0;
         completedTurnsRef.current = finalTurns.length;
@@ -835,6 +879,27 @@ const resumeQualityRef = useRef<any>(
 
     async function prepare() {
       try {
+        // 0. 刷新或误关页面后，直接从上次进度接着答（30 分钟内有效）
+        const progressKey = `${role}|${company}|${mode}|${persona}`;
+        const saved = readSavedProgress(progressKey);
+        if (saved?.pending) {
+          const restored = saved.pending;
+          setTurns(saved.turns);
+          pendingQuestionRef.current = restored;
+          activeQuestionRef.current = restored.text;
+          setInterviewerLabel(restored.interviewer);
+          setRoleLabel(restored.roleLabel);
+          setCurrentStage(restored.stage);
+          await voiceSession?.prepare();
+          await voiceSession?.preloadQuestion(restored.text);
+          if (!cancelled) {
+            setRestoredFromSaved(true);
+            setPhase('ready');
+            setStatusText(`已恢复上次进度 · 第 ${Math.min(saved.turns.length + 1, getTotalRoundsForMode(mode))} 题`);
+          }
+          return;
+        }
+
         // 1. Prepare voice session
         const [, firstQ] = await Promise.all([
           voiceSession?.prepare(),
@@ -861,6 +926,14 @@ const resumeQualityRef = useRef<any>(
 
         if (firstQ.interviewer) setInterviewerLabel(firstQ.interviewer);
         if (firstQ.roleLabel) setRoleLabel(firstQ.roleLabel);
+
+        // 记录进度：首题已就绪（未作答）
+        writeSavedProgress({
+          key: progressKey,
+          turns: [],
+          pending: pendingQuestionRef.current,
+          savedAt: Date.now(),
+        });
 
         // 4. Preload TTS for first question
         setStatusText('正在准备语音...');
@@ -1055,6 +1128,14 @@ const resumeQualityRef = useRef<any>(
 
       if (nextQ.interviewer) setInterviewerLabel(nextQ.interviewer);
       if (nextQ.roleLabel) setRoleLabel(nextQ.roleLabel);
+
+      // 记录进度：已答 nextTurns.length 题，下一题已就绪
+      writeSavedProgress({
+        key: `${role}|${company}|${mode}|${persona}`,
+        turns: nextTurns,
+        pending: pendingQuestionRef.current,
+        savedAt: Date.now(),
+      });
 
       // Preload TTS while still showing "AI 正在分析你的回答..."
       setStatusText('AI 正在分析你的回答...（语音准备中）');
@@ -1420,6 +1501,11 @@ const resumeQualityRef = useRef<any>(
               <p className="mt-2 text-sm text-white/85">
                 已准备好 {roleLabel} 岗位的模拟面试
               </p>
+              {restoredFromSaved ? (
+                <p className="mt-2 rounded-full border border-emerald-300/25 bg-emerald-400/10 px-4 py-1.5 text-[11px] text-emerald-100/85">
+                  已恢复上次未完成的面试 · 从第 {Math.min(turns.length + 1, totalRounds)} 题继续
+                </p>
+              ) : null}
               {/* 本场配置：航司 / 岗位 / 模式 / 面试官 + 简历是否参与 */}
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] text-white/70">
                 {[company, roleLabel, mode, persona].filter(Boolean).map((item) => (
@@ -1438,6 +1524,18 @@ const resumeQualityRef = useRef<any>(
               >
                 点击开始面试
               </button>
+              {turns.length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearSavedProgress();
+                    window.location.reload();
+                  }}
+                  className="mt-4 text-[11px] text-white/45 underline underline-offset-4 transition hover:text-white/70"
+                >
+                  放弃这次进度，重新开始一场
+                </button>
+              ) : null}
               <div className="mt-12 max-w-md rounded-xl border border-white/8 bg-white/5 px-5 py-4 text-center">
                 <p className="text-xs leading-relaxed text-white/80">
                   为保证语音识别效果，建议佩戴耳机并使用收音清晰的麦克风，以确保您的回答被完整记录。
