@@ -311,7 +311,7 @@ export default function MembershipPage() {
                       setSelected(pack);
                     }
                   }}
-                  className={`group relative flex cursor-pointer flex-col rounded-2xl border px-5 py-7 text-left outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-amber-300 active:scale-[0.98] ${
+                  className={`group relative flex h-full cursor-pointer flex-col rounded-2xl border px-5 py-7 text-left outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-amber-300 active:scale-[0.98] ${
                     isActive
                       ? "scale-[1.02] border-amber-300 bg-gradient-to-b from-amber-50 to-white shadow-[0_18px_40px_rgba(251,191,36,0.28)] ring-2 ring-amber-200/60"
                       : "border-white/60 bg-white/70 shadow-sm hover:-translate-y-1 hover:border-amber-200/70 hover:shadow-lg"
@@ -333,35 +333,47 @@ export default function MembershipPage() {
                   )}
 
                   <p className="text-center text-base font-semibold text-slate-800">{pack.label}</p>
-                  <p className="mt-4 text-center">
-                    <span className="text-4xl font-bold text-slate-900">¥{pack.price}</span>
-                    <span className="ml-1 text-xs text-slate-400">
-                      （¥{(pack.price / pack.credits).toFixed(1).replace(/\.0$/, "")}/次）
-                    </span>
-                  </p>
-                  {pack.save ? (
-                    <p className="mt-1.5 text-center">
-                      <span className="rounded-full bg-rose-50 px-2.5 py-0.5 text-[10px] font-medium text-rose-600">
+                  <div className="mt-5 text-center">
+                    <p className="text-4xl font-bold text-slate-900">¥{pack.price}</p>
+                    <p className="mt-1.5 text-xs text-slate-400">
+                      {pack.credits === 1
+                        ? `¥${pack.price} / 次`
+                        : `折合 ¥${(pack.price / pack.credits).toFixed(1).replace(/\.0$/, "")} / 次`}
+                    </p>
+                  </div>
+
+                  <div className="mt-3 flex min-h-6 items-center justify-center">
+                    {pack.save ? (
+                      <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-medium text-rose-600">
                         比单次购买省 ¥{pack.save}
                       </span>
-                    </p>
-                  ) : null}
-                  <p className="mt-2 text-center text-xs text-slate-400">{pack.desc}</p>
+                    ) : (
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-medium text-slate-500">
+                        按次购买
+                      </span>
+                    )}
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePay(pack);
-                    }}
-                    className={`mt-6 w-full rounded-full px-4 py-2.5 text-xs font-medium transition ${
-                      isActive
-                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md hover:brightness-110"
-                        : "bg-slate-900/5 text-slate-600 hover:bg-slate-900/10"
-                    }`}
-                  >
-                    立即购买 · ¥{pack.price}
-                  </button>
+                  <p className="mt-2 flex min-h-10 items-start justify-center text-center text-xs leading-5 text-slate-400">
+                    {pack.desc}
+                  </p>
+
+                  <div className="mt-auto pt-6">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePay(pack);
+                      }}
+                      className={`w-full rounded-full px-4 py-2.5 text-xs font-medium transition ${
+                        isActive
+                          ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md hover:brightness-110"
+                          : "bg-slate-900/5 text-slate-600 hover:bg-slate-900/10"
+                      }`}
+                    >
+                      立即购买 · ¥{pack.price}
+                    </button>
+                  </div>
                 </div>
               );
             })}
