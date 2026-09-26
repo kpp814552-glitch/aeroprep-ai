@@ -54,11 +54,6 @@ body::before {
   opacity: 0.72;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
 button,
 input,
 select,
