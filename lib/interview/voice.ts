@@ -1,11 +1,11 @@
 import { TtsAutoplayBlockedError, TtsPlayer } from "@/lib/audio/tts-player";
 
-export type VoiceProviderName = "doubao-tts";
+export type VoiceProviderName = "interview-voice";
 
-export class DoubaoVoiceUnavailableError extends Error {
-  constructor(message = "豆包语音暂时不可用，请检查网络后重试。") {
+export class InterviewVoiceUnavailableError extends Error {
+  constructor(message = "面试官语音暂时不可用，请检查网络后重试。") {
     super(message);
-    this.name = "DoubaoVoiceUnavailableError";
+    this.name = "InterviewVoiceUnavailableError";
   }
 }
 
@@ -78,8 +78,8 @@ export function createInterviewVoiceSession(
       return providerName;
     },
     getVoiceLabel() {
-      if (providerName === "doubao-tts") {
-        return options.voiceId || "zh_female_vv_uranus_bigtts";
+      if (providerName === "interview-voice") {
+        return "interview-voice";
       }
 
       return null;
@@ -102,15 +102,15 @@ export function createInterviewVoiceSession(
           onPlayStart: callbacks?.onPlayStart,
           onPlayEnd: callbacks?.onPlayEnd,
         });
-        providerName = "doubao-tts";
-        return { providerName, voiceLabel: options.voiceId || "zh_female_vv_uranus_bigtts" };
+        providerName = "interview-voice";
+        return { providerName, voiceLabel: "interview-voice" };
       } catch (error) {
         if (error instanceof TtsAutoplayBlockedError) {
           throw error;
         }
 
-        console.error("[TTS] Doubao playback failed after retries.", error);
-        throw new DoubaoVoiceUnavailableError();
+        console.error("[TTS] Interview voice playback failed after retries.", error);
+        throw new InterviewVoiceUnavailableError();
       }
     },
     stop() {

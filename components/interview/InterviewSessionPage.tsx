@@ -4,7 +4,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useRouter, useSearchParams } from "next/navigation";
-import { Loader2, RotateCcw } from "lucide-react";
+import { CheckCircle2, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 
 /** 生成报告时的分阶段提示，避免长时间等待让人觉得卡死 */
 const REPORT_STEPS = [
@@ -327,6 +327,7 @@ const resumeQualityRef = useRef<any>(
   const [turns, setTurns] = useState<InterviewTurn[]>([]);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   const [voiceRetryAvailable, setVoiceRetryAvailable] = useState(false);
+  const [preflightAccepted, setPreflightAccepted] = useState(false);
   const [reportStep, setReportStep] = useState(0);
   const [restoredFromSaved, setRestoredFromSaved] = useState(false);
   const [fatalError, setFatalError] = useState("");
@@ -1027,10 +1028,10 @@ const resumeQualityRef = useRef<any>(
         setVoiceActivityState('tts_playing');
         return;
       }
-      console.error('[Interview] Doubao voice playback failed after retries.', error);
+      console.error('[Interview] Interview voice playback failed after retries.', error);
       setVoiceActivityState('Silent');
-      setStatusText('豆包语音连接失败');
-      setFatalError('豆包语音暂时不可用。系统已自动重试，但不会切换浏览器语音。请检查网络后重试。');
+      setStatusText('面试官语音连接失败');
+      setFatalError('面试官语音暂时不可用。系统已自动重试，请检查网络后重新连接。');
       setVoiceRetryAvailable(true);
       setPhase('error');
     }
@@ -1048,6 +1049,7 @@ const resumeQualityRef = useRef<any>(
   // ── Handle user clicking "开始面试" (ready → playing) ──
   const handleStartInterview = useCallback(async () => {
     if (phase !== 'ready') return;
+    if (!preflightAccepted) return;
     const pending = pendingQuestionRef.current;
     if (!pending) return;
 
@@ -1064,7 +1066,7 @@ const resumeQualityRef = useRef<any>(
 
     setPhase('playing');
     await playCurrentQuestion(pending);
-  }, [company, mode, phase, playCurrentQuestion, timer.startElapsedTimer]);
+  }, [company, mode, phase, playCurrentQuestion, preflightAccepted, timer.startElapsedTimer]);
 
   // ── Handle user ending answer (listening → processing → playing) ──
   const handleEndAnswer = useCallback(async () => {
@@ -1350,7 +1352,7 @@ const resumeQualityRef = useRef<any>(
       }
     } catch {
       setVoiceRetryAvailable(true);
-      setFatalError('豆包语音重播失败，请检查网络后重试。');
+      setFatalError('面试官语音重播失败，请检查网络后重试。');
       setPhase('error');
     }
   }, [currentQuestion, isGeneratingReport, timer, voiceSession]);
@@ -1545,10 +1547,43 @@ const resumeQualityRef = useRef<any>(
               <p className="mt-3 text-[11px] text-white/45">
                 {resumeTextRef.current ? "已结合你上传的简历提问" : "未上传简历 · 将按岗位通用问题面试"}
               </p>
+
+              <div className="mt-6 w-full max-w-2xl rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,17,13,0.7),rgba(10,8,7,0.48))] px-5 py-5 text-left shadow-[0_18px_44px_rgba(0,0,0,0.18)] backdrop-blur-md md:px-6">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-[#f5c689]" />
+                  <p className="text-sm font-medium tracking-wide text-white/92">面试前须知</p>
+                </div>
+                <div className="mt-4 grid gap-2.5 text-[11px] leading-5 text-white/65 sm:grid-cols-2">
+                  {[
+                    "建议佩戴耳机，并确认麦克风收音正常",
+                    "保持网络稳定，面试中不要切换网络",
+                    "选择安静环境，避免他人声音干扰",
+                    "浏览器询问麦克风权限时，请选择允许",
+                    "面试过程中不要刷新、关闭或切换页面",
+                    "请听完面试官问题后，再开始回答",
+                  ].map((item) => (
+                    <div key={item} className="flex items-start gap-2 rounded-xl border border-white/7 bg-white/[0.04] px-3 py-2.5">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-300/80" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+                <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-[#f5c689]/18 bg-[#f5c689]/[0.06] px-3.5 py-3 text-xs leading-5 text-white/78">
+                  <input
+                    type="checkbox"
+                    checked={preflightAccepted}
+                    onChange={(event) => setPreflightAccepted(event.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[#d9a35f]"
+                  />
+                  <span>我已确认设备、网络和麦克风状态正常，并已阅读以上面试须知。</span>
+                </label>
+              </div>
+
               <button
                 type="button"
                 onClick={handleStartInterview}
-                className="mt-10 inline-flex items-center gap-2 rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
+                disabled={!preflightAccepted}
+                className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35"
               >
                 点击开始面试
               </button>
@@ -1564,11 +1599,6 @@ const resumeQualityRef = useRef<any>(
                   放弃这次进度，重新开始一场
                 </button>
               ) : null}
-              <div className="mt-12 max-w-md rounded-xl border border-white/8 bg-white/5 px-5 py-4 text-center">
-                <p className="text-xs leading-relaxed text-white/80">
-                  为保证语音识别效果，建议佩戴耳机并使用收音清晰的麦克风，以确保您的回答被完整记录。
-                </p>
-              </div>
             </div>
           )}
 
@@ -1589,7 +1619,7 @@ const resumeQualityRef = useRef<any>(
                   onClick={handleRetryVoice}
                   className="mt-10 inline-flex items-center gap-2 rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
                 >
-                  重试豆包语音
+                  重试面试官语音
                 </button>
               ) : null}
               <button
