@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { deriveUsage, totalGranted } from "@/lib/member/wallet";
+import { deriveUsage, FREE_TRIAL_LIMIT, totalGranted } from "@/lib/member/wallet";
 import { loadRegistry, mutateWallet } from "@/lib/member/wallet-server";
 
 /**
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
 
   const result = await mutateWallet(supabase, user.id, (doc) => {
     const usage = deriveUsage(totalInterviews || 0, doc.used);
+    const paidFloor = Math.max(0, (totalInterviews || 0) - FREE_TRIAL_LIMIT);
     const granted = totalGranted(doc, registry);
     const wallet = {
       granted,
@@ -51,8 +52,10 @@ export async function POST(request: NextRequest) {
       return { commit: false, value: { charged: false, duplicate: false, wallet } };
     }
 
-    // 账本与会话事实对齐后再 +1
-    doc.used = usage.paidUsed + 1;
+    // 与"已完成面试条数"对齐：
+    // - 保存面试记录与扣次接口存在并发，如果记录已先落库，paidFloor 已包含本场，不能再额外 +1
+    // - 如果扣次先到达，则只需把账本从当前值推进 1 次
+    doc.used = paidFloor > doc.used ? paidFloor : doc.used + 1;
     if (key) doc.lastConsume = { key, at: new Date().toISOString() };
     const next = {
       granted,
