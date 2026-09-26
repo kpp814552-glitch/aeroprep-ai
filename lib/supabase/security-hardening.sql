@@ -14,6 +14,13 @@
 --   · 管理员账号可以正常维护这些字段
 --   · 本脚本幂等，可重复执行
 -- 执行位置：Supabase 控制台 → SQL Editor
+--
+-- 状态：已在生产库（项目 drdzgxncqpydteksedzq）执行过（2026-09-26），
+--       本脚本幂等，可重复执行；想确认是否生效可以跑：
+--         select tgname from pg_trigger
+--         where tgrelid = 'public.users'::regclass and tgname = 'users_guard_row';
+--       或者用普通账号试着 PATCH 自己的 is_admin=true：
+--         生效后返回值仍是 false，且读不到其他用户的行。
 -- ============================================================
 
 CREATE OR REPLACE FUNCTION public.guard_user_row()
