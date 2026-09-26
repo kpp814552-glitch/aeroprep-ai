@@ -162,12 +162,6 @@ export default function MembershipPage() {
   return (
     <AppFrame>
       <main className="relative z-10 min-h-dvh-safe">
-        <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 h-[1200px] w-[1000px] -translate-x-1/2 rounded-full bg-gradient-to-b from-amber-50/40 via-sky-50/20 to-transparent blur-3xl" />
-          <div className="absolute -left-60 top-1/4 h-[600px] w-[600px] rounded-full bg-sky-50/25 blur-3xl" />
-          <div className="absolute -right-60 top-1/3 h-[600px] w-[600px] rounded-full bg-amber-50/25 blur-3xl" />
-        </div>
-
         <div className="stagger-section relative mx-auto max-w-5xl px-5 pb-32 pt-12 md:px-8 md:pt-20">
           {/* ===== HERO ===== */}
           <div className="mx-auto max-w-xl text-center">

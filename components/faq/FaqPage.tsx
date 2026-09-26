@@ -241,11 +241,6 @@ export default function FaqPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
       <main className="relative z-10 min-h-dvh-safe">
-        <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-          <div className="absolute left-1/2 top-0 h-[1000px] w-[1100px] -translate-x-1/2 rounded-full bg-gradient-to-b from-sky-50/50 via-violet-50/20 to-transparent blur-3xl" />
-          <div className="absolute -bottom-56 -right-56 h-[620px] w-[620px] rounded-full bg-amber-50/30 blur-3xl" />
-        </div>
-
         <div className="stagger-section relative mx-auto max-w-[1320px] px-5 pb-32 pt-12 md:px-8 md:pt-16">
           <header className="rise-in">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/60 px-4 py-1.5 text-[10px] font-medium uppercase tracking-[0.24em] text-slate-500 shadow-sm backdrop-blur-md">

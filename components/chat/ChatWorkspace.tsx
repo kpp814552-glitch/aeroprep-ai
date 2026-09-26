@@ -329,11 +329,6 @@ export default function ChatWorkspace() {
   return (
     <AppFrame>
       <main className="relative z-10 min-h-dvh-safe px-5 pb-20 pt-8 md:px-8 md:pt-10">
-        <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
-          <div className="absolute -left-40 -top-40 h-[520px] w-[520px] rounded-full bg-sky-100/25 blur-3xl" />
-          <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-violet-100/20 blur-3xl" />
-        </div>
-
         <div className="relative mx-auto max-w-[1480px]">
           {/* ====== 顶部：紧凑标题栏（不再是巨幅 hero） ====== */}
           <header className="rise-in mb-8 flex flex-wrap items-start justify-between gap-6">

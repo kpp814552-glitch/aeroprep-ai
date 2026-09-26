@@ -211,29 +211,6 @@ export default function HomePage() {
     <AppFrame>
       <AnnouncementsBanner />
 
-      {/* ====== Floating Background Blobs ====== */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden" aria-hidden="true">
-        {[
-          { size: 400, top: "-10%", left: "-5%", color: "rgba(148, 197, 255, 0.15)", dur: "18s", anim: "blob1" },
-          { size: 350, top: "30%", right: "-8%", color: "rgba(196, 181, 253, 0.12)", dur: "22s", anim: "blob2" },
-          { size: 300, bottom: "10%", left: "20%", color: "rgba(167, 243, 208, 0.1)", dur: "20s", anim: "blob3" },
-          { size: 250, top: "50%", left: "50%", color: "rgba(253, 186, 116, 0.08)", dur: "25s", anim: "blob1" },
-          { size: 200, bottom: "20%", right: "15%", color: "rgba(147, 197, 253, 0.1)", dur: "19s", anim: "blob2" },
-          { size: 500, top: "-20%", right: "-10%", color: "rgba(219, 234, 254, 0.08)", dur: "23s", anim: "blob3" },
-        ].map((b, i) => (
-          <div
-            key={i}
-            className="absolute rounded-full blur-3xl"
-            style={{
-              width: b.size, height: b.size,
-              top: b.top, left: b.left, right: b.right, bottom: b.bottom,
-              background: `radial-gradient(circle, ${b.color}, transparent 70%)`,
-              animation: `${b.anim} ${b.dur} ease-in-out infinite`,
-            }}
-          />
-        ))}
-      </div>
-
       <main className="stagger-section relative z-10 px-5 pb-14 pt-8 md:px-8 md:pb-20 md:pt-10">
         {/* ====== Hero Section ====== */}
         <section
