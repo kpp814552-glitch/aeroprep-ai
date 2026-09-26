@@ -539,6 +539,16 @@ textarea {
   animation-delay: var(--rise-delay, 0ms);
 }
 
+/* 轻柔脉动：用于"推荐"徽标、选中态光晕，不抢视觉 */
+@keyframes softPulse {
+  0%, 100% { opacity: 0.92; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.04); }
+}
+
+.soft-pulse {
+  animation: softPulse 2.4s ease-in-out infinite;
+}
+
 .stagger-section > * {
   animation: riseIn 0.72s cubic-bezier(0.22, 0.75, 0.25, 1) both;
 }
@@ -558,6 +568,7 @@ textarea {
   .glass-shimmer::after { animation: none; }
   .stagger-section > * { animation: none; opacity: 1; }
   .rise-in { animation: none; opacity: 1; transform: none; }
+  .soft-pulse { animation: none; }
   [style*="animation"] { animation: none !important; }
 }
 

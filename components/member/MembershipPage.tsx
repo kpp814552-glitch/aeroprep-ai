@@ -296,7 +296,7 @@ export default function MembershipPage() {
           )}
 
           {/* ===== PACK CARDS ===== */}
-          <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-3">
+          <div className="stagger-section mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-3">
             {CREDIT_PACKS.map((pack) => {
               const isActive = selected?.id === pack.id;
               return (
@@ -313,15 +313,22 @@ export default function MembershipPage() {
                   }}
                   className={`group relative flex cursor-pointer flex-col rounded-2xl border px-5 py-7 text-left outline-none transition-all duration-300 focus-visible:ring-2 focus-visible:ring-amber-300 active:scale-[0.98] ${
                     isActive
-                      ? "border-amber-300 bg-white shadow-xl ring-2 ring-amber-200/50"
-                      : pack.recommended
-                        ? "border-amber-200/60 bg-white shadow-md hover:shadow-lg"
-                        : "border-white/50 bg-white/60 shadow-sm hover:shadow-md"
+                      ? "scale-[1.02] border-amber-300 bg-gradient-to-b from-amber-50 to-white shadow-[0_18px_40px_rgba(251,191,36,0.28)] ring-2 ring-amber-200/60"
+                      : "border-white/60 bg-white/70 shadow-sm hover:-translate-y-1 hover:border-amber-200/70 hover:shadow-lg"
                   }`}
                 >
                   {pack.recommended && !isActive && (
-                    <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                    <span className="soft-pulse absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                       推荐
+                    </span>
+                  )}
+                  {isActive && (
+                    <span
+                      className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-2.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+                      style={{ animation: "softEnter 0.32s ease both" }}
+                    >
+                      <CheckCircleIcon className="h-3 w-3" />
+                      已选
                     </span>
                   )}
 
@@ -348,9 +355,9 @@ export default function MembershipPage() {
                       handlePay(pack);
                     }}
                     className={`mt-6 w-full rounded-full px-4 py-2.5 text-xs font-medium transition ${
-                      pack.recommended || isActive
-                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-sm hover:brightness-110"
-                        : "bg-slate-900/6 text-slate-700 hover:bg-slate-900/10"
+                      isActive
+                        ? "bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md hover:brightness-110"
+                        : "bg-slate-900/5 text-slate-600 hover:bg-slate-900/10"
                     }`}
                   >
                     立即购买 · ¥{pack.price}
