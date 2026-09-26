@@ -476,9 +476,20 @@ export default function InterviewPrepPage() {
                       ))}
                     </div>
                     {showProcess && (
-                      <p className="mt-2 border-t border-white/10 pt-2 text-[10px] leading-5 text-slate-400">
-                        常见硬性条件：{roleModel.hardRequirements.join("；")}
-                      </p>
+                      <>
+                        <p className="mt-2 border-t border-white/10 pt-2 text-[10px] leading-5 text-slate-400">
+                          常见硬性条件：{roleModel.hardRequirements.join("；")}
+                        </p>
+                        {roleModel.sources?.length ? (
+                          <p className="mt-1.5 text-[10px] leading-5 text-slate-500">
+                            依据公开资料整理：{roleModel.sources.join("；")}
+                          </p>
+                        ) : (
+                          <p className="mt-1.5 text-[10px] leading-5 text-slate-500">
+                            依据行业公开招聘公告惯例整理，各航司要求可能不同
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
 
