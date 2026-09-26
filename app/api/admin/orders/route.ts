@@ -57,6 +57,11 @@ export async function GET(request: NextRequest) {
   const counts = { pending: 0, approved: 0, rejected: 0, revoked: 0 };
   let approvedAmount = 0;
   let approvedCredits = 0;
+  let pendingAmount = 0;
+  let pendingCredits = 0;
+  let revokedAmount = 0;
+  let paidOrderCount = 0;
+  let manualAdjustmentCount = 0;
 
   for (const user of data || []) {
     const doc = parseWalletDoc(user.pending_plan);
@@ -64,8 +69,20 @@ export async function GET(request: NextRequest) {
     for (const order of mergeOrders(doc.orders, registry)) {
       counts[order.status] += 1;
       if (order.status === "approved") {
-        approvedAmount += order.amount;
         approvedCredits += order.credits;
+        if (order.channel === "manual") {
+          manualAdjustmentCount += 1;
+        } else {
+          approvedAmount += order.amount;
+          paidOrderCount += 1;
+        }
+      } else if (order.status === "pending") {
+        if (order.channel !== "manual") {
+          pendingAmount += order.amount;
+          pendingCredits += order.credits;
+        }
+      } else if (order.status === "revoked" && order.channel !== "manual") {
+        revokedAmount += order.amount;
       }
       rows.push({
         ...order,
@@ -96,6 +113,12 @@ export async function GET(request: NextRequest) {
     summary: {
       approvedAmount: Math.round(approvedAmount * 100) / 100,
       approvedCredits,
+      pendingAmount: Math.round(pendingAmount * 100) / 100,
+      pendingCredits,
+      revokedAmount: Math.round(revokedAmount * 100) / 100,
+      paidOrderCount,
+      manualAdjustmentCount,
+      averageOrderValue: paidOrderCount > 0 ? Math.round((approvedAmount / paidOrderCount) * 100) / 100 : 0,
     },
     meta: { serviceRole, allowlistEnforced, scannedUsers: (data || []).length },
   });

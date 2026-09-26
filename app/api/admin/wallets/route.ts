@@ -65,6 +65,14 @@ export async function GET(request: NextRequest) {
   }
 
   const wallets: WalletSummary[] = [];
+  const summary = {
+    users: 0,
+    withBalance: 0,
+    pendingUsers: 0,
+    totalGranted: 0,
+    totalUsed: 0,
+    totalLeft: 0,
+  };
 
   for (const user of data || []) {
     const doc = parseWalletDoc(user.pending_plan);
@@ -82,14 +90,23 @@ export async function GET(request: NextRequest) {
     const hasActivity = orders.length > 0;
     if (onlyWithBalance && Math.max(0, granted - usage.paidUsed) <= 0 && !hasActivity) continue;
 
+    const left = Math.max(0, granted - usage.paidUsed);
+    const pendingCount = orders.filter((o) => o.status === "pending").length;
+    summary.users += 1;
+    summary.totalGranted += granted;
+    summary.totalUsed += usage.paidUsed;
+    summary.totalLeft += left;
+    if (left > 0) summary.withBalance += 1;
+    if (pendingCount > 0) summary.pendingUsers += 1;
+
     wallets.push({
       userId: user.id as string,
       email,
       username,
       granted,
       used: usage.paidUsed,
-      left: Math.max(0, granted - usage.paidUsed),
-      pendingCount: orders.filter((o) => o.status === "pending").length,
+      left,
+      pendingCount,
       isAdmin: user.is_admin === true,
       createdAt: (user.created_at as string) || "",
       lastActivityAt: orders[0]?.appliedAt || null,
@@ -106,6 +123,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     wallets: wallets.slice(0, limit),
     total: wallets.length,
+    summary,
     meta: { serviceRole, allowlistEnforced, scannedUsers: (data || []).length },
   });
 }

@@ -8,6 +8,22 @@ import type { UserProfile } from "@/lib/supabase/types";
 import { translateAuthError } from "@/lib/supabase/auth-errors";
 import { syncServerMember } from "@/lib/member/member-storage";
 
+const LOGIN_TOUCH_PREFIX = "aeroprep_login_touch:";
+
+function touchLastLogin(userId: string) {
+  if (typeof window === "undefined") return;
+  const key = `${LOGIN_TOUCH_PREFIX}${userId}`;
+  const now = Date.now();
+  try {
+    const previous = Number(window.sessionStorage.getItem(key) || 0);
+    if (previous && now - previous < 6 * 60 * 60 * 1000) return;
+    window.sessionStorage.setItem(key, String(now));
+  } catch {
+    // 隐私模式下 sessionStorage 不可用时仍继续打点，不影响登录。
+  }
+  void fetch("/api/auth/touch", { method: "POST", cache: "no-store" }).catch(() => {});
+}
+
 export default function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -81,6 +97,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           try {
+            touchLastLogin(session.user.id);
             await fetchProfile(session.user.id);
             // Check if server-side membership was approved
             syncServerMember().catch(() => {});
@@ -99,6 +116,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user && !cancelled) {
           setUser(session.user);
+          touchLastLogin(session.user.id);
           await fetchProfile(session.user.id);
         }
       } catch (err) {
@@ -125,7 +143,8 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error && data.user) touchLastLogin(data.user.id);
       return { error: error?.message ? translateAuthError(error.message) : null };
     } catch (err) {
       console.error('[Auth] signIn error:', err);

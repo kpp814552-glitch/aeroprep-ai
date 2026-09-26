@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus, Pencil, Trash2, X, Globe, EyeOff, Info, AlertTriangle, AlertCircle, Megaphone } from "lucide-react";
-import { GlassPanel, GlassCard, GlassButton } from "@/components/ui/glass";
+import { GlassCard, GlassButton } from "@/components/ui/glass";
 import { cn } from "@/lib/utils";
 
 type Announcement = {
@@ -138,13 +138,32 @@ export default function AdminAnnouncements() {
     </div>
   );
 
+  const publishedCount = announcements.filter((item) => item.is_published).length;
+  const draftCount = announcements.length - publishedCount;
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-slate-500">共 {announcements.length} 条公告</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-slate-950">公告运营</h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">发布站内通知、维护公告状态，并集中查看历史内容。</p>
+        </div>
         <button type="button" onClick={openCreate} className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 transition">
           <Plus className="h-4 w-4" /> 发布公告
         </button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: "全部公告", value: announcements.length, color: "text-slate-800" },
+          { label: "已发布", value: publishedCount, color: "text-emerald-600" },
+          { label: "未发布", value: draftCount, color: "text-amber-600" },
+        ].map((item) => (
+          <GlassCard key={item.label} className="px-4 py-3">
+            <p className="text-[10px] text-slate-400">{item.label}</p>
+            <p className={`mt-1 text-xl font-semibold ${item.color}`}>{item.value}</p>
+          </GlassCard>
+        ))}
       </div>
 
       {error && (

@@ -10,7 +10,6 @@ import {
   Loader2,
   RefreshCw,
   Search,
-  ShieldCheck,
   Undo2,
   Upload,
   Wallet,
@@ -32,6 +31,26 @@ type WalletSummary = {
   isAdmin: boolean;
   createdAt: string;
   lastActivityAt: string | null;
+};
+
+type OrderSummary = {
+  approvedAmount: number;
+  approvedCredits: number;
+  pendingAmount: number;
+  pendingCredits: number;
+  revokedAmount: number;
+  paidOrderCount: number;
+  manualAdjustmentCount: number;
+  averageOrderValue: number;
+};
+
+type WalletOverview = {
+  users: number;
+  withBalance: number;
+  pendingUsers: number;
+  totalGranted: number;
+  totalUsed: number;
+  totalLeft: number;
 };
 
 type Msg = { type: "ok" | "err" | "info"; text: string } | null;
@@ -77,8 +96,16 @@ export default function AdminOrders() {
   // 订单
   const [orders, setOrders] = useState<AdminOrderRow[]>([]);
   const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0, revoked: 0 });
-  const [summary, setSummary] = useState({ approvedAmount: 0, approvedCredits: 0 });
-  const [allowlistEnforced, setAllowlistEnforced] = useState<boolean | null>(null);
+  const [summary, setSummary] = useState<OrderSummary>({
+    approvedAmount: 0,
+    approvedCredits: 0,
+    pendingAmount: 0,
+    pendingCredits: 0,
+    revokedAmount: 0,
+    paidOrderCount: 0,
+    manualAdjustmentCount: 0,
+    averageOrderValue: 0,
+  });
   const [statusFilter, setStatusFilter] = useState<"all" | OrderStatus>("all");
   const [keyword, setKeyword] = useState("");
   const [loadingOrders, setLoadingOrders] = useState(false);
@@ -87,6 +114,14 @@ export default function AdminOrders() {
 
   // 钱包
   const [wallets, setWallets] = useState<WalletSummary[]>([]);
+  const [walletOverview, setWalletOverview] = useState<WalletOverview>({
+    users: 0,
+    withBalance: 0,
+    pendingUsers: 0,
+    totalGranted: 0,
+    totalUsed: 0,
+    totalLeft: 0,
+  });
   const [walletKeyword, setWalletKeyword] = useState("");
   const [loadingWallets, setLoadingWallets] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<WalletSummary | null>(null);
@@ -121,8 +156,10 @@ export default function AdminOrders() {
       }
       setOrders(data.orders || []);
       setCounts(data.counts || { pending: 0, approved: 0, rejected: 0, revoked: 0 });
-      setSummary(data.summary || { approvedAmount: 0, approvedCredits: 0 });
-      if (data.meta && typeof data.meta.allowlistEnforced === "boolean") setAllowlistEnforced(data.meta.allowlistEnforced);
+      setSummary((current) => ({
+        ...current,
+        ...(data.summary || {}),
+      }));
     } catch {
       flash("err", "网络异常，订单列表加载失败");
     } finally {
@@ -143,7 +180,10 @@ export default function AdminOrders() {
         return;
       }
       setWallets(data.wallets || []);
-      if (data.meta && typeof data.meta.allowlistEnforced === "boolean") setAllowlistEnforced(data.meta.allowlistEnforced);
+      setWalletOverview((current) => ({
+        ...current,
+        ...(data.summary || {}),
+      }));
     } catch {
       flash("err", "网络异常，用户数据加载失败");
     } finally {
@@ -163,9 +203,18 @@ export default function AdminOrders() {
     }
   }, []);
 
-  useEffect(() => { loadOrders(); }, [loadOrders]);
-  useEffect(() => { loadWallets(); }, [loadWallets]);
-  useEffect(() => { loadQr(); }, [loadQr]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadOrders(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadOrders]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadWallets(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadWallets]);
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadQr(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadQr]);
 
   // 轮询：待审核订单自动刷新
   useEffect(() => {
@@ -319,7 +368,7 @@ export default function AdminOrders() {
 
   return (
     <div className="stagger-section space-y-5">
-      <div className="flex gap-1.5 rounded-2xl border border-white/40 bg-white/60 p-1.5">
+      <div className="flex gap-1.5 overflow-x-auto rounded-2xl border border-white/40 bg-white/60 p-1.5">
         {TABS.map((t) => {
           const Icon = t.icon;
           const active = tab === t.key;
@@ -328,8 +377,8 @@ export default function AdminOrders() {
               key={t.key}
               type="button"
               onClick={() => setTab(t.key)}
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-medium transition ${
-                active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+              className={`flex min-w-fit flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-medium transition ${
+                active ? "bg-slate-950 text-white shadow-sm" : "text-slate-500 hover:bg-white/70 hover:text-slate-800"
               }`}
             >
               <Icon className="h-3.5 w-3.5" />
@@ -359,23 +408,16 @@ export default function AdminOrders() {
         </div>
       )}
 
-      <div className="flex items-start gap-2 rounded-xl border border-slate-200/70 bg-white/50 px-4 py-2.5 text-[11px] leading-5 text-slate-500">
-        <ShieldCheck className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
-        <span>
-          管理后台已开启服务端鉴权：仅白名单管理员可访问，非管理员访问 /admin 与全部管理接口都会被拒绝。
-          建议在 Supabase 再执行一次 <span className="font-mono">lib/supabase/security-hardening.sql</span>，锁死权限字段。
-          {allowlistEnforced === false ? "如需新增管理员，在 Vercel 配置 ADMIN_EMAILS。" : ""}
-        </span>
-      </div>
-
       {/* ================= 订单管理 ================= */}
       {tab === "orders" && (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
             <StatCard label="待审核" value={String(counts.pending)} accent="text-amber-600" />
-            <StatCard label="已通过订单" value={String(counts.approved)} accent="text-emerald-600" />
-            <StatCard label="累计核发次数" value={String(summary.approvedCredits)} accent="text-sky-600" />
-            <StatCard label="累计成交金额" value={`¥${summary.approvedAmount}`} accent="text-violet-600" />
+            <StatCard label="待确认金额" value={`¥${summary.pendingAmount}`} accent="text-amber-700" />
+            <StatCard label="有效购买订单" value={String(summary.paidOrderCount)} accent="text-emerald-600" />
+            <StatCard label="累计成交金额" value={`¥${summary.approvedAmount}`} accent="text-sky-600" />
+            <StatCard label="平均客单价" value={`¥${summary.averageOrderValue}`} accent="text-violet-600" />
+            <StatCard label="累计核发次数" value={String(summary.approvedCredits)} accent="text-slate-700" />
           </div>
 
           <GlassPanel className="px-5 py-4">
@@ -564,6 +606,15 @@ export default function AdminOrders() {
       {/* ================= 次数管理 ================= */}
       {tab === "wallets" && (
         <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+            <StatCard label="纳入统计用户" value={String(walletOverview.users)} accent="text-slate-700" />
+            <StatCard label="有余次用户" value={String(walletOverview.withBalance)} accent="text-emerald-600" />
+            <StatCard label="有未审订单" value={String(walletOverview.pendingUsers)} accent="text-amber-600" />
+            <StatCard label="累计核发" value={String(walletOverview.totalGranted)} accent="text-sky-600" />
+            <StatCard label="累计使用" value={String(walletOverview.totalUsed)} accent="text-violet-600" />
+            <StatCard label="剩余总次数" value={String(walletOverview.totalLeft)} accent="text-emerald-700" />
+          </div>
+
           <GlassPanel className="px-5 py-4">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
