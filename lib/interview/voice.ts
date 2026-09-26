@@ -121,8 +121,23 @@ export async function speakWithNativeChineseVoice(
 
   const utteranceText = humanizeInterviewSpeech(text);
 
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<void>((resolve) => {
     const utterance = new SpeechSynthesisUtterance(utteranceText);
+    let settled = false;
+    let started = false;
+    const estimatedMs = Math.min(60000, Math.max(8000, utteranceText.length * 220));
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      callbacks?.onPlayEnd?.();
+      resolve();
+    };
+    const timeoutId = window.setTimeout(() => {
+      if (!started) callbacks?.onPlayStart?.();
+      finish();
+    }, estimatedMs);
+
     utterance.lang = "zh-CN";
     utterance.rate = 0.92;
     utterance.pitch = 1.06;
@@ -131,14 +146,18 @@ export async function speakWithNativeChineseVoice(
       utterance.voice = fixedVoice;
       utterance.lang = fixedVoice.lang || utterance.lang;
     }
-    utterance.onstart = () => callbacks?.onPlayStart?.();
-    utterance.onend = () => {
-      callbacks?.onPlayEnd?.();
-      resolve();
+    utterance.onstart = () => {
+      started = true;
+      callbacks?.onPlayStart?.();
     };
-    utterance.onerror = () => reject(new Error("语音播放失败。"));
+    utterance.onend = finish;
+    utterance.onerror = finish;
 
-    window.speechSynthesis.speak(utterance);
+    try {
+      window.speechSynthesis.speak(utterance);
+    } catch {
+      finish();
+    }
   });
 }
 

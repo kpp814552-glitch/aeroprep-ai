@@ -242,6 +242,12 @@ function createSessionId() {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function toSafeIso(value: unknown): string {
+  const numeric = typeof value === "number" ? value : Number(value);
+  const date = Number.isFinite(numeric) ? new Date(numeric) : new Date();
+  return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+}
+
 function normalizeRole(value: string | null): InterviewRole {
   const candidates: InterviewRole[] = [
     "pilot", "dispatcher", "maintenance", "civil-aviation-electronics",
@@ -523,7 +529,7 @@ const resumeQualityRef = useRef<any>(
               evaluation: payload.report?.overallEvaluation || "",
               strengths: payload.report?.strengths || [],
               weaknesses: payload.report?.weaknesses || [],
-              started_at: new Date(sessionIdRef.current.split("-")[1] || Date.now()).toISOString(),
+              started_at: toSafeIso(timer.startAtRef.current),
               ended_at: new Date().toISOString(),
               duration_seconds: totalElapsedSeconds,
               total_turns: finalTurns.length,
@@ -1019,7 +1025,16 @@ const resumeQualityRef = useRef<any>(
         setVoiceActivityState('tts_playing');
         return;
       }
-      throw error;
+      console.error('[Interview] Voice playback failed, continuing with text question.', error);
+      setCurrentQuestion(pending.text);
+      setCurrentStage(pending.stage);
+      setPhase('listening');
+      setVoiceActivityState('waiting_answer');
+      setStatusText('语音播放失败，已切换为文字提问，请开始作答');
+      const answerSeconds = getAnswerSecondsForStage(pending.stage);
+      timer.setAnswerCountdown(answerSeconds);
+      startRecognition();
+      timer.startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
     }
   }, [company, mode, timer.startAnswerCountdown, startRecognition, voiceSession]);
 
