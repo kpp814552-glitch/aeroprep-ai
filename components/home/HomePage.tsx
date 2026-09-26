@@ -112,7 +112,7 @@ export default function HomePage() {
             <div className="mt-10 w-full max-w-[880px]">
               <div
                 ref={heroPanelRef}
-                className="liquid-hero-panel rounded-[24px] p-3 backdrop-blur-[30px] backdrop-saturate-[1.65]"
+                className="liquid-hero-panel rounded-[24px] p-3 backdrop-blur-[26px] backdrop-saturate-[1.65]"
               >
                 <div className="px-3 pb-2 pt-2">
                   <p className="text-[10px] font-medium uppercase tracking-[0.2em] text-slate-500">
@@ -143,7 +143,7 @@ export default function HomePage() {
                         type="button"
                         onClick={() => setSelectedMode(mode)}
                         className={cn(
-                          "rounded-full px-3 py-2 text-xs font-medium transition",
+                          "rounded-full px-3 py-2 text-xs font-medium transition active:scale-[0.95]",
                           selectedMode === mode
                             ? "bg-slate-950 text-white shadow-sm"
                             : "bg-white/42 text-slate-600 hover:bg-white/68",
@@ -158,7 +158,7 @@ export default function HomePage() {
                     href="/interview"
                     onClick={saveInterviewIntent}
                     aria-label="开始AI面试"
-                    className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#152443] px-5 text-sm font-medium text-white shadow-[0_12px_28px_rgba(21,36,67,0.20)] transition hover:-translate-y-0.5 hover:bg-[#1c3158]"
+                    className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-[#152443] px-5 text-sm font-medium text-white shadow-[0_12px_28px_rgba(21,36,67,0.20)] transition hover:-translate-y-0.5 hover:bg-[#1c3158] active:scale-[0.97]"
                   >
                     开始面试
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/14">
@@ -172,14 +172,14 @@ export default function HomePage() {
             <div className="mt-6 flex w-full flex-col items-stretch justify-center gap-3 min-[520px]:w-auto min-[520px]:flex-row">
               <Link
                 href="/chat"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/54 bg-white/42 px-5 py-3 text-sm font-medium text-slate-700 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/68"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/54 bg-white/42 px-5 py-3 text-sm font-medium text-slate-700 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/68 active:scale-[0.97]"
               >
                 <WandSparkles className="h-4 w-4 text-violet-500" />
                 AI 优化回答
               </Link>
               <Link
                 href="/learning"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/54 bg-white/42 px-5 py-3 text-sm font-medium text-slate-700 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/68"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/54 bg-white/42 px-5 py-3 text-sm font-medium text-slate-700 backdrop-blur-xl transition hover:-translate-y-0.5 hover:bg-white/68 active:scale-[0.97]"
               >
                 <BookOpen className="h-4 w-4 text-sky-500" />
                 浏览资料中心
