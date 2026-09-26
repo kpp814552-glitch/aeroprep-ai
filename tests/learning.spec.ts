@@ -1,31 +1,30 @@
-import { test, expect } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 test.describe("资料中心", () => {
-  test("4. 筛选栏可交互", async ({ page }) => {
+  test("四条学习主线与我的学习正常展示", async ({ page }) => {
     await page.goto("/learning");
-    await page.waitForTimeout(2000);
-    await expect(page.getByText("招聘方式").first()).toBeVisible({ timeout: 10000 });
-    // 点击岗位筛选
-    const pilotBtn = page.getByText("飞行员").first();
-    if (await pilotBtn.isVisible()) await pilotBtn.click();
-    // 点击招聘方式
-    const campus = page.getByText("校招").first();
-    if (await campus.isVisible()) await campus.click();
+    await expect(page.getByText("民航面试能力训练库").first()).toBeVisible();
+    for (const label of ["面试必修", "表达训练", "岗位专项", "民航基础", "实战训练"]) {
+      await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
+    }
+    await expect(page.getByText("我的收藏", { exact: true })).toBeVisible();
+    await expect(page.getByText("学习进度", { exact: true })).toBeVisible();
   });
 
-  test("5. 搜索+内容卡片展开", async ({ page }) => {
+  test("搜索并打开训练内容", async ({ page }) => {
     await page.goto("/learning");
-    await page.waitForTimeout(2000);
-    // 搜索
-    const search = page.locator("input[placeholder*='搜索']").first();
-    if (await search.isVisible()) {
-      await search.fill("面试");
-    }
-    // 展开卡片
-    const card = page.locator("button").filter({ hasText: /模|STAR|自我/ }).first();
-    if (await card.isVisible()) {
-      await card.click();
-      await page.waitForTimeout(500);
-    }
+    await page.getByPlaceholder("搜索知识与训练").fill("STAR");
+    await expect(page.getByText("STAR 案例法：让经历有证据")).toBeVisible();
+    await page.getByText("STAR 案例法：让经历有证据").click();
+    await expect(page.getByText("学完你要做到")).toBeVisible();
+    await expect(page.getByText("练习：先想，再看示范")).toBeVisible();
+  });
+
+  test("岗位专项内容可进入", async ({ page }) => {
+    await page.goto("/learning");
+    await page.getByText("岗位专项", { exact: true }).first().click();
+    await page.getByText("飞行员面试：安全、纪律与决策").click();
+    await expect(page.getByText("核心能力")).toBeVisible();
+    await expect(page.getByText("常见扣分点")).toBeVisible();
   });
 });

@@ -1,663 +1,658 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { ComponentType } from "react";
+import Link from "next/link";
 import {
-  Bookmark, BookmarkCheck, ChevronDown,
-  Plane, Users, Wrench, GraduationCap, Briefcase,
-  ClipboardList, Radar, Cpu, Building2, Shield, Ticket, Plus
+  AlertTriangle,
+  ArrowRight,
+  Bookmark,
+  BookmarkCheck,
+  Briefcase,
+  Building2,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  Clock,
+  Cpu,
+  GraduationCap,
+  Lightbulb,
+  Plane,
+  Radar,
+  Search,
+  Shield,
+  Sparkles,
+  Target,
+  Ticket,
+  Users,
+  Wrench,
 } from "lucide-react";
-import { learningCategories } from "@/lib/learning-center/data";
-import { getFavorites, toggleFavorite, addHistory } from "@/lib/learning-center/storage";
-import { getUserMaterials, saveUserMaterial, checkQuality, checkViolation, type UserMaterial } from "@/lib/learning-center/user-storage";
-import type { LearningItem } from "@/lib/learning-center/types";
 import LoginModal from "@/components/auth/LoginModal";
+import { allLearningItems, learningTracks } from "@/lib/learning-center/data";
+import {
+  addHistory,
+  getFavorites,
+  getHistory,
+  getProgress,
+  setProgress,
+  subscribeLearningState,
+  toggleFavorite,
+} from "@/lib/learning-center/storage";
+import type {
+  FavoriteRecord,
+  LearningItem,
+  LearningRole,
+  LearningTrackId,
+  ProgressStatus,
+} from "@/lib/learning-center/types";
 import { useLoginPrompt } from "@/hooks/useLoginPrompt";
 
-const positionLabels: Record<string, { label: string; icon: any; color: string }> = {
-  pilot: { label: "飞行员", icon: Plane, color: "text-blue-600 bg-blue-50" },
-  dispatcher: { label: "签派员", icon: ClipboardList, color: "text-indigo-600 bg-indigo-50" },
-  atc: { label: "空管员", icon: Radar, color: "text-cyan-600 bg-cyan-50" },
-  maintenance: { label: "机务维修", icon: Wrench, color: "text-emerald-600 bg-emerald-50" },
-  avionics: { label: "航电工程师", icon: Cpu, color: "text-purple-600 bg-purple-50" },
-  cabin: { label: "空乘", icon: Users, color: "text-rose-600 bg-rose-50" },
-  "airport-ops": { label: "机场运行", icon: Building2, color: "text-teal-600 bg-teal-50" },
-  "cabin-safety": { label: "客舱安全员", icon: Shield, color: "text-orange-600 bg-orange-50" },
-  "terminal-service": { label: "航站楼服务", icon: Ticket, color: "text-slate-600 bg-slate-100" },
+type ViewKey = LearningTrackId | "favorites" | "progress";
+
+const roleMeta: Record<
+  LearningRole,
+  { label: string; icon: ComponentType<{ className?: string }>; className: string }
+> = {
+  pilot: { label: "飞行员", icon: Plane, className: "bg-blue-50 text-blue-700" },
+  cabin: { label: "空中乘务员", icon: Users, className: "bg-rose-50 text-rose-700" },
+  "cabin-safety": { label: "客舱安全员", icon: Shield, className: "bg-orange-50 text-orange-700" },
+  maintenance: { label: "机务维修", icon: Wrench, className: "bg-emerald-50 text-emerald-700" },
+  dispatcher: { label: "签派员", icon: ClipboardList, className: "bg-indigo-50 text-indigo-700" },
+  atc: { label: "空中交通管制", icon: Radar, className: "bg-cyan-50 text-cyan-700" },
+  avionics: { label: "航电与通信导航", icon: Cpu, className: "bg-violet-50 text-violet-700" },
+  "airport-ops": { label: "机场运行", icon: Building2, className: "bg-teal-50 text-teal-700" },
+  "terminal-service": { label: "地服与航站楼", icon: Ticket, className: "bg-slate-100 text-slate-700" },
 };
 
-const categoryButtons = learningCategories
-  .filter((c) => c.id !== "records")
-  .map((c) => ({ id: c.id, label: c.label }));
+const navMeta: Record<
+  LearningTrackId,
+  { icon: ComponentType<{ className?: string }>; accent: string }
+> = {
+  essentials: { icon: GraduationCap, accent: "from-sky-500 to-blue-500" },
+  expression: { icon: ClipboardList, accent: "from-violet-500 to-fuchsia-500" },
+  roles: { icon: Briefcase, accent: "from-emerald-500 to-teal-500" },
+  aviation: { icon: Radar, accent: "from-amber-500 to-orange-500" },
+  practice: { icon: Target, accent: "from-rose-500 to-pink-500" },
+};
 
+function levelStyle(level: LearningItem["level"]) {
+  if (level === "入门") return "bg-emerald-50 text-emerald-700";
+  if (level === "进阶") return "bg-sky-50 text-sky-700";
+  return "bg-rose-50 text-rose-700";
+}
 
+function ProgressMark({ status }: { status: ProgressStatus | null }) {
+  if (status === "completed") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600">
+        <CheckCircle2 className="h-3.5 w-3.5" /> 已完成
+      </span>
+    );
+  }
+  if (status === "in-progress") {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-600">
+        <Clock className="h-3.5 w-3.5" /> 学习中
+      </span>
+    );
+  }
+  return null;
+}
 
 export default function LearningCenterClient() {
-  const { isLoggedIn, requireLogin, loginModalProps } = useLoginPrompt();
-  const [contentFilter, setContentFilter] = useState("all");
-  const [positionFilter, setPositionFilter] = useState("all");
-  const [recruitFilter, setRecruitFilter] = useState("all");
-  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [showUpload, setShowUpload] = useState(false);
-  const [uploadForm, setUploadForm] = useState({ title: "", content: "", recruitType: "" as const, role: "" as const, category: "" as const });
-  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
-  const [qualityWarnings, setQualityWarnings] = useState<string[]>([]);
-  const [userMaterials, setUserMaterials] = useState<UserMaterial[]>([]);
-  const [umKey, setUmKey] = useState(0);
+  const { requireLogin, loginModalProps } = useLoginPrompt();
+  const [view, setView] = useState<ViewKey>("essentials");
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [, setStateTick] = useState(0);
 
-  useEffect(() => {
-    setFavorites(getFavorites().map((f) => f.itemId));
-    setUserMaterials(getUserMaterials());
-  }, []);
+  useEffect(() => subscribeLearningState(() => setStateTick((value) => value + 1)), []);
 
-  const allItems = useMemo(() => {
-    const items: Array<{ item: LearningItem; catLabel: string; subLabel: string }> = [];
-    for (const c of learningCategories) {
-      for (const s of c.subcategories) {
-        for (const item of s.items) {
-          items.push({ item, catLabel: c.label, subLabel: s.label });
-        }
-      }
-    }
-    return items;
-  }, []);
-
-  // Merge user materials into display
-  const allItemsWithUploads = useMemo(() => {
-    const items = [...allItems];
-    const uMaterials = getUserMaterials();
-    for (const m of uMaterials) {
-      // Map recruitType to tags for filtering
-      const tags: string[] = [];
-      if (m.recruitType) tags.push(m.recruitType);
-      tags.push("用户上传");
-      if (m.isHighQuality) tags.push("优质投稿");
-
-      items.push({
-        item: {
-          id: m.id,
-          title: m.title,
-          content: m.content,
-          role: m.role || undefined,
-          tags,
-        } as LearningItem,
-        catLabel: learningCategories.find((c) => c.id === m.category)?.label || "用户上传",
-        subLabel: m.isHighQuality ? "优质经验" : "用户分享",
-      });
-    }
-    return items;
-  }, [allItems, umKey]);
-
-  // Handle upload submission
-  const handleUpload = () => {
-    const result = saveUserMaterial({
-      title: uploadForm.title.trim(),
-      content: uploadForm.content.trim(),
-      recruitType: uploadForm.recruitType,
-      role: uploadForm.role,
-      category: uploadForm.category,
-    });
-    if (!result.success) {
-      setUploadErrors(result.errors.map((e) => e.message));
-      return;
-    }
-    // Quality check
-    const quality = checkQuality(uploadForm.content);
-    if (!quality.isGood) {
-      setQualityWarnings(quality.suggestions);
-    } else {
-      setQualityWarnings([]);
-    }
-    setUploadForm({ title: "", content: "", recruitType: "" as const, role: "" as const, category: "" as const });
-    setUploadErrors([]);
-    setShowUpload(false);
-    setUserMaterials(getUserMaterials());
-    setUmKey((k) => k + 1);
-  };
-
-  const filteredItems = useMemo(() => {
-    // Content filter: flatten from category
-    let source = allItemsWithUploads;
-    if (contentFilter === "my-uploads") {
-      // Only show user materials
-      source = allItemsWithUploads.filter(({ item }) => item.tags?.includes("用户上传"));
-    } else
-    if (contentFilter !== "all" && contentFilter !== "records") {
-      const cat = learningCategories.find((c) => c.id === contentFilter);
-      source = cat
-        ? cat.subcategories.flatMap((s) =>
-            s.items.map((item) => ({ item, catLabel: cat.label, subLabel: s.label }))
-          )
-        : [];
-    }
-
-    // Position filter
-    if (positionFilter !== "all") {
-      source = source.filter(({ item }) => item.role === positionFilter);
-    }
-
-    // Recruit type filter
-    if (recruitFilter !== "all") {
-      source = source.filter(({ item }) => {
-        const tags = item.tags || [];
-        return recruitFilter === "campus" ? tags.includes("校招") : tags.includes("社招");
-      });
-    }
-
-    return source;
-  }, [allItemsWithUploads, contentFilter, positionFilter, recruitFilter]);
-
-  // Apply search filter
-  const searchedItems = useMemo(() => {
-    if (!search.trim()) return filteredItems;
-    const q = search.toLowerCase();
-    return filteredItems.filter(({ item, catLabel }) =>
-      item.title.toLowerCase().includes(q) ||
-      item.content.toLowerCase().includes(q) ||
-      (item.tags && item.tags.some((t) => t.toLowerCase().includes(q))) ||
-      catLabel.toLowerCase().includes(q)
-    );
-  }, [filteredItems, search]);
-
-  const favoriteItems = useMemo(() => {
-    if (contentFilter !== "records") return null;
-    const favs = getFavorites();
-    const items: Array<{ item: LearningItem; catLabel: string; subLabel: string }> = [];
-    for (const fav of favs) {
-      for (const c of learningCategories) {
-        for (const s of c.subcategories) {
-          const found = s.items.find((i) => i.id === fav.itemId);
-          if (found) {
-            // Apply filters on favorites too
-            let skip = false;
-            if (positionFilter !== "all" && found.role !== positionFilter) skip = true;
-            if (recruitFilter !== "all") {
-              const tags = found.tags || [];
-              if (!tags.includes(recruitFilter === "campus" ? "校招" : "社招")) skip = true;
-            }
-            if (!skip) items.push({ item: found, catLabel: c.label, subLabel: s.label });
-          }
-        }
-      }
-    }
-    return items;
-  }, [contentFilter, positionFilter, recruitFilter]);
-
-  const toggleExpand = (item: LearningItem, catLabel: string) => {
-    setExpandedItems((prev) => {
-      const next = { ...prev, [item.id]: !prev[item.id] };
-      if (!prev[item.id]) {
-        addHistory({
-          itemId: item.id,
-          categoryLabel: catLabel,
-          title: item.title,
-          viewedAt: new Date().toISOString(),
-        });
-      }
-      return next;
-    });
-  };
-
-  const handleToggleFav = (item: LearningItem, catLabel: string, subLabel: string) => {
-    // 收藏属于"操作"：游客先引导登录 / 注册
-    if (!requireLogin("登录后即可收藏题目与案例")) return;
-    const newFavs = toggleFavorite({
-      itemId: item.id,
-      categoryLabel: catLabel,
-      subcategoryLabel: subLabel,
-      title: item.title,
-      savedAt: new Date().toISOString(),
-    });
-    setFavorites(newFavs.map((f) => f.itemId));
-  };
-
-  const displayItems = contentFilter === "records" ? (favoriteItems || []) : filteredItems;
-
-  const isFilterActive = contentFilter !== "all" || positionFilter !== "all" || recruitFilter !== "all";
-  
-  // Active filter labels for display
-  const filterLabels: string[] = [];
-  if (recruitFilter !== "all") filterLabels.push(recruitFilter === "campus" ? "校招" : "社招");
-  if (positionFilter !== "all") filterLabels.push(positionLabels[positionFilter]?.label || positionFilter);
-  if (contentFilter !== "all" && contentFilter !== "records") {
-    const f = learningCategories.find((c) => c.id === contentFilter);
-    if (f) filterLabels.push(f.label);
-  }
-  if (contentFilter === "records") filterLabels.push("⭐ 收藏");
-
-  const FilterBtn = ({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition active:scale-[0.95] ${
-        active ? "bg-sky-100 text-sky-700 shadow-sm" : "bg-white/60 text-slate-500 hover:bg-white/80"
-      }`}
-    >
-      {children}
-    </button>
+  const favorites = getFavorites();
+  const progress = getProgress();
+  const history = getHistory();
+  const favoriteIds = useMemo(() => new Set(favorites.map((item) => item.itemId)), [favorites]);
+  const progressMap = useMemo(
+    () => new Map(progress.map((item) => [item.itemId, item.status])),
+    [progress],
   );
+  const selectedItem = allLearningItems.find((item) => item.id === selectedItemId) || null;
+  const completedCount = progress.filter((item) => item.status === "completed").length;
+  const inProgressCount = progress.filter((item) => item.status === "in-progress").length;
+  const completionRate = Math.round((completedCount / allLearningItems.length) * 100);
 
-  // Upload Modal
-  const UploadModal = showUpload ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}>
-      <div className="w-full max-w-lg rounded-[24px] border border-white/40 bg-white p-6 shadow-xl backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
-        <h2 className="mb-1 text-lg font-semibold text-slate-900">上传面试经验</h2>
-        <p className="mb-4 text-xs text-slate-400">分享你的面试经验或学习笔记，帮助其他考生</p>
+  const currentTrack =
+    view !== "favorites" && view !== "progress"
+      ? learningTracks.find((track) => track.id === view) || learningTracks[0]
+      : null;
 
-        <div className="space-y-3.5">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">标题 *</label>
-            <input type="text" value={uploadForm.title} onChange={(e) => setUploadForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="给你的经验起个标题" className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300" />
+  const searchedItems = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return [];
+    return allLearningItems.filter((item) => {
+      return (
+        item.title.toLowerCase().includes(keyword) ||
+        item.summary.toLowerCase().includes(keyword) ||
+        item.subtitle.toLowerCase().includes(keyword) ||
+        item.tags.some((tag) => tag.toLowerCase().includes(keyword))
+      );
+    });
+  }, [search]);
+
+  const favoriteItems = allLearningItems.filter((item) => favoriteIds.has(item.id));
+  const progressItems = allLearningItems.filter((item) => progressMap.has(item.id));
+
+  function openItem(item: LearningItem) {
+    setSelectedItemId(item.id);
+    setView(item.trackId);
+    addHistory({
+      itemId: item.id,
+      title: item.title,
+      trackLabel:
+        learningTracks.find((track) => track.id === item.trackId)?.label || "资料中心",
+      viewedAt: new Date().toISOString(),
+    });
+    setStateTick((value) => value + 1);
+  }
+
+  function selectView(nextView: ViewKey) {
+    setView(nextView);
+    setSelectedItemId(null);
+    setSearch("");
+  }
+
+  function handleFavorite(item: LearningItem) {
+    if (!requireLogin("登录后即可收藏学习内容")) return;
+    const record: FavoriteRecord = {
+      itemId: item.id,
+      title: item.title,
+      trackLabel:
+        learningTracks.find((track) => track.id === item.trackId)?.label || "资料中心",
+      savedAt: new Date().toISOString(),
+    };
+    toggleFavorite(record);
+    setStateTick((value) => value + 1);
+  }
+
+  function handleProgress(item: LearningItem) {
+    if (!requireLogin("登录后即可记录学习进度")) return;
+    const current = progressMap.get(item.id);
+    setProgress(item.id, current === "completed" ? "in-progress" : "completed");
+    setStateTick((value) => value + 1);
+  }
+
+  function renderItemCard(item: LearningItem) {
+    const role = item.role ? roleMeta[item.role] : null;
+    const RoleIcon = role?.icon;
+    const status = progressMap.get(item.id) || null;
+    return (
+      <button
+        key={item.id}
+        type="button"
+        onClick={() => openItem(item)}
+        className="group w-full rounded-[22px] border border-white/55 bg-white/65 px-5 py-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-sky-200 hover:bg-white"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-medium ${levelStyle(item.level)}`}>
+                {item.level}
+              </span>
+              {role ? (
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-medium ${role.className}`}>
+                  {RoleIcon ? <RoleIcon className="h-3 w-3" /> : null}
+                  {role.label}
+                </span>
+              ) : null}
+              <span className="text-[10px] text-amber-500">{"★".repeat(item.frequency)}</span>
+            </div>
+            <p className="mt-3 text-sm font-semibold text-slate-900">{item.title}</p>
+            <p className="mt-1 text-xs font-medium text-slate-500">{item.subtitle}</p>
+            <p className="mt-2 text-xs leading-5 text-slate-500">{item.summary}</p>
           </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">内容 *</label>
-            <textarea value={uploadForm.content} onChange={(e) => setUploadForm((p) => ({ ...p, content: e.target.value }))}
-              rows={6} placeholder="写下你的面试经验、答题思路或学习笔记……
-
-建议加入真实经历和行业细节，内容越具体对他人帮助越大"
-              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300 resize-y" />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">招聘方式 *</label>
-              <select value={uploadForm.recruitType} onChange={(e) => setUploadForm((p) => ({ ...p, recruitType: e.target.value as any }))}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300">
-                <option value="">请选择</option>
-                <option value="校招">校招</option>
-                <option value="社招">社招</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">岗位 *</label>
-              <select value={uploadForm.role} onChange={(e) => setUploadForm((p) => ({ ...p, role: e.target.value as any }))}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300">
-                <option value="">请选择</option>
-                {Object.entries(positionLabels).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">分类 *</label>
-              <select value={uploadForm.category} onChange={(e) => setUploadForm((p) => ({ ...p, category: e.target.value as any }))}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300">
-                <option value="">请选择</option>
-                {categoryButtons.filter((c) => c.id !== "records" && c.id !== "my-uploads").map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {uploadErrors.length > 0 && (
-            <div className="rounded-xl bg-rose-50 px-3 py-2">
-              {uploadErrors.map((e, i) => <p key={i} className="text-xs text-rose-600">⚠ {e}</p>)}
-            </div>
-          )}
-
-          {qualityWarnings.length > 0 && (
-            <div className="rounded-xl bg-amber-50 px-3 py-2">
-              <p className="text-xs font-medium text-amber-700 mb-1">内容优化建议：</p>
-              {qualityWarnings.map((w, i) => <p key={i} className="text-xs text-amber-600">• {w}</p>)}
-            </div>
-          )}
+          <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-sky-500" />
         </div>
-
-        <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-
-          <div className="flex gap-2">
-            <button type="button" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}
-              className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
-            <button type="button" onClick={handleUpload}
-              className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600">上传文本</button>
-          </div>
+        <div className="mt-4 flex items-center justify-between gap-3 border-t border-white/55 pt-3">
+          <span className="inline-flex items-center gap-1 text-[10px] text-slate-400">
+            <Clock className="h-3 w-3" /> {item.durationMinutes} 分钟
+          </span>
+          <ProgressMark status={status} />
         </div>
+      </button>
+    );
+  }
+
+  function renderItemDetail(item: LearningItem) {
+    const track = learningTracks.find((entry) => entry.id === item.trackId)!;
+    const learningModule = track.modules.find((entry) => entry.id === item.moduleId)!;
+    const role = item.role ? roleMeta[item.role] : null;
+    const RoleIcon = role?.icon;
+    const status = progressMap.get(item.id) || null;
+    const isFavorite = favoriteIds.has(item.id);
+
+    return (
+      <div className="space-y-5">
+        <button
+          type="button"
+          onClick={() => setSelectedItemId(null)}
+          className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 transition hover:text-sky-600"
+        >
+          <ChevronRight className="h-3.5 w-3.5 rotate-180" />
+          返回{track.label}
+        </button>
+
+        <section className="rounded-[26px] border border-white/60 bg-white/70 px-6 py-6 shadow-sm md:px-8 md:py-7">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-slate-400">
+                {track.label} · {learningModule.title}
+              </p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
+                {item.title}
+              </h2>
+              <p className="mt-2 text-sm font-medium text-slate-500">{item.subtitle}</p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => handleFavorite(item)}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-medium transition ${
+                  isFavorite
+                    ? "border-sky-200 bg-sky-50 text-sky-700"
+                    : "border-white/70 bg-white/70 text-slate-500 hover:bg-white"
+                }`}
+              >
+                {isFavorite ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
+                {isFavorite ? "已收藏" : "收藏"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleProgress(item)}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium transition ${
+                  status === "completed"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-slate-950 text-white hover:bg-slate-800"
+                }`}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {status === "completed" ? "标记为学习中" : "标记完成"}
+              </button>
+            </div>
+          </div>
+
+          <p className="mt-5 max-w-3xl text-sm leading-7 text-slate-600">{item.summary}</p>
+          <div className="mt-5 flex flex-wrap gap-2">
+            <span className={`rounded-full px-3 py-1 text-[11px] font-medium ${levelStyle(item.level)}`}>
+              {item.level}
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/75 px-3 py-1 text-[11px] text-slate-500">
+              <Clock className="h-3 w-3" /> {item.durationMinutes} 分钟
+            </span>
+            {role ? (
+              <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-medium ${role.className}`}>
+                {RoleIcon ? <RoleIcon className="h-3 w-3" /> : null}
+                {role.label}
+              </span>
+            ) : null}
+            {item.tags.filter((tag) => tag !== role?.label).map((tag) => (
+              <span key={tag} className="rounded-full bg-slate-100 px-3 py-1 text-[11px] text-slate-500">
+                {tag}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-[24px] border border-sky-100 bg-sky-50/60 px-6 py-5">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-sky-900">
+            <Target className="h-4 w-4" /> 学完你要做到
+          </h3>
+          <div className="mt-4 grid gap-2 md:grid-cols-3">
+            {item.objectives.map((objective) => (
+              <div key={objective} className="flex items-start gap-2 rounded-2xl bg-white/70 px-4 py-3 text-xs leading-5 text-slate-600">
+                <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-sky-500" />
+                {objective}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {item.blocks.map((block) => (
+          <section key={block.heading} className="rounded-[24px] border border-white/60 bg-white/65 px-6 py-6">
+            <h3 className="text-base font-semibold text-slate-900">{block.heading}</h3>
+            <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
+              {block.body.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
+            {block.bullets?.length ? (
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {block.bullets.map((bullet) => (
+                  <div key={bullet} className="flex items-start gap-2 rounded-2xl bg-slate-50/80 px-4 py-3 text-xs leading-6 text-slate-600">
+                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
+                    {bullet}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {block.example ? (
+              <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50/70 px-5 py-4">
+                <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-emerald-600">
+                  {block.example.label}
+                </p>
+                <p className="mt-2 text-sm leading-7 text-emerald-900">{block.example.text}</p>
+              </div>
+            ) : null}
+          </section>
+        ))}
+
+        {item.practice ? (
+          <section className="rounded-[24px] border border-violet-100 bg-violet-50/55 px-6 py-6">
+            <h3 className="flex items-center gap-2 text-base font-semibold text-violet-900">
+              <Lightbulb className="h-4 w-4" /> 练习：先想，再看示范
+            </h3>
+            <p className="mt-4 text-sm font-medium leading-7 text-slate-800">{item.practice.question}</p>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="rounded-2xl bg-white/75 px-5 py-4">
+                <p className="text-xs font-semibold text-slate-700">思考顺序</p>
+                <ol className="mt-3 space-y-2">
+                  {item.practice.thinking.map((step, index) => (
+                    <li key={step} className="flex gap-2 text-xs leading-5 text-slate-600">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[10px] font-semibold text-violet-700">
+                        {index + 1}
+                      </span>
+                      {step}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div className="rounded-2xl border border-violet-100 bg-white px-5 py-4">
+                <p className="text-xs font-semibold text-violet-700">参考示范</p>
+                <p className="mt-3 text-xs leading-6 text-slate-600">{item.practice.sample}</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        <section className="rounded-[24px] border border-amber-100 bg-amber-50/60 px-6 py-5">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+            <AlertTriangle className="h-4 w-4" /> 常见扣分点
+          </h3>
+          <div className="mt-4 grid gap-2 md:grid-cols-3">
+            {item.pitfalls.map((pitfall) => (
+              <div key={pitfall} className="flex items-start gap-2 rounded-2xl bg-white/75 px-4 py-3 text-xs leading-5 text-amber-900">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                {pitfall}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-[24px] border border-white/60 bg-slate-950 px-6 py-5 text-white">
+          <div>
+            <p className="text-sm font-semibold">把知识转成真实回答</p>
+            <p className="mt-1 text-xs text-white/55">用 AI 面试或回答优化验证你是否真的会用。</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/interview"
+              className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-medium text-slate-900 transition hover:bg-slate-100"
+            >
+              去 AI 面试 <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href="/chat"
+              className="inline-flex items-center gap-2 rounded-full bg-white/10 px-5 py-2.5 text-xs font-medium text-white transition hover:bg-white/16"
+            >
+              AI 优化回答
+            </Link>
+          </div>
+        </section>
       </div>
-    </div>
-  ) : null;
+    );
+  }
+
+  const trackProgress = (trackId: LearningTrackId) => {
+    const items = allLearningItems.filter((item) => item.trackId === trackId);
+    const completed = items.filter((item) => progressMap.get(item.id) === "completed").length;
+    return { completed, total: items.length, percent: Math.round((completed / items.length) * 100) };
+  };
 
   return (
     <>
-    <div className="stagger-section mx-auto max-w-6xl">
-      {!isLoggedIn && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200/70 bg-sky-50/70 px-5 py-3">
-          <p className="text-xs leading-5 text-sky-800">
-            游客预览模式 · 全部题目与案例都可免费阅读，登录后即可收藏、上传面经并同步学习记录
-          </p>
-          <button
-            type="button"
-            onClick={() => requireLogin("登录后即可收藏、上传面经并同步学习记录")}
-            className="shrink-0 rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-4 py-1.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110"
-          >
-            登录 / 注册
-          </button>
-        </div>
-      )}
-      {/* ====== Search Bar + 快捷入口 ====== */}
-      <div className="mb-2 flex items-center gap-3">
-        <div className="relative flex-1">
-          <svg className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.34-4.34"/></svg>
-          <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜索面试题、技巧、知识点..."
-            className="w-full rounded-[20px] border border-white/40 bg-white/70 px-4 py-3 pl-11 text-sm text-slate-800 outline-none backdrop-blur-md placeholder:text-slate-400 focus:border-sky-300 focus:ring-2 focus:ring-sky-200/50" />
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <button type="button" onClick={() => { setContentFilter("my-uploads"); setSearch(""); }}
-            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-medium transition ${
-              contentFilter === "my-uploads"
-                ? "bg-sky-100 text-sky-700 shadow-sm"
-                : "bg-white/70 text-slate-500 hover:bg-white/90 border border-white/40"
-            }`}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-            我的上传
-          </button>
-          <button type="button" onClick={() => { setContentFilter("records"); setSearch(""); }}
-            className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-medium transition ${
-              contentFilter === "records"
-                ? "bg-amber-100 text-amber-700 shadow-sm"
-                : "bg-white/70 text-slate-500 hover:bg-white/90 border border-white/40"
-            }`}>
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5"><path d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z"/></svg>
-            收藏
-          </button>
-        </div>
-      </div>
-
-      {/* ====== Row 1: 招聘方式 ====== */}
-      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-[20px] border border-white/40 bg-white/70 px-4 py-2.5 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
-        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">招聘方式</span>
-        <FilterBtn active={recruitFilter === "all"} onClick={() => setRecruitFilter("all")}>全部</FilterBtn>
-        <FilterBtn active={recruitFilter === "campus"} onClick={() => setRecruitFilter("campus")}>
-          <GraduationCap className="-ml-0.5 mr-0.5 inline h-3 w-3" />校招
-        </FilterBtn>
-        <FilterBtn active={recruitFilter === "experienced"} onClick={() => setRecruitFilter("experienced")}>
-          <Briefcase className="-ml-0.5 mr-0.5 inline h-3 w-3" />社招
-        </FilterBtn>
-      </div>
-
-      {/* ====== Row 2: 岗位 ====== */}
-      <div className="mb-2 flex flex-wrap items-center gap-2 rounded-[20px] border border-white/40 bg-white/70 px-4 py-2.5 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.04)]">
-        <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">岗位</span>
-        <FilterBtn active={positionFilter === "all"} onClick={() => setPositionFilter("all")}>全部</FilterBtn>
-        {Object.entries(positionLabels).map(([key, p]) => {
-          const Icon = p.icon;
-          // Upload Modal
-  const UploadModal = showUpload ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}>
-      <div className="w-full max-w-lg rounded-[24px] border border-white/40 bg-white p-6 shadow-xl backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
-        <h2 className="mb-1 text-lg font-semibold text-slate-900">上传面试经验</h2>
-        <p className="mb-4 text-xs text-slate-400">分享你的面试经验或学习笔记，帮助其他考生</p>
-
-        <div className="space-y-3.5">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">标题 *</label>
-            <input type="text" value={uploadForm.title} onChange={(e) => setUploadForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="给你的经验起个标题" className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300" />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">内容 *</label>
-            <textarea value={uploadForm.content} onChange={(e) => setUploadForm((p) => ({ ...p, content: e.target.value }))}
-              rows={6} placeholder="写下你的面试经验、答题思路或学习笔记……
-
-建议加入真实经历和行业细节，内容越具体对他人帮助越大"
-              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300 resize-y" />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
+      <div className="mx-auto max-w-[1480px]">
+        <header className="rise-in overflow-hidden rounded-[30px] border border-white/55 bg-[linear-gradient(135deg,rgba(255,255,255,0.78),rgba(236,245,255,0.66))] px-6 py-7 shadow-[0_20px_60px_rgba(40,74,120,0.10)] md:px-9 md:py-9">
+          <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">招聘方式 *</label>
-              <select value={uploadForm.recruitType} onChange={(e) => setUploadForm((p) => ({ ...p, recruitType: e.target.value as any }))}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300">
-                <option value="">请选择</option>
-                <option value="校招">校招</option>
-                <option value="社招">社招</option>
-              </select>
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/65 bg-white/60 px-3.5 py-1.5 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500">
+                <Sparkles className="h-3 w-3 text-sky-500" /> Interview Learning Center
+              </div>
+              <h1 className="mt-4 text-3xl font-semibold tracking-[-0.04em] text-slate-950 md:text-5xl">
+                民航面试能力训练库
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-600">
+                不是背答案，而是按“岗位逻辑、表达结构、行业知识、实战训练”建立稳定的面试能力。
+              </p>
             </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">岗位 *</label>
-              <select value={uploadForm.role} onChange={(e) => setUploadForm((p) => ({ ...p, role: e.target.value as any }))}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300">
-                <option value="">请选择</option>
-                {Object.entries(positionLabels).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">分类 *</label>
-              <select value={uploadForm.category} onChange={(e) => setUploadForm((p) => ({ ...p, category: e.target.value as any }))}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300">
-                <option value="">请选择</option>
-                {categoryButtons.filter((c) => c.id !== "records" && c.id !== "my-uploads").map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
+            <div className="grid w-full grid-cols-3 gap-2 sm:w-auto">
+              {[
+                ["内容", allLearningItems.length],
+                ["完成", completedCount],
+                ["进度", `${completionRate}%`],
+              ].map(([label, value]) => (
+                <div key={label} className="min-w-20 rounded-2xl bg-white/70 px-4 py-3 text-center">
+                  <p className="text-[10px] text-slate-400">{label}</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-900">{value}</p>
+                </div>
+              ))}
             </div>
           </div>
+        </header>
 
-          {uploadErrors.length > 0 && (
-            <div className="rounded-xl bg-rose-50 px-3 py-2">
-              {uploadErrors.map((e, i) => <p key={i} className="text-xs text-rose-600">⚠ {e}</p>)}
-            </div>
-          )}
+        <div className="mt-6 grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)] lg:items-start">
+          <aside className="lg:sticky lg:top-6">
+            <div className="glass-panel p-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+                <input
+                  value={search}
+                  onChange={(event) => {
+                    setSearch(event.target.value);
+                    setSelectedItemId(null);
+                  }}
+                  placeholder="搜索知识与训练"
+                  className="w-full rounded-2xl border border-white/65 bg-white/70 py-2.5 pl-9 pr-3 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-sky-300"
+                />
+              </div>
 
-          {qualityWarnings.length > 0 && (
-            <div className="rounded-xl bg-amber-50 px-3 py-2">
-              <p className="text-xs font-medium text-amber-700 mb-1">内容优化建议：</p>
-              {qualityWarnings.map((w, i) => <p key={i} className="text-xs text-amber-600">• {w}</p>)}
-            </div>
-          )}
-        </div>
+              <nav className="mt-3 space-y-1.5">
+                {learningTracks.map((track) => {
+                  const meta = navMeta[track.id];
+                  const Icon = meta.icon;
+                  const itemCount = track.modules.reduce((sum, module) => sum + module.items.length, 0);
+                  const active = view === track.id && !selectedItemId;
+                  return (
+                    <button
+                      key={track.id}
+                      type="button"
+                      onClick={() => selectView(track.id)}
+                      className={`flex w-full items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition ${
+                        active
+                          ? "bg-slate-950 text-white shadow-lg"
+                          : "text-slate-600 hover:bg-white/60 hover:text-slate-900"
+                      }`}
+                    >
+                      <span className={`flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br ${meta.accent} text-white`}>
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-xs font-semibold">{track.label}</span>
+                        <span className={`mt-0.5 block text-[10px] ${active ? "text-white/55" : "text-slate-400"}`}>
+                          {itemCount} 个训练主题
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </nav>
 
-        <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-
-          <div className="flex gap-2">
-            <button type="button" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}
-              className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
-            <button type="button" onClick={handleUpload}
-              className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600">上传文本</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  ) : null;
-
-  return (
-            <FilterBtn key={key} active={positionFilter === key} onClick={() => setPositionFilter(key)}>
-              <Icon className="-ml-0.5 mr-0.5 inline h-3 w-3" />{p.label}
-            </FilterBtn>
-          );
-        })}
-      </div>
-
-      {/* ====== Content ====== */}
-      {searchedItems.length === 0 ? (
-        <div className="rounded-[20px] border border-white/40 bg-white/60 px-6 py-10 text-center">
-          <p className="text-sm text-slate-500">
-            {search.trim() ? "没有找到匹配的内容，试试其他关键词" : "当前筛选条件下没有内容"}
-            {filterLabels.length > 0 && <span>（{filterLabels.join(" · ")})</span>}
-          </p>
-          <button
-            type="button"
-            onClick={() => { setContentFilter("all"); setPositionFilter("all"); setRecruitFilter("all"); }}
-            className="mt-3 rounded-full bg-sky-100 px-4 py-1.5 text-xs font-medium text-sky-700 hover:bg-sky-200 transition"
-          >
-            清除筛选
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          <p className="text-xs text-slate-500">
-            共 {searchedItems.length} 项
-            {filterLabels.length > 0 && <span>（{filterLabels.join(" · ")})</span>}
-          </p>
-
-          {searchedItems.map(({ item, catLabel, subLabel }) => {
-            const isExpanded = expandedItems[item.id] || false;
-            const isFav = favorites.includes(item.id);
-            const roleInfo = item.role ? positionLabels[item.role] : null;
-            const RoleIcon = roleInfo?.icon;
-            const tags = item.tags || [];
-            const hasRecruitTag = tags.includes("校招") || tags.includes("社招");
-
-            // Upload Modal
-  const UploadModal = showUpload ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4 backdrop-blur-sm" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}>
-      <div className="w-full max-w-lg rounded-[24px] border border-white/40 bg-white p-6 shadow-xl backdrop-blur-xl" onClick={(e) => e.stopPropagation()}>
-        <h2 className="mb-1 text-lg font-semibold text-slate-900">上传面试经验</h2>
-        <p className="mb-4 text-xs text-slate-400">分享你的面试经验或学习笔记，帮助其他考生</p>
-
-        <div className="space-y-3.5">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">标题 *</label>
-            <input type="text" value={uploadForm.title} onChange={(e) => setUploadForm((p) => ({ ...p, title: e.target.value }))}
-              placeholder="给你的经验起个标题" className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300" />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">内容 *</label>
-            <textarea value={uploadForm.content} onChange={(e) => setUploadForm((p) => ({ ...p, content: e.target.value }))}
-              rows={6} placeholder="写下你的面试经验、答题思路或学习笔记……
-
-建议加入真实经历和行业细节，内容越具体对他人帮助越大"
-              className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-sky-300 resize-y" />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">招聘方式 *</label>
-              <select value={uploadForm.recruitType} onChange={(e) => setUploadForm((p) => ({ ...p, recruitType: e.target.value as any }))}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300">
-                <option value="">请选择</option>
-                <option value="校招">校招</option>
-                <option value="社招">社招</option>
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">岗位 *</label>
-              <select value={uploadForm.role} onChange={(e) => setUploadForm((p) => ({ ...p, role: e.target.value as any }))}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300">
-                <option value="">请选择</option>
-                {Object.entries(positionLabels).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-500">分类 *</label>
-              <select value={uploadForm.category} onChange={(e) => setUploadForm((p) => ({ ...p, category: e.target.value as any }))}
-                className="w-full rounded-xl border border-slate-200 bg-white/80 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-300">
-                <option value="">请选择</option>
-                {categoryButtons.filter((c) => c.id !== "records" && c.id !== "my-uploads").map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          {uploadErrors.length > 0 && (
-            <div className="rounded-xl bg-rose-50 px-3 py-2">
-              {uploadErrors.map((e, i) => <p key={i} className="text-xs text-rose-600">⚠ {e}</p>)}
-            </div>
-          )}
-
-          {qualityWarnings.length > 0 && (
-            <div className="rounded-xl bg-amber-50 px-3 py-2">
-              <p className="text-xs font-medium text-amber-700 mb-1">内容优化建议：</p>
-              {qualityWarnings.map((w, i) => <p key={i} className="text-xs text-amber-600">• {w}</p>)}
-            </div>
-          )}
-        </div>
-
-        <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-
-          <div className="flex gap-2">
-            <button type="button" onClick={() => { setShowUpload(false); setUploadErrors([]); setQualityWarnings([]); }}
-              className="rounded-full bg-white/60 px-4 py-2 text-xs font-medium text-slate-600 transition hover:bg-white/80">取消</button>
-            <button type="button" onClick={handleUpload}
-              className="rounded-full bg-sky-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-sky-600">上传文本</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  ) : null;
-
-  return (
-              <div
-                key={item.id}
-                className="rounded-[20px] border border-white/40 bg-white/70 shadow-[0_4px_20px_rgba(0,0,0,0.04)] backdrop-blur-md transition-all hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
-              >
+              <div className="my-3 h-px bg-white/55" />
+              <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.18em] text-slate-400">
+                我的学习
+              </p>
+              <nav className="space-y-1.5">
                 <button
                   type="button"
-                  onClick={() => toggleExpand(item, catLabel)}
-                  className="glass-shimmer flex w-full items-center justify-between gap-3 px-5 py-4 text-left"
+                  onClick={() => selectView("favorites")}
+                  className={`flex w-full items-center justify-between rounded-2xl px-3.5 py-3 text-xs font-medium transition ${
+                    view === "favorites" ? "bg-amber-50 text-amber-800" : "text-slate-600 hover:bg-white/60"
+                  }`}
                 >
-                  <div className="min-w-0 flex-1 stagger-section">
-                    <p className="text-sm font-medium text-slate-900 truncate">{item.title}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2">
-                      {roleInfo && (
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${roleInfo.color}`}>
-                          {RoleIcon && <RoleIcon className="h-2.5 w-2.5" />}
-                          {roleInfo.label}
-                        </span>
-                      )}
-                      {hasRecruitTag && (
-                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
-                          tags.includes("校招") ? "bg-violet-50 text-violet-600" : "bg-amber-50 text-amber-600"
-                        }`}>
-                          {tags.includes("校招") ? <GraduationCap className="h-2.5 w-2.5" /> : <Briefcase className="h-2.5 w-2.5" />}
-                          {tags.includes("校招") ? "校招" : "社招"}
-                        </span>
-                      )}
-                      {catLabel && <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[10px] text-sky-600">{catLabel}</span>}
-                      {item.frequency && (
-                        <span className="text-[10px] text-amber-600">
-                          {"★".repeat(item.frequency)}{"☆".repeat(5 - item.frequency)}
-                        </span>
-                      )}
-                      {item.difficulty && (
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] ${
-                          item.difficulty === "入门" ? "bg-emerald-50 text-emerald-600" :
-                          item.difficulty === "中级" ? "bg-amber-50 text-amber-600" :
-                          item.difficulty === "高级" ? "bg-rose-50 text-rose-600" :
-                          "bg-slate-50 text-slate-500"
-                        }`}>{item.difficulty}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span
-                      role="button" tabIndex={0}
-                      onClick={(e) => { e.stopPropagation(); handleToggleFav(item, catLabel, subLabel); }}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleToggleFav(item, catLabel, subLabel); }}
-                      className="inline-flex"
-                    >
-                      {isFav ? <BookmarkCheck className="h-4 w-4 text-sky-500" /> : <Bookmark className="h-4 w-4 text-slate-300 hover:text-slate-400" />}
-                    </span>
-                    <ChevronDown className={`h-4 w-4 text-slate-300 transition ${isExpanded ? "rotate-0" : "-rotate-90"}`} />
-                  </div>
+                  <span className="flex items-center gap-2">
+                    <Bookmark className="h-4 w-4" /> 我的收藏
+                  </span>
+                  <span>{favorites.length}</span>
                 </button>
-                {isExpanded && (
-                  <div className="border-t border-white/40 px-5 py-4">
-                    <div className="prose prose-sm max-w-none whitespace-pre-wrap text-sm leading-7 text-slate-700 [&_strong]:text-slate-900 [&_strong]:font-semibold">
-                      {item.content}
-                    </div>
-                    {tags.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {tags.map((tag: string) => (
-                          <span key={tag} className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] text-slate-500">{tag}</span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-          {UploadModal}
+                <button
+                  type="button"
+                  onClick={() => selectView("progress")}
+                  className={`flex w-full items-center justify-between rounded-2xl px-3.5 py-3 text-xs font-medium transition ${
+                    view === "progress" ? "bg-emerald-50 text-emerald-800" : "text-slate-600 hover:bg-white/60"
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" /> 学习进度
+                  </span>
+                  <span>{completedCount}</span>
+                </button>
+              </nav>
+            </div>
+          </aside>
 
-      {/* 上传浮动按钮 */}
-      <button type="button" onClick={() => { if (!requireLogin("登录后即可上传你的面经")) return; setShowUpload(true); }}
-        className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-white shadow-lg transition hover:bg-sky-600 active:scale-95"
-        title="上传面试经验">
-        <Plus className="h-5 w-5" />
-      </button>
+          <main className="min-w-0">
+            {selectedItem ? (
+              renderItemDetail(selectedItem)
+            ) : search.trim() ? (
+              <section>
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Search Results</p>
+                    <h2 className="mt-1.5 text-xl font-semibold text-slate-950">搜索“{search}”</h2>
+                  </div>
+                  <span className="text-xs text-slate-400">{searchedItems.length} 个结果</span>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {searchedItems.map(renderItemCard)}
+                </div>
+                {searchedItems.length === 0 ? (
+                  <div className="mt-5 rounded-[24px] border border-dashed border-white/70 bg-white/50 px-6 py-14 text-center text-sm text-slate-400">
+                    没有找到相关内容
+                  </div>
+                ) : null}
+              </section>
+            ) : view === "favorites" ? (
+              <section>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Saved</p>
+                  <h2 className="mt-1.5 text-xl font-semibold text-slate-950">我的收藏</h2>
+                  <p className="mt-1 text-xs text-slate-500">集中复习你标记过的高频内容和训练主题。</p>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {favoriteItems.map(renderItemCard)}
+                </div>
+                {favoriteItems.length === 0 ? (
+                  <div className="mt-5 rounded-[24px] border border-dashed border-white/70 bg-white/50 px-6 py-14 text-center">
+                    <Bookmark className="mx-auto h-7 w-7 text-slate-300" />
+                    <p className="mt-3 text-sm text-slate-500">还没有收藏内容</p>
+                  </div>
+                ) : null}
+              </section>
+            ) : view === "progress" ? (
+              <section>
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">Progress</p>
+                  <h2 className="mt-1.5 text-xl font-semibold text-slate-950">学习进度</h2>
+                  <p className="mt-1 text-xs text-slate-500">
+                    已完成 {completedCount} 项，学习中 {inProgressCount} 项。
+                  </p>
+                </div>
+                <div className="mt-5 grid gap-4 md:grid-cols-2">
+                  {progressItems.map(renderItemCard)}
+                </div>
+                {progressItems.length === 0 ? (
+                  <div className="mt-5 rounded-[24px] border border-dashed border-white/70 bg-white/50 px-6 py-14 text-center">
+                    <CheckCircle2 className="mx-auto h-7 w-7 text-slate-300" />
+                    <p className="mt-3 text-sm text-slate-500">打开内容并标记完成，进度会显示在这里</p>
+                  </div>
+                ) : null}
+                {history.length > 0 ? (
+                  <div className="mt-8">
+                    <h3 className="text-sm font-semibold text-slate-800">最近学习</h3>
+                    <div className="mt-3 space-y-2">
+                      {history.slice(0, 5).map((record) => (
+                        <button
+                          key={`${record.itemId}-${record.viewedAt}`}
+                          type="button"
+                          onClick={() => {
+                            const item = allLearningItems.find((entry) => entry.id === record.itemId);
+                            if (item) openItem(item);
+                          }}
+                          className="flex w-full items-center justify-between rounded-2xl bg-white/55 px-4 py-3 text-left text-xs text-slate-600 transition hover:bg-white"
+                        >
+                          <span className="truncate">{record.title}</span>
+                          <span className="ml-4 shrink-0 text-[10px] text-slate-400">
+                            {new Date(record.viewedAt).toLocaleDateString("zh-CN")}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+            ) : currentTrack ? (
+              <section>
+                <div className="flex flex-wrap items-end justify-between gap-4">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                      Learning Track
+                    </p>
+                    <h2 className="mt-1.5 text-2xl font-semibold tracking-tight text-slate-950">
+                      {currentTrack.label}
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-slate-500">{currentTrack.description}</p>
+                  </div>
+                  <div className="min-w-40 rounded-2xl bg-white/60 px-4 py-3">
+                    <div className="flex items-center justify-between text-[10px] text-slate-400">
+                      <span>本模块进度</span>
+                      <span>{trackProgress(currentTrack.id).percent}%</span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-sky-500 to-violet-500"
+                        style={{ width: `${trackProgress(currentTrack.id).percent}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-7">
+                  {currentTrack.modules.map((learningModule) => (
+                    <div key={learningModule.id}>
+                      <div className="mb-3">
+                        <h3 className="text-base font-semibold text-slate-900">{learningModule.title}</h3>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">{learningModule.description}</p>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        {learningModule.items.map(renderItemCard)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ) : null}
+          </main>
         </div>
+      </div>
+
       <LoginModal {...loginModalProps} />
     </>
   );

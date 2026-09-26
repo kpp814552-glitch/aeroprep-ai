@@ -7,6 +7,7 @@ export default defineConfig({
   maxFailures: 1,
   use: {
     baseURL: "http://localhost:3100",
+    channel: "chrome",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
   },
