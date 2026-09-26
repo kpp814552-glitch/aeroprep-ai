@@ -1,8 +1,13 @@
 import { TtsAutoplayBlockedError, TtsPlayer } from "@/lib/audio/tts-player";
 
-export type VoiceProviderName =
-  | "doubao-tts"
-  | "native-preview";
+export type VoiceProviderName = "doubao-tts";
+
+export class DoubaoVoiceUnavailableError extends Error {
+  constructor(message = "豆包语音暂时不可用，请检查网络后重试。") {
+    super(message);
+    this.name = "DoubaoVoiceUnavailableError";
+  }
+}
 
 export type SpeakQuestionOptions = {
   onPlayStart?: () => void;
@@ -26,59 +31,6 @@ type CreateInterviewVoiceSessionOptions = {
   endpoint?: string;
   voiceId?: string;
 };
-
-export async function ensureVoicesReady() {
-  const existingVoices = window.speechSynthesis.getVoices();
-  if (existingVoices.length > 0) return existingVoices;
-
-  return new Promise<SpeechSynthesisVoice[]>((resolve) => {
-    const timeout = window.setTimeout(() => {
-      window.speechSynthesis.onvoiceschanged = null;
-      resolve(window.speechSynthesis.getVoices());
-    }, 900);
-
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.clearTimeout(timeout);
-      window.speechSynthesis.onvoiceschanged = null;
-      resolve(window.speechSynthesis.getVoices());
-    };
-  });
-}
-
-function pickNaturalChineseVoice(voices: SpeechSynthesisVoice[]) {
-  const preferredNames = [
-    "Xiaoxiao",
-    "Yunxi",
-    "Meijia",
-    "Tingting",
-    "Sinji",
-    "Xiaochen",
-    "Xiaoyi",
-  ];
-
-  return (
-    voices.find(
-      (voice) =>
-        voice.lang.toLowerCase().startsWith("zh") &&
-        !/yunyang|yunjian|jun|gang|hao/i.test(voice.name) &&
-        preferredNames.some((name) => voice.name.includes(name))
-    ) ||
-    voices.find(
-      (voice) =>
-        voice.lang.toLowerCase().startsWith("zh") &&
-        !voice.default &&
-        /xiao|mei|ting|yi|xi|female/i.test(voice.name)
-    ) ||
-    voices.find((voice) => voice.lang.toLowerCase().startsWith("zh")) ||
-    voices.find((voice) => !voice.default) ||
-    null
-  );
-}
-
-export async function resolveInterviewVoice() {
-  const voices = await ensureVoicesReady();
-  return pickNaturalChineseVoice(voices);
-}
 
 export function humanizeInterviewSpeech(text: string) {
   return text
@@ -108,79 +60,18 @@ export function buildInterviewerPrompt(text: string) {
   return dedupeConsecutiveSpeechUnits(humanizeInterviewSpeech(text));
 }
 
-export async function speakWithNativeChineseVoice(
-  text: string,
-  fixedVoice: SpeechSynthesisVoice | null,
-  callbacks?: SpeakQuestionOptions
-) {
-  if (!("speechSynthesis" in window)) {
-    throw new Error("当前浏览器不支持语音播放。");
-  }
-
-  window.speechSynthesis.cancel();
-
-  const utteranceText = humanizeInterviewSpeech(text);
-
-  return new Promise<void>((resolve) => {
-    const utterance = new SpeechSynthesisUtterance(utteranceText);
-    let settled = false;
-    let started = false;
-    const estimatedMs = Math.min(60000, Math.max(8000, utteranceText.length * 220));
-    const finish = () => {
-      if (settled) return;
-      settled = true;
-      window.clearTimeout(timeoutId);
-      callbacks?.onPlayEnd?.();
-      resolve();
-    };
-    const timeoutId = window.setTimeout(() => {
-      if (!started) callbacks?.onPlayStart?.();
-      finish();
-    }, estimatedMs);
-
-    utterance.lang = "zh-CN";
-    utterance.rate = 0.92;
-    utterance.pitch = 1.06;
-    utterance.volume = 1;
-    if (fixedVoice) {
-      utterance.voice = fixedVoice;
-      utterance.lang = fixedVoice.lang || utterance.lang;
-    }
-    utterance.onstart = () => {
-      started = true;
-      callbacks?.onPlayStart?.();
-    };
-    utterance.onend = finish;
-    utterance.onerror = finish;
-
-    try {
-      window.speechSynthesis.speak(utterance);
-    } catch {
-      finish();
-    }
-  });
-}
-
 export function createInterviewVoiceSession(
   options: CreateInterviewVoiceSessionOptions = {}
 ): InterviewVoiceSession {
   let providerName: VoiceProviderName | null = null;
-  let fixedVoice: SpeechSynthesisVoice | null = null;
   const ttsPlayer = typeof window !== "undefined"
     ? new TtsPlayer({
         endpoint: options.endpoint || "/api/tts",
         voiceId: options.voiceId,
-        retries: 1,
+        retries: 3,
+        timeoutMs: 25000,
       })
     : null;
-
-  async function prepare() {
-    if (typeof window === "undefined") return;
-
-    if (fixedVoice === null && "speechSynthesis" in window) {
-      fixedVoice = await resolveInterviewVoice();
-    }
-  }
 
   return {
     getProviderName() {
@@ -191,19 +82,11 @@ export function createInterviewVoiceSession(
         return options.voiceId || "zh_female_vv_uranus_bigtts";
       }
 
-      if (providerName === "native-preview") {
-        return fixedVoice ? `${fixedVoice.name} (${fixedVoice.lang})` : "native-preview";
-      }
-
       return null;
     },
-    async prepare() {
-
-      await prepare();
-    },
+    async prepare() {},
     async preloadQuestion(text: string) {
       const normalizedText = buildInterviewerPrompt(text);
-      await prepare();
       try {
         await ttsPlayer?.preload(normalizedText);
       } catch {
@@ -213,10 +96,9 @@ export function createInterviewVoiceSession(
     async speakQuestion(text: string, callbacks?: SpeakQuestionOptions) {
       const normalizedText = buildInterviewerPrompt(text);
 
-      await prepare();
-
       try {
         await ttsPlayer?.play(normalizedText, {
+          timeoutMs: 25000,
           onPlayStart: callbacks?.onPlayStart,
           onPlayEnd: callbacks?.onPlayEnd,
         });
@@ -227,21 +109,12 @@ export function createInterviewVoiceSession(
           throw error;
         }
 
-        console.error("[TTS] Doubao playback failed, falling back to native voice.", error);
-        await speakWithNativeChineseVoice(normalizedText, fixedVoice, callbacks);
-        providerName = "native-preview";
-        return {
-          providerName,
-          voiceLabel: fixedVoice ? `${fixedVoice.name} (${fixedVoice.lang})` : "native-preview",
-        };
+        console.error("[TTS] Doubao playback failed after retries.", error);
+        throw new DoubaoVoiceUnavailableError();
       }
     },
     stop() {
       ttsPlayer?.stop();
-
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
     },
   };
 }

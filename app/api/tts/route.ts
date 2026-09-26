@@ -10,6 +10,8 @@ type TtsRequestBody = {
 const VOLCENGINE_TTS_URL =
   "https://openspeech.bytedance.com/api/v1/tts";
 const VOLCENGINE_TTS_CLUSTER = "volcano_tts";
+const TTS_ATTEMPTS = 3;
+const TTS_TIMEOUT_MS = 20000;
 
 function splitSpeechUnits(text: string) {
   return text
@@ -90,18 +92,50 @@ export async function POST(request: Request) {
   };
 
 
-  const response = await fetch(VOLCENGINE_TTS_URL, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(requestBody),
-  });
+  let responseText = "";
+  let lastError = "";
 
-  const responseText = await response.text();
+  for (let attempt = 0; attempt < TTS_ATTEMPTS; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TTS_TIMEOUT_MS);
 
+    try {
+      const response = await fetch(VOLCENGINE_TTS_URL, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          ...requestBody,
+          request: {
+            ...requestBody.request,
+            reqid: crypto.randomUUID(),
+          },
+        }),
+        signal: controller.signal,
+      });
+      responseText = await response.text();
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${responseText.slice(0, 300)}`);
+      }
+      lastError = "";
+      break;
+    } catch (error) {
+      lastError =
+        error instanceof Error && error.name === "AbortError"
+          ? `请求超时（${TTS_TIMEOUT_MS}ms）`
+          : error instanceof Error
+            ? error.message
+            : "未知网络错误";
+      if (attempt < TTS_ATTEMPTS - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
 
-  if (!response.ok) {
+  if (lastError) {
     return NextResponse.json(
-      { error: `VolcEngine TTS failed: ${responseText}` },
+      { error: `VolcEngine TTS failed after ${TTS_ATTEMPTS} attempts: ${lastError}` },
       { status: 502 }
     );
   }

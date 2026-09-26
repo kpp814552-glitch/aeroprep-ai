@@ -326,6 +326,7 @@ const resumeQualityRef = useRef<any>(
   const [statusText, setStatusText] = useState("正在连接面试室");
   const [turns, setTurns] = useState<InterviewTurn[]>([]);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [voiceRetryAvailable, setVoiceRetryAvailable] = useState(false);
   const [reportStep, setReportStep] = useState(0);
   const [restoredFromSaved, setRestoredFromSaved] = useState(false);
   const [fatalError, setFatalError] = useState("");
@@ -985,6 +986,7 @@ const resumeQualityRef = useRef<any>(
   // ── Play current question (TTS + text sync via onPlayStart) ──
   const playCurrentQuestion = useCallback(async (pending: PendingQuestion) => {
     setAutoplayBlocked(false);
+    setVoiceRetryAvailable(false);
     setStatusText('面试官正在提问...');
     setVoiceActivityState('tts_playing');
     setLiveTranscript('');
@@ -1025,18 +1027,23 @@ const resumeQualityRef = useRef<any>(
         setVoiceActivityState('tts_playing');
         return;
       }
-      console.error('[Interview] Voice playback failed, continuing with text question.', error);
-      setCurrentQuestion(pending.text);
-      setCurrentStage(pending.stage);
-      setPhase('listening');
-      setVoiceActivityState('waiting_answer');
-      setStatusText('语音播放失败，已切换为文字提问，请开始作答');
-      const answerSeconds = getAnswerSecondsForStage(pending.stage);
-      timer.setAnswerCountdown(answerSeconds);
-      startRecognition();
-      timer.startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
+      console.error('[Interview] Doubao voice playback failed after retries.', error);
+      setVoiceActivityState('Silent');
+      setStatusText('豆包语音连接失败');
+      setFatalError('豆包语音暂时不可用。系统已自动重试，但不会切换浏览器语音。请检查网络后重试。');
+      setVoiceRetryAvailable(true);
+      setPhase('error');
     }
   }, [company, mode, timer.startAnswerCountdown, startRecognition, voiceSession]);
+
+  const handleRetryVoice = useCallback(async () => {
+    const pending = pendingQuestionRef.current;
+    if (!pending || !voiceSession) return;
+    setFatalError('');
+    setVoiceRetryAvailable(false);
+    setPhase('playing');
+    await playCurrentQuestion(pending);
+  }, [playCurrentQuestion, voiceSession]);
 
   // ── Handle user clicking "开始面试" (ready → playing) ──
   const handleStartInterview = useCallback(async () => {
@@ -1213,6 +1220,7 @@ const resumeQualityRef = useRef<any>(
         return;
       }
       setFatalError(error instanceof Error ? error.message : '语音播放失败');
+      setVoiceRetryAvailable(true);
       setPhase('error');
     }
   }, [autoplayBlocked, phase, timer.startAnswerCountdown, startRecognition, voiceSession]);
@@ -1323,9 +1331,6 @@ const resumeQualityRef = useRef<any>(
       stopRecognition();
       voiceSession?.stop();
 
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
     };
   }, [stopRecognition, voiceSession]);
 
@@ -1338,13 +1343,15 @@ const resumeQualityRef = useRef<any>(
     setStatusText('正在重播题目...');
     try {
       await voiceSession.speakQuestion(text);
-    } catch {
-      /* 播放失败不阻塞答题 */
-    } finally {
+      setVoiceRetryAvailable(false);
       if (remaining > 0) {
         timer.startAnswerCountdown(remaining, () => endAnswerRef.current());
         setStatusText('请继续作答');
       }
+    } catch {
+      setVoiceRetryAvailable(true);
+      setFatalError('豆包语音重播失败，请检查网络后重试。');
+      setPhase('error');
     }
   }, [currentQuestion, isGeneratingReport, timer, voiceSession]);
 
@@ -1576,10 +1583,19 @@ const resumeQualityRef = useRef<any>(
                   {fatalError}
                 </p>
               )}
+              {voiceRetryAvailable ? (
+                <button
+                  type="button"
+                  onClick={handleRetryVoice}
+                  className="mt-10 inline-flex items-center gap-2 rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
+                >
+                  重试豆包语音
+                </button>
+              ) : null}
               <button
                 type="button"
                 onClick={() => window.location.reload()}
-                className="mt-10 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/14 px-6 py-3 text-sm uppercase tracking-[0.22em] text-white/70 transition hover:border-white/30 hover:bg-white/22 hover:text-white"
+                className={`${voiceRetryAvailable ? "mt-3" : "mt-10"} inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/14 px-6 py-3 text-sm uppercase tracking-[0.22em] text-white/70 transition hover:border-white/30 hover:bg-white/22 hover:text-white`}
               >
                 刷新重试
               </button>

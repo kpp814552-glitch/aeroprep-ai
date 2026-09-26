@@ -2,6 +2,7 @@ export type TtsPlayerOptions = {
   endpoint?: string;
   voiceId?: string;
   retries?: number;
+  timeoutMs?: number;
   onPlayStart?: () => void;
   onPlayEnd?: () => void;
   onDebug?: (message: string) => void;
@@ -25,6 +26,7 @@ export class TtsPlayer {
   private readonly endpoint: string;
   private readonly voiceId?: string;
   private readonly retries: number;
+  private readonly timeoutMs: number;
   private activePlayId = 0;
   private preloadedBlob: Blob | null = null;
   private preloadedText = "";
@@ -34,6 +36,7 @@ export class TtsPlayer {
     this.endpoint = options.endpoint || "/api/tts";
     this.voiceId = options.voiceId;
     this.retries = options.retries ?? 1;
+    this.timeoutMs = options.timeoutMs ?? 25000;
   }
 
   stop() {
@@ -78,11 +81,7 @@ export class TtsPlayer {
       voiceId: options.voiceId || this.voiceId,
     };
 
-    const response = await fetch(options.endpoint || this.endpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    const response = await this._fetchWithTimeout(options.endpoint || this.endpoint, payload, options.timeoutMs);
 
     if (!response.ok) throw new Error(await response.text());
 
@@ -131,10 +130,7 @@ export class TtsPlayer {
       return;
     }
 
-    const payload: TtsPayload = {
-      text,
-      voiceId: options.voiceId || this.voiceId,
-    };
+    const payload: TtsPayload = { text, voiceId: options.voiceId || this.voiceId };
 
     let lastError: Error | null = null;
     const retryCount = options.retries ?? this.retries;
@@ -144,13 +140,11 @@ export class TtsPlayer {
         this.stop();
         this.activePlayId = playId;
 
-        const response = await fetch(options.endpoint || this.endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+        const response = await this._fetchWithTimeout(
+          options.endpoint || this.endpoint,
+          payload,
+          options.timeoutMs,
+        );
 
         if (!response.ok) {
           throw new Error(await response.text());
@@ -179,10 +173,37 @@ export class TtsPlayer {
       } catch (error) {
         lastError = error instanceof Error ? error : new Error("Unknown TTS error.");
         options.onDebug?.(`[TTS] attempt ${attempt + 1} failed: ${lastError.message}`);
+        if (attempt < retryCount) {
+          await new Promise((resolve) => window.setTimeout(resolve, 500 * 2 ** attempt));
+        }
       }
     }
 
     throw lastError || new Error("TTS play failed.");
+  }
+
+  private async _fetchWithTimeout(
+    endpoint: string,
+    payload: TtsPayload,
+    timeoutMs = this.timeoutMs,
+  ): Promise<Response> {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      return await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        throw new Error(`TTS request timed out after ${timeoutMs}ms.`);
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
   }
 
   private async _playElement(playId: number, options: TtsPlayerOptions = {}): Promise<void> {
