@@ -334,9 +334,9 @@ export default function ChatWorkspace() {
           <div className="absolute -bottom-40 -right-40 h-[600px] w-[600px] rounded-full bg-violet-100/20 blur-3xl" />
         </div>
 
-        <div className="relative mx-auto max-w-7xl">
+        <div className="relative mx-auto max-w-[1480px]">
           {/* ====== 顶部：紧凑标题栏（不再是巨幅 hero） ====== */}
-          <header className="rise-in mb-6 flex flex-wrap items-end justify-between gap-4">
+          <header className="rise-in mb-8 flex flex-wrap items-start justify-between gap-6">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/60 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.22em] text-slate-500 shadow-sm backdrop-blur-md">
                 <WandSparkles className="h-3 w-3 text-violet-500" />AI 优化
@@ -348,9 +348,9 @@ export default function ChatWorkspace() {
                 按目标岗位输出五维评分、逐句改写、追问预测与可直接使用的优化稿。
               </p>
             </div>
-            <div className="flex flex-wrap gap-1.5 text-[11px] text-slate-500">
+            <div className="flex max-w-2xl flex-wrap gap-2 text-[11px] text-slate-500">
               {["五维真实评分", "逐句改写对照", "面试追问预测", "岗位关键词覆盖"].map((item) => (
-                <span key={item} className="rounded-full border border-white/50 bg-white/60 px-2.5 py-1 shadow-sm">
+                <span key={item} className="rounded-full border border-white/50 bg-white/60 px-3 py-1.5 shadow-sm">
                   {item}
                 </span>
               ))}
@@ -358,10 +358,10 @@ export default function ChatWorkspace() {
           </header>
 
           {/* ====== 两栏工作区：左输入 / 右结果 ====== */}
-          <div className="stagger-section grid gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start">
+          <div className="stagger-section grid gap-6 lg:grid-cols-2 lg:items-start xl:gap-8">
             {/* ---------- 左：输入 ---------- */}
-            <section className="space-y-4 lg:sticky lg:top-6">
-              <div className="grid grid-cols-2 gap-2">
+            <section className="space-y-5 lg:sticky lg:top-6">
+              <div className="grid grid-cols-2 gap-3">
                 {[
                   { id: "interview" as const, icon: MessageSquare, title: "面试回答", desc: "自我介绍 / STAR / 情景题" },
                   { id: "resume" as const, icon: FileText, title: "简历诊断", desc: "结构 / 量化 / 关键词" },
@@ -373,7 +373,7 @@ export default function ChatWorkspace() {
                       key={card.id}
                       type="button"
                       onClick={() => { setKind(card.id); resetResult(); }}
-                      className={`flex items-center gap-2.5 rounded-2xl border px-3.5 py-3 text-left transition ${
+                      className={`flex items-center gap-3 rounded-2xl border px-4 py-3.5 text-left transition ${
                         active ? "border-sky-200 bg-white shadow-md" : "border-white/50 bg-white/50 shadow-sm hover:bg-white/70"
                       }`}
                     >
@@ -398,8 +398,8 @@ export default function ChatWorkspace() {
                 </div>
               ) : null}
 
-              <GlassPanel className="overflow-hidden rounded-[22px] border border-white/40 bg-white/70 shadow-[0_8px_30px_rgba(0,0,0,0.04)] backdrop-blur-xl">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/30 px-5 py-3">
+              <GlassPanel className="overflow-hidden rounded-[24px] border border-white/40 bg-white/70 shadow-[0_14px_40px_rgba(37,66,109,0.08)] backdrop-blur-xl">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/30 px-5 py-4">
               <div className="flex items-center gap-3">
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-medium ${
                   kind === "resume" ? "bg-sky-50 text-sky-600" : "bg-violet-50 text-violet-600"
@@ -439,17 +439,17 @@ export default function ChatWorkspace() {
             <textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value.slice(0, 5000))}
-              rows={10}
+              rows={12}
               placeholder={
                 kind === "resume"
                   ? "粘贴完整简历内容（教育经历、实习、项目、证书等），AI 会按目标岗位诊断结构与量化成果"
                   : "粘贴你的面试回答或自我介绍，AI 会按目标岗位做五维诊断、逐句改写与追问预测"
               }
-              className="w-full resize-none bg-transparent px-5 py-4 text-sm leading-7 text-slate-800 outline-none placeholder:text-slate-400"
-              style={{ minHeight: "240px" }}
+              className="w-full resize-none bg-transparent px-6 py-5 text-sm leading-7 text-slate-800 outline-none placeholder:text-slate-400"
+              style={{ minHeight: "300px" }}
             />
 
-            <div className="flex flex-wrap items-center gap-3 border-t border-white/30 px-5 py-3">
+            <div className="flex flex-wrap items-center gap-3 border-t border-white/30 px-5 py-4">
               <label className="flex items-center gap-2 text-[11px] text-slate-500">
                 目标岗位
                 <select
@@ -534,7 +534,7 @@ export default function ChatWorkspace() {
             </section>
 
             {/* ---------- 右：诊断结果 ---------- */}
-            <section className="min-w-0 space-y-4">
+            <section className="min-w-0 space-y-5">
           {error ? (
             <div className="rounded-2xl bg-rose-50 px-5 py-3 text-center text-xs text-rose-600">
               {error}
@@ -560,7 +560,7 @@ export default function ChatWorkspace() {
           ) : null}
 
           {!analysis && !loading && !fallbackText ? (
-            <div className="space-y-4">
+            <div className="space-y-5">
               {/* 结果示意：让空状态也能看出产品形态，避免右栏过空 */}
               <div className="rounded-[22px] border border-white/50 bg-white/60 px-5 py-5 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -602,7 +602,7 @@ export default function ChatWorkspace() {
                 </div>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {[
                   { icon: BarChart3, title: "五维评分", desc: dimensionNames.join(" · ") },
                   { icon: Lightbulb, title: "逐句改写", desc: "指出原句问题，给出可直接替换的句子" },
@@ -626,17 +626,17 @@ export default function ChatWorkspace() {
           ) : null}
 
           {analysis ? (
-            <div ref={resultRef} className="rise-in space-y-4">
-              <div className="rounded-[24px] border border-white/50 bg-white/70 px-6 py-5 shadow-sm backdrop-blur-xl">
-                <div className="flex flex-wrap items-center gap-6">
-                  <div className="text-center">
+            <div ref={resultRef} className="rise-in space-y-5">
+              <div className="rounded-[24px] border border-white/50 bg-white/70 px-6 py-6 shadow-sm backdrop-blur-xl">
+                <div className="grid gap-5 md:grid-cols-[150px_minmax(0,1fr)_auto] md:items-center">
+                  <div className="text-center md:text-left">
                     <p className="text-[10px] uppercase tracking-wider text-slate-400">综合评分</p>
                     <p className={`mt-1 text-5xl font-semibold ${scoreColor(analysis.score)}`}>{analysis.score}</p>
                     <p className="mt-1 text-[11px] text-slate-500">{analysis.level}</p>
                   </div>
-                  <div className="min-w-[240px] flex-1">
-                    <p className="text-sm font-medium text-slate-800">{analysis.summary || "已完成诊断"}</p>
-                    <p className="mt-1 text-[11px] text-slate-400">
+                  <div className="min-w-0 border-white/50 md:border-l md:pl-6">
+                    <p className="text-sm leading-6 font-medium text-slate-800">{analysis.summary || "已完成诊断"}</p>
+                    <p className="mt-1.5 text-[11px] text-slate-400">
                       目标岗位：{positionLabel} · {recruitType}
                     </p>
                     {cachedHint ? (
@@ -648,7 +648,7 @@ export default function ChatWorkspace() {
                   <button
                     type="button"
                     onClick={() => copyText(analysis.optimized)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white transition hover:bg-slate-800"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-medium text-white transition hover:bg-slate-800"
                   >
                     {copied ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     {copied ? "已复制优化稿" : "复制优化稿"}
@@ -656,7 +656,7 @@ export default function ChatWorkspace() {
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap gap-1.5 rounded-2xl border border-white/40 bg-white/60 p-1.5">
+              <div className="flex gap-1.5 overflow-x-auto rounded-2xl border border-white/40 bg-white/60 p-1.5 lg:grid lg:grid-cols-5">
                 {tabs.map((t) => {
                   const Icon = t.icon;
                   const active = tab === t.key;
@@ -665,7 +665,7 @@ export default function ChatWorkspace() {
                       key={t.key}
                       type="button"
                       onClick={() => setTab(t.key)}
-                      className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition ${
+                      className={`flex min-w-[132px] items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-medium transition lg:min-w-0 ${
                         active ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
                       }`}
                     >

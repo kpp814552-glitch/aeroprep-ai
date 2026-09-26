@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from "react";
-import { FileText, Loader2, Mic, MoveRight, ShieldCheck, Sparkles, Target, Upload } from "lucide-react";
+import { FileText, Mic, MoveRight, ShieldCheck, Sparkles, Target, Upload } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import { GlassCard, GlassPanel } from "@/components/ui/glass";
-import { GlassLinkButton } from "@/components/ui/glass-link";
 import { useAuth } from "@/hooks/useAuth";
 import LoginModal from "@/components/auth/LoginModal";
 import {
@@ -36,6 +35,7 @@ type UploadState = {
   type: string;
   text: string;
   chars: number;
+  quality?: unknown;
 } | null;
 
 type SelectionPillProps = {
@@ -93,7 +93,6 @@ export default function InterviewPrepPage() {
   const [selectedPersona, setSelectedPersona] =
     useState<InterviewerPersona>("专业型HR");
   const [uploadError, setUploadError] = useState("");
-  const [uploading, setUploading] = useState(false);
   const [showProcess, setShowProcess] = useState(false);
 
   const selectedRoleLabel = useMemo(
@@ -136,7 +135,6 @@ export default function InterviewPrepPage() {
     }
 
     setUploadError("");
-    setUploading(true);
 
     const formData = new FormData();
     formData.append("file", file);
@@ -159,13 +157,12 @@ export default function InterviewPrepPage() {
           type: data.fileType,
           text: data.text,
           chars: data.chars,
+          quality: data.quality,
         });
-        setUploading(false);
       })
       .catch((err) => {
         setUploadError(err.message || "简历解析失败，请重试");
         setResume(null);
-        setUploading(false);
       });
   }
 
@@ -180,9 +177,9 @@ export default function InterviewPrepPage() {
     }
     if (resume?.text) {
       sessionStorage.setItem("aeroprep_resume_text", resume.text);
-    if ((resume as any).quality) {
-      sessionStorage.setItem("aeroprep_resume_quality", JSON.stringify((resume as any).quality));
-    }
+      if (resume.quality) {
+        sessionStorage.setItem("aeroprep_resume_quality", JSON.stringify(resume.quality));
+      }
     } else {
       sessionStorage.removeItem("aeroprep_resume_text");
       sessionStorage.removeItem("aeroprep_resume_quality");
@@ -207,16 +204,16 @@ export default function InterviewPrepPage() {
   return (
     <AppFrame backHref="/" backLabel="返回首页">
       <main className="relative z-10 px-5 pb-16 pt-8 md:px-8">
-        <div className="stagger-section mx-auto max-w-7xl space-y-6">
-          <GlassPanel className="soft-enter overflow-hidden px-6 py-8 md:px-8 md:py-10">
+        <div className="stagger-section mx-auto max-w-[1440px] space-y-8">
+          <GlassPanel className="soft-enter overflow-hidden px-6 py-9 md:px-10 md:py-12">
             <div className="absolute inset-x-16 top-0 h-28 rounded-full bg-sky-200/55 blur-3xl" />
-            <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="relative grid gap-10 lg:grid-cols-2 lg:items-center">
               <div>
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/44 px-4 py-2 text-xs font-medium uppercase tracking-[0.26em] text-slate-500">
                   <Sparkles className="h-4 w-4 text-blue-500" />
                   Interview Prep
                 </div>
-                <h1 className="mt-8 text-3xl font-semibold tracking-[-0.04em] text-slate-950 md:text-5xl">
+                <h1 className="mt-8 text-3xl font-semibold tracking-[-0.04em] text-slate-950 md:text-[3.25rem]">
                   AI面试准备页
                 </h1>
                 <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600">
@@ -263,13 +260,13 @@ export default function InterviewPrepPage() {
                     </div>
 
                     <div className="mt-8 space-y-3">
-                      <div className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-slate-200">
+                      <div className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3.5 text-sm text-slate-200">
                         面试官人格：{selectedPersona}
                       </div>
-                      <div className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-slate-200">
+                      <div className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3.5 text-sm text-slate-200">
                         题型节奏：AI提问 + 语音回答 + 实时反馈
                       </div>
-                      <div className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3 text-sm text-slate-200">
+                      <div className="rounded-2xl border border-white/12 bg-white/6 px-4 py-3.5 text-sm text-slate-200">
                         风格：现代会议室 / 浅景深 / 高端纪录片采访感
                       </div>
                     </div>
@@ -279,10 +276,10 @@ export default function InterviewPrepPage() {
             </div>
           </GlassPanel>
 
-          <div className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
-            <GlassPanel className="soft-enter-delay px-5 py-5 md:px-6 md:py-6">
-              <div className="grid gap-6">
-                <div className="rounded-[28px] border border-white/35 bg-white/24 p-5">
+          <div className="grid gap-8 lg:grid-cols-2">
+            <GlassPanel className="soft-enter-delay px-5 py-6 md:px-7 md:py-7">
+              <div className="grid gap-7">
+                <div className="rounded-[28px] border border-white/35 bg-white/24 p-6">
                   <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/60 text-slate-900">
                       <Upload className="h-5 w-5" />
@@ -322,7 +319,7 @@ export default function InterviewPrepPage() {
                   ) : null}
                 </div>
 
-                <div className="rounded-[28px] border border-white/35 bg-white/24 p-5">
+                <div className="rounded-[28px] border border-white/35 bg-white/24 p-6">
                   <p className="text-base font-medium text-slate-950">公司选择</p>
                   <div className="mt-4 flex flex-wrap gap-3">
                     {interviewCompanies.map((company) => (
@@ -336,7 +333,7 @@ export default function InterviewPrepPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[28px] border border-white/35 bg-white/24 p-5">
+                <div className="rounded-[28px] border border-white/35 bg-white/24 p-6">
                   <p className="text-base font-medium text-slate-950">岗位选择</p>
                   <div className="mt-4 grid gap-3 sm:grid-cols-2">
                     {prepRoleOptions.map((role) => (
@@ -362,9 +359,9 @@ export default function InterviewPrepPage() {
               </div>
             </GlassPanel>
 
-            <GlassPanel className="soft-enter-delay-2 px-5 py-5 md:px-6 md:py-6">
-              <div className="grid gap-6">
-                <div className="rounded-[28px] border border-white/35 bg-white/24 p-5">
+            <GlassPanel className="soft-enter-delay-2 px-5 py-6 md:px-7 md:py-7">
+              <div className="grid gap-7">
+                <div className="rounded-[28px] border border-white/35 bg-white/24 p-6">
                   <p className="text-base font-medium text-slate-950">面试模式</p>
                   <div className="mt-4 flex flex-wrap gap-3">
                     {interviewModes.map((mode) => (
@@ -378,7 +375,7 @@ export default function InterviewPrepPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[28px] border border-white/35 bg-white/24 p-5">
+                <div className="rounded-[28px] border border-white/35 bg-white/24 p-6">
                   <p className="text-base font-medium text-slate-950">面试官人格</p>
                   <div className="mt-4 grid gap-3">
                     {interviewerPersonas.map((persona) => (
@@ -399,7 +396,7 @@ export default function InterviewPrepPage() {
                   </div>
                 </div>
 
-                <div className="rounded-[30px] border border-white/36 bg-slate-950/88 p-6 text-white shadow-[0_22px_60px_rgba(10,18,36,0.32)]">
+                <div className="rounded-[30px] border border-white/36 bg-slate-950/88 p-7 text-white shadow-[0_22px_60px_rgba(10,18,36,0.32)]">
                   <div className="flex items-center gap-3">
                     <ShieldCheck className="h-5 w-5 text-sky-300" />
                     <p className="text-xs uppercase tracking-[0.3em] text-slate-400">

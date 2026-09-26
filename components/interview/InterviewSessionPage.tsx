@@ -1408,77 +1408,80 @@ const resumeQualityRef = useRef<any>(
       <div className="absolute inset-x-0 bottom-[13%] h-[24%] bg-[radial-gradient(circle_at_center,rgba(16,9,7,0.22),rgba(16,9,7,0)_72%)]" />
 
       <div className="relative z-10 min-h-dvh-safe px-4 py-4 md:px-5 md:py-5">
-        <div className="rise-in mx-auto flex min-h-dvh-safe max-w-[1536px] flex-col">
+        <div className="rise-in mx-auto flex min-h-dvh-safe w-full max-w-[1280px] flex-col">
 
           {/* ── Header: Transcript + Timer (playing/listening only) ── */}
           {showHeader && (
-            <>
-            {/* 本场配置：让"选了哪一类就按哪一类面"在面试过程中一直可见 */}
-            <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] text-white/55">
-              {[company, roleLabel, mode, persona].filter(Boolean).map((item) => (
-                <span key={item} className="rounded-full border border-white/10 bg-white/[0.05] px-2.5 py-0.5">
-                  {item}
+            <div className="mb-4 rounded-[22px] border border-white/8 bg-[linear-gradient(180deg,rgba(24,15,12,0.48),rgba(10,8,7,0.3))] p-3 shadow-[0_16px_38px_rgba(0,0,0,0.16)] backdrop-blur-md md:p-4">
+              <div className="flex flex-wrap items-center gap-2 text-[10px] text-white/58">
+                {[company, roleLabel, mode, persona].filter(Boolean).map((item) => (
+                  <span key={item} className="rounded-full border border-white/10 bg-white/[0.055] px-3 py-1">
+                    {item}
+                  </span>
+                ))}
+                <span className={`rounded-full border px-3 py-1 ${
+                  resumeTextRef.current
+                    ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100/80"
+                    : "border-white/10 bg-white/[0.055]"
+                }`}>
+                  {resumeTextRef.current ? "已结合简历提问" : "岗位通用提问"}
                 </span>
-              ))}
-              <span className={`rounded-full border px-2.5 py-0.5 ${
-                resumeTextRef.current
-                  ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100/80"
-                  : "border-white/10 bg-white/[0.05]"
-              }`}>
-                {resumeTextRef.current ? "已结合简历提问" : "岗位通用提问"}
-              </span>
-            </div>
-            <div className="flex max-sm:flex-col max-sm:gap-3 items-start justify-between gap-4">
-              <div className="w-full max-sm:max-w-full max-w-[13.2rem] rounded-[16px] border border-white/6 bg-[linear-gradient(180deg,rgba(26,15,10,0.42),rgba(8,6,6,0.3))] px-2.5 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.12)] backdrop-blur-md">
-                <div className="flex items-center gap-2.5">
-                  <div className="flex h-4 items-end gap-1 text-[#ffd9ae]/80">
-                    <span className="h-2 w-[2px] rounded-full bg-current/55" />
-                    <span className="h-3.5 w-[2px] rounded-full bg-current" />
-                    <span className="h-3 w-[2px] rounded-full bg-current/75" />
-                    <span className="h-4 w-[2px] rounded-full bg-current/80" />
-                    <span className="h-1.5 w-[2px] rounded-full bg-current/45" />
+              </div>
+
+              <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_200px]">
+                <div className="min-w-0 rounded-[18px] border border-white/7 bg-[rgba(9,7,7,0.28)] px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-4 items-end gap-1 text-[#ffd9ae]/80">
+                      <span className="h-2 w-[2px] rounded-full bg-current/55" />
+                      <span className="h-3.5 w-[2px] rounded-full bg-current" />
+                      <span className="h-3 w-[2px] rounded-full bg-current/75" />
+                      <span className="h-4 w-[2px] rounded-full bg-current/80" />
+                      <span className="h-1.5 w-[2px] rounded-full bg-current/45" />
+                    </div>
+                    <p className="text-[9px] uppercase tracking-[0.22em] text-white/58">
+                      实时识别 / Live Transcript
+                    </p>
                   </div>
-                  <p className="text-[7px] uppercase tracking-[0.2em] text-white/56">
-                    实时识别 / Live Transcript
-                  </p>
+
+                  <div
+                    ref={transcriptScrollRef}
+                    className="mt-3 h-[9.5rem] max-sm:h-[8rem] space-y-2 overflow-y-auto pr-1 text-[0.8rem] leading-6 text-white/76 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/12"
+                  >
+                    <p>
+                      <span className="text-white/56">{interviewerLabel}：</span>
+                      {phase === 'processing' && isGeneratingReport ? '面试结束，正在生成面试报告...' : phase === 'processing' ? '正在分析问题内容...' : (currentQuestion || '请稍等，面试官正在进入面试室。')}
+                    </p>
+                    {phase === 'processing' && isGeneratingReport ? (
+                      <p className="text-[0.7rem] leading-5 text-[#f5c689]/70">{REPORT_STEPS[reportStep]}</p>
+                    ) : null}
+                    <p className="break-words">
+                      <span className="text-white/56">考生：</span>
+                      {transcriptPreview}
+                    </p>
+                    <p className="text-[0.7rem] leading-5 text-white/62">
+                      <span className="text-white/52">状态：</span>
+                      <span className={activeVoiceState.accent}>{voiceActivityState}</span>
+                      <span className="text-white/42"> / {statusText}</span>
+                    </p>
+                    {fatalError ? (
+                      <p className="text-[0.7rem] leading-5 text-[#ffd1c6]/84">{fatalError}</p>
+                    ) : null}
+                  </div>
                 </div>
 
-                <div
-                  ref={transcriptScrollRef}
-                  className="mt-2.5 h-[12.4rem] max-sm:h-[7.5rem] space-y-2 overflow-y-auto pr-1 text-[0.75rem] sm:text-[0.7rem] leading-6 text-white/74 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/12"
-                >
-                  <p>
-                    <span className="text-white/56">{interviewerLabel}：</span>
-                    {phase === 'processing' && isGeneratingReport ? '面试结束，正在生成面试报告...' : phase === 'processing' ? '正在分析问题内容...' : (currentQuestion || '请稍等，面试官正在进入面试室。')}
+                <div className="flex min-h-[9.5rem] flex-col justify-center rounded-[18px] border border-white/7 bg-[linear-gradient(180deg,rgba(52,45,40,0.3),rgba(23,19,18,0.32))] px-5 py-4 text-left md:text-right">
+                  <p className="text-[9px] uppercase tracking-[0.24em] text-white/56">
+                    面试时长 / Duration
                   </p>
-                  {phase === 'processing' && isGeneratingReport ? (
-                    <p className="text-[0.66rem] leading-5 text-[#f5c689]/70">{REPORT_STEPS[reportStep]}</p>
-                  ) : null}
-                  <p className="break-words">
-                    <span className="text-white/56">考生：</span>
-                    {transcriptPreview}
+                  <p className="mt-3 font-light tabular-nums tracking-[0.1em] text-white/92 text-[2rem] md:text-[2.35rem]">
+                    {formatDuration(timer.elapsedSeconds)}
                   </p>
-                  <p className="text-[0.66rem] leading-5 text-white/60">
-                    <span className="text-white/52">状态：</span>
-                    <span className={activeVoiceState.accent}>{voiceActivityState}</span>
-                    <span className="text-white/42"> / {statusText}</span>
+                  <p className="mt-2 text-[10px] leading-5 text-white/42">
+                    保持自然语速，不必急于结束回答
                   </p>
-                  {fatalError ? (
-                    <p className="text-[0.66rem] leading-5 text-[#ffd1c6]/84">{fatalError}</p>
-                  ) : null}
                 </div>
-              </div>
-
-              <div className="rounded-[20px] max-sm:w-full border border-white/7 bg-[linear-gradient(180deg,rgba(52,45,40,0.34),rgba(23,19,18,0.34))] px-4 py-2.5 text-right shadow-[0_10px_28px_rgba(0,0,0,0.16)] backdrop-blur-md">
-                <p className="text-[10px] uppercase tracking-[0.26em] text-white/56">
-                  面试时长 / Duration
-                </p>
-                <p className="mt-2 text-[1.5rem] sm:text-[2.15rem] font-light tracking-[0.12em] text-white/92 md:text-[2.85rem]">
-                  {formatDuration(timer.elapsedSeconds)}
-                </p>
               </div>
             </div>
-            </>
           )}
 
           {/* ── Preparing State ── */}
@@ -1614,111 +1617,111 @@ const resumeQualityRef = useRef<any>(
           {/* ── Bottom Card (playing/listening) ── */}
           {showBottomCard && (
             <section className="safe-bottom relative flex flex-1 items-end justify-center pt-4 md:pt-6">
-              <div className="relative w-full max-w-[1120px]">
-                <div className="pointer-events-none absolute inset-x-0 bottom-[-1.1rem] flex justify-center px-5 md:px-8">
-                  <div className="w-full max-w-[760px] rounded-[18px] border border-white/5 bg-[linear-gradient(180deg,rgba(18,11,9,0.3),rgba(8,7,7,0.18))] px-4 py-2 shadow-[0_10px_22px_rgba(0,0,0,0.16)] backdrop-blur-sm md:px-5 md:py-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-[#f5c689]/72">
-                        <span className={activeVoiceState.dotClassName || "h-1.5 w-1.5 rounded-full bg-[#f5c689]/90"} />
-                        {phase === 'processing' && isGeneratingReport ? '面试结束 / Interview Complete' : phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
+              <div className="w-full max-w-[1180px] rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(22,14,11,0.72),rgba(8,7,7,0.58))] px-5 py-5 shadow-[0_22px_54px_rgba(0,0,0,0.26)] backdrop-blur-md md:px-7 md:py-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="flex items-center gap-2 text-[10px] uppercase tracking-[0.28em] text-[#f5c689]/72">
+                    <span className={activeVoiceState.dotClassName || "h-1.5 w-1.5 rounded-full bg-[#f5c689]/90"} />
+                    {phase === 'processing' && isGeneratingReport ? '面试结束 / Interview Complete' : phase === 'processing' ? 'AI 正在分析 / Processing' : isPlayingPhase ? '面试官正在提问 / AI Interviewer' : '答题阶段 / Answering'}
+                  </p>
+                  {isListeningPhase ? (
+                    <span ref={recordingTimerRef} className="font-light tabular-nums text-[0.85rem] tracking-[0.12em] text-[#f5c689]/62">
+                      00:00
+                    </span>
+                  ) : null}
+                </div>
+
+                {isListeningPhase ? (
+                  <div className="mt-4 rounded-2xl border border-white/7 bg-white/[0.035] px-4 py-3">
+                    <canvas
+                      ref={waveformCanvasRef}
+                      className="h-11 w-full rounded-sm"
+                      style={{ height: '44px' }}
+                    />
+                    <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[0.68rem] tracking-[0.18em] text-[#f5c689]/62">
+                        {voiceActivityState === 'Listening' ? '正在聆听...' : voiceActivityState === 'waiting_answer' ? '等待你的回答' : '—'}
                       </p>
-                      {isListeningPhase ? (
-                        <span ref={recordingTimerRef} className="font-light tabular-nums text-[0.82rem] tracking-[0.12em] text-[#f5c689]/60">
-                          00:00
-                        </span>
-                      ) : null}
+                      <p
+                        ref={silenceWarningRef}
+                        className="text-[0.68rem] tracking-[0.08em] text-amber-300/72"
+                        style={{ display: 'none' }}
+                      >
+                        未检测到声音，请确认麦克风是否正常
+                      </p>
                     </div>
-                    {isListeningPhase ? (
-                      <div className="mt-1.5">
-                        <canvas
-                          ref={waveformCanvasRef}
-                          className="h-8 w-full rounded-sm"
-                          style={{ height: '32px' }}
-                        />
-                        <div className="flex items-center justify-between mt-0.5">
-                          <p className="text-[0.6rem] tracking-[0.2em] text-[#f5c689]/60">
-                            {voiceActivityState === 'Listening' ? '正在聆听...' : voiceActivityState === 'waiting_answer' ? '等待你的回答' : '—'}
-                          </p>
-                          <p
-                            ref={silenceWarningRef}
-                            className="text-[0.6rem] tracking-[0.1em] text-amber-300/70"
-                            style={{ display: 'none' }}
-                          >
-                            未检测到声音，请确认麦克风是否正常
-                          </p>
-                        </div>
-                      </div>
-                    ) : null}
-                    <p className="mt-2 text-pretty text-[0.9rem] sm:text-[1rem] leading-[1.42] tracking-[-0.01em] text-white/92 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)] md:text-[1.28rem]">
+                  </div>
+                ) : null}
+
+                <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                  <div className="min-w-0">
+                    <p className="text-pretty text-[0.95rem] leading-[1.55] tracking-[-0.01em] text-white/94 drop-shadow-[0_2px_8px_rgba(0,0,0,0.2)] md:text-[1.28rem]">
                       {phase === 'processing' && isGeneratingReport ? '面试结束，正在生成面试报告...' : phase === 'processing' ? '正在分析问题内容...' : currentQuestion}
                     </p>
                     {phase === 'processing' && isGeneratingReport ? (
-                      <p className="mt-1 text-[0.7rem] tracking-[0.04em] text-[#f5c689]/70">
+                      <p className="mt-2 text-[0.72rem] tracking-[0.04em] text-[#f5c689]/70">
                         {REPORT_STEPS[reportStep]}
                       </p>
                     ) : null}
-                    <div className="mt-2 flex max-sm:flex-col max-sm:items-stretch items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="text-[0.64rem] uppercase tracking-[0.26em] text-white/42">
-                            {roundLabel} · {interviewStageLabels[currentStage] || "答题"}
-                          </p>
-                          <p className="mt-1 font-light tabular-nums text-[1.18rem] tracking-[0.12em] text-white/84 md:text-[1.32rem]">
-                            {answerCountdownLabel}
-                          </p>
-                          {/* 答题时间可视化：剩余时间占比 */}
-                          {isListeningPhase ? (
-                            <div className="mt-1.5 h-0.5 w-24 overflow-hidden rounded-full bg-white/10">
-                              <div
-                                className="h-full rounded-full bg-[#f5c689]/70 transition-all duration-1000 ease-linear"
-                                style={{ width: `${Math.round(answerProgress * 100)}%` }}
-                              />
-                            </div>
-                          ) : null}
-                        </div>
-                        <p className="text-[0.72rem] text-white/48 md:text-[0.8rem]">
-                          {isPlayingPhase
-                            ? 'AI 正在朗读题目...'
-                            : isAnswering
-                              ? '你可以继续作答，或主动结束当前回答'
-                              : ''}
-                        </p>
-                      </div>
-                      {autoplayBlocked && isPlayingPhase ? (
-                        <button
-                          type="button"
-                          onClick={handleResumeAudioPlayback}
-                          aria-label="播放面试官语音"
-                          className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white max-sm:py-3"
-                        >
-                          播放语音
-                        </button>
-                      ) : isListeningPhase ? (
-                        <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
-                          {/* 没听清题时可以重听：真人线上面试也允许请面试官重复问题 */}
-                          <button
-                            type="button"
-                            onClick={handleReplayQuestion}
-                            aria-label="重听题目"
-                            disabled={!isAnswering || isGeneratingReport}
-                            className="pointer-events-auto inline-flex items-center justify-center gap-1.5 rounded-full border border-white/14 bg-white/8 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-white/70 transition hover:border-white/24 hover:bg-white/14 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35 max-sm:py-3"
-                          >
-                            <RotateCcw className="h-3.5 w-3.5" />
-                            重听题目
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleEndAnswer}
-                            aria-label="结束回答"
-                            disabled={!isAnswering || isGeneratingReport}
-                            className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-white/20 bg-white/14 px-4 py-2 text-[0.72rem] uppercase tracking-[0.22em] text-white/88 transition hover:border-white/30 hover:bg-white/22 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35 max-sm:py-3"
-                          >
-                            End Answer
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
                   </div>
+
+                  <div className="min-w-[170px] rounded-2xl border border-white/7 bg-white/[0.035] px-4 py-3 text-left md:text-right">
+                    <p className="text-[0.64rem] uppercase tracking-[0.24em] text-white/42">
+                      {roundLabel} · {interviewStageLabels[currentStage] || "答题"}
+                    </p>
+                    <p className="mt-1.5 font-light tabular-nums text-[1.25rem] tracking-[0.12em] text-white/86 md:text-[1.4rem]">
+                      {answerCountdownLabel}
+                    </p>
+                    {isListeningPhase ? (
+                      <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-[#f5c689]/70 transition-all duration-1000 ease-linear"
+                          style={{ width: `${Math.round(answerProgress * 100)}%` }}
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="mt-5 flex flex-col gap-3 border-t border-white/7 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-[0.76rem] leading-5 text-white/48">
+                    {isPlayingPhase
+                      ? 'AI 正在朗读题目，请听完后作答。'
+                      : isAnswering
+                        ? '你可以继续作答，或主动结束当前回答。'
+                        : '请根据当前状态等待下一步操作。'}
+                  </p>
+                  {autoplayBlocked && isPlayingPhase ? (
+                    <button
+                      type="button"
+                      onClick={handleResumeAudioPlayback}
+                      aria-label="播放面试官语音"
+                      className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-5 py-2.5 text-[0.72rem] uppercase tracking-[0.2em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
+                    >
+                      播放语音
+                    </button>
+                  ) : isListeningPhase ? (
+                    <div className="flex items-center gap-2 max-sm:flex-col max-sm:items-stretch">
+                      <button
+                        type="button"
+                        onClick={handleReplayQuestion}
+                        aria-label="重听题目"
+                        disabled={!isAnswering || isGeneratingReport}
+                        className="pointer-events-auto inline-flex items-center justify-center gap-2 rounded-full border border-white/14 bg-white/8 px-5 py-2.5 text-[0.72rem] uppercase tracking-[0.2em] text-white/70 transition hover:border-white/24 hover:bg-white/14 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        重听题目
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleEndAnswer}
+                        aria-label="结束回答"
+                        disabled={!isAnswering || isGeneratingReport}
+                        className="pointer-events-auto inline-flex items-center justify-center rounded-full border border-white/20 bg-white/14 px-5 py-2.5 text-[0.72rem] uppercase tracking-[0.2em] text-white/88 transition hover:border-white/30 hover:bg-white/22 hover:text-white disabled:cursor-not-allowed disabled:border-white/8 disabled:bg-white/5 disabled:text-white/35"
+                      >
+                        End Answer
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </section>
