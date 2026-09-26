@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function POST(request: NextRequest) {
   // 解析后会调用大模型做简历质量分析，必须先登录
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "请先登录后再上传简历" }, { status: 401 });

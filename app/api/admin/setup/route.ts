@@ -11,7 +11,7 @@ import { isAllowlistedAdmin } from "@/lib/admin/auth";
  * 杜绝"任何登录用户一键把自己变成管理员"。
  */
 export async function POST(request: NextRequest) {
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "请先登录" }, { status: 401 });

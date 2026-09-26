@@ -9,7 +9,7 @@ import { loadRegistry, mutateWallet } from "@/lib/member/wallet-server";
  * 幂等：同一 key（面试会话 ID）重复上报只会扣一次。
  */
 export async function POST(request: NextRequest) {
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 

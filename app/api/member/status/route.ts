@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const all = url.searchParams.get("all") === "true";
 
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (all) {

@@ -15,7 +15,7 @@ const MAX_LEGACY_CLAIM = 10;
  * 用户没有写权限）。因此伪造请求最多只能生成一条待审核记录，拿不到任何次数。
  */
 export async function POST(request: NextRequest) {
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 

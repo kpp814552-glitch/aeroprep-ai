@@ -125,7 +125,7 @@ function normalizeAnalysis(raw: unknown): OptimizeAnalysis | null {
 
 export async function POST(request: NextRequest) {
   // 需要登录：AI 优化对已登录用户免费，但不允许游客刷接口
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "请先登录后使用 AI 优化" }, { status: 401 });

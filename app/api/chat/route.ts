@@ -124,7 +124,7 @@ ${languagePrompts[language]}
 
 export async function POST(request: NextRequest) {
   // AI 优化接口对已登录用户免费，但不能对游客开放（防止被刷接口消耗额度）
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "请先登录后使用 AI 优化" }, { status: 401 });

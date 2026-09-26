@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "不支持的配置项" }, { status: 400 });
   }
 
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data, error } = await supabase
     .from("site_config")
     .select("value, updated_at")

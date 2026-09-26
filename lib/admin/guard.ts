@@ -30,7 +30,7 @@ export type AdminGuardResult =
   | { ok: false; response: NextResponse };
 
 export async function requireAdmin(request: NextRequest): Promise<AdminGuardResult> {
-  const session = createClient(request) as unknown as SupabaseClient;
+  const session = (await createClient()) as unknown as SupabaseClient;
 
   const { data: { user } } = await session.auth.getUser();
   if (!user) {

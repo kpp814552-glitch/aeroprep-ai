@@ -229,7 +229,7 @@ function normalizeReportPayload(payload: unknown, fallback: InterviewReport, tur
 
 export async function POST(request: NextRequest) {
   // 面试出题 / 报告都会调用付费大模型，必须先登录（防止接口被匿名刷）
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "请先登录后再开始面试" }, { status: 401 });

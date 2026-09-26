@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
  * 避免旧客户端把服务端账本覆盖掉。
  */
 export async function POST(request: NextRequest) {
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 

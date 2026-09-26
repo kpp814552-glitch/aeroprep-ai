@@ -11,7 +11,7 @@ const MAX_PENDING = 5;
  * 管理员审核通过后，次数才会写入钱包。
  */
 export async function POST(request: NextRequest) {
-  const supabase = createClient(request);
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });
 
