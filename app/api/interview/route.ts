@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
           body.resumeText,
           body.resumeQuality
         ),
-        { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000 }
+        { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000, userId: user.id }
       );
 
       return NextResponse.json({
@@ -326,7 +326,7 @@ export async function POST(request: NextRequest) {
           body.resumeText,
           body.resumeQuality
         ),
-        { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000 }
+        { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000, userId: user.id }
       );
 
       return NextResponse.json(normalizeModelQuestion(result, fallback));
@@ -363,7 +363,7 @@ export async function POST(request: NextRequest) {
          fallbackReport,
          body.resumeQuality
         ),
-        { maxTokens: 16000, reasoningEffort: "low", timeoutMs: 110000 }
+        { maxTokens: 16000, reasoningEffort: "low", timeoutMs: 110000, userId: user.id }
       );
 
       return NextResponse.json({

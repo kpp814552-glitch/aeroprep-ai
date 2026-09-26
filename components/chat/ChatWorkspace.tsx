@@ -40,7 +40,42 @@ type HistoryItem = {
 };
 
 const HISTORY_KEY = "aeroprep_optimize_history";
+const CACHE_KEY = "aeroprep_optimize_cache";
 const MAX_HISTORY = 8;
+const MAX_CACHE = 20;
+
+/** 轻量哈希：同样内容 + 同样参数 → 同样 key，用于命中本地缓存 */
+function cacheHash(input: string): string {
+  let h = 5381;
+  for (let i = 0; i < input.length; i += 1) {
+    h = ((h << 5) + h + input.charCodeAt(i)) | 0;
+  }
+  return `k${(h >>> 0).toString(36)}`;
+}
+
+function readCache(): Record<string, OptimizeAnalysis> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, OptimizeAnalysis>) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeCache(key: string, analysis: OptimizeAnalysis): void {
+  if (typeof window === "undefined") return;
+  try {
+    const cache = readCache();
+    cache[key] = analysis;
+    const keys = Object.keys(cache);
+    if (keys.length > MAX_CACHE) {
+      // 只保留最近的若干条，避免 localStorage 无限增长
+      for (const old of keys.slice(0, keys.length - MAX_CACHE)) delete cache[old];
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch { /* ignore */ }
+}
 
 const positionOptions = [
   { value: "pilot", label: "飞行员" },
@@ -107,6 +142,7 @@ export default function ChatWorkspace() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [copied, setCopied] = useState(false);
   const [progressStep, setProgressStep] = useState(0);
+  const [cachedHint, setCachedHint] = useState(false);
 
   const resultRef = useRef<HTMLDivElement | null>(null);
   const positionLabel = useMemo(
@@ -162,6 +198,21 @@ export default function ChatWorkspace() {
       return;
     }
 
+    // 同样内容 + 同样参数 → 直接复用上次结果，不重复消耗模型调用
+    const cacheKey = cacheHash(
+      [kind, positionLabel, recruitType, kind === "interview" ? answerType : "简历", draft.trim()].join("|"),
+    );
+    const cached = readCache()[cacheKey];
+    if (cached) {
+      resetResult();
+      setAnalysis(cached);
+      setTab("overview");
+      setCachedHint(true);
+      window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+      return;
+    }
+
+    setCachedHint(false);
     setLoading(true);
     resetResult();
     try {
@@ -191,6 +242,7 @@ export default function ChatWorkspace() {
       const next = data.analysis as OptimizeAnalysis;
       setAnalysis(next);
       setTab("overview");
+      writeCache(cacheKey, next);
       persistHistory({
         id: `${Date.now()}`,
         kind,
@@ -555,6 +607,11 @@ export default function ChatWorkspace() {
                     <p className="mt-1 text-[11px] text-slate-400">
                       目标岗位：{positionLabel} · {recruitType}
                     </p>
+                    {cachedHint ? (
+                      <p className="mt-1 text-[10px] text-slate-400">
+                        内容与上次完全一致，已直接复用上次诊断结果
+                      </p>
+                    ) : null}
                   </div>
                   <button
                     type="button"

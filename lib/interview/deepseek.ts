@@ -13,6 +13,8 @@ type DeepSeekCallOptions = {
   timeoutMs?: number;
   /** 用量归类（写进 api_usage_logs.endpoint，便于后台分别统计面试 / 优化成本） */
   endpoint?: string;
+  /** 调用用户 ID（写进用量日志，便于按用户统计成本、为后续限额做准备） */
+  userId?: string;
 };
 
 export type DeepSeekRawResult = {
@@ -37,6 +39,7 @@ export async function callDeepSeekRaw(
     reasoningEffort = "low",
     timeoutMs = 110000,
     endpoint = "interview",
+    userId,
   } = options;
 
   const startTime = Date.now();
@@ -86,6 +89,7 @@ export async function callDeepSeekRaw(
     const inputTokens = usage.prompt_tokens || 0;
     const outputTokens = usage.completion_tokens || 0;
     logApiUsage({
+      userId,
       model: 'deepseek',
       inputTokens,
       outputTokens,

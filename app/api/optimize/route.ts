@@ -172,6 +172,7 @@ export async function POST(request: NextRequest) {
       reasoningEffort: "low",
       timeoutMs: 110000,
       endpoint: "optimize",
+      userId: user.id,
     });
 
     const analysis = normalizeAnalysis(result.parsed);

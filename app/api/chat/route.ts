@@ -216,6 +216,7 @@ export async function POST(request: NextRequest) {
     const inputTokens = usage.prompt_tokens || 0;
     const outputTokens = usage.completion_tokens || 0;
     logApiUsage({
+      userId: user.id,
       model: 'deepseek',
       inputTokens,
       outputTokens,
