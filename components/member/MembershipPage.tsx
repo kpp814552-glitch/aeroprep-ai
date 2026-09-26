@@ -53,6 +53,14 @@ const FAQS = [
     a: "本页顶部会显示你的剩余免费次数和已购次数，每次完成面试后自动扣减一次。",
   },
   {
+    q: "中途退出或刷新会扣次数吗？",
+    a: "不会。只有完整做完并生成面试报告才会扣 1 次；中途退出、刷新或网络中断都不扣次数。如果面试没做完，重新进入会自动恢复到上次进度，继续答完即可。",
+  },
+  {
+    q: "重新开始一场怎么算？",
+    a: "每次完整做完并生成报告算一场，扣 1 次。主动放弃当前进度、重新开始，不会被额外扣费——只有做完的那一场计费。",
+  },
+  {
     q: "可以退款吗？",
     a: "面试次数为数字虚拟商品，购买后不支持退款。建议先用免费额度完整体验一次，确认合适后再购买。",
   },
@@ -72,6 +80,7 @@ export default function MembershipPage() {
   const [quota, setQuota] = useState<{ freeLeft: number; credits: number; isMember: boolean } | null>(null);
   const [creditedBanner, setCreditedBanner] = useState<number | null>(null);
   const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
+  const [orderCopied, setOrderCopied] = useState(false);
 
   useEffect(() => {
     setQuota(getQuotaSummary());
@@ -237,6 +246,12 @@ export default function MembershipPage() {
                   免费次数已用完，购买次数后即可继续面试训练
                 </p>
               )}
+              {/* 计费规则说明：让用户明确"什么时候会扣次数" */}
+              <div className="mt-4 space-y-1 border-t border-amber-200/60 pt-3 text-[11px] leading-5 text-slate-500">
+                <p>· 扣减顺序：先用免费次数，再用已购次数</p>
+                <p>· <span className="font-medium text-slate-600">只有完整做完并生成报告才扣 1 次</span>；中途退出、刷新或放弃重开都不扣</p>
+                <p>· 每次面试重新开始都算独立一场，完成一场扣 1 次</p>
+              </div>
             </div>
           )}
 
@@ -426,9 +441,34 @@ export default function MembershipPage() {
                     )}
                   </div>
 
-                  <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-center">
-                    <p className="mb-1 text-sm font-semibold text-amber-700">⚠️ 支付时请备注以下订单号</p>
-                    <p className="font-mono text-sm font-bold tracking-wider text-amber-800">{currentOrderId || "生成中..."}</p>
+                  {/* 支付三步说明 */}
+                  <ol className="mt-4 space-y-1.5 rounded-xl bg-slate-50 px-4 py-3 text-[11px] leading-5 text-slate-500">
+                    <li>1. 扫码支付 ¥{selected.price}（支付宝/微信）</li>
+                    <li>2. 付款备注里填下面的订单号</li>
+                    <li>3. 回到本页点「我已知晓」→「支付成功」提交申请</li>
+                  </ol>
+
+                  <div className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-center">
+                    <p className="mb-1 text-sm font-semibold text-amber-700">支付时请备注以下订单号</p>
+                    <div className="flex items-center justify-center gap-2">
+                      <p className="font-mono text-sm font-bold tracking-wider text-amber-800">{currentOrderId || "生成中..."}</p>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!currentOrderId) return;
+                          try {
+                            await navigator.clipboard.writeText(currentOrderId);
+                            setOrderCopied(true);
+                            window.setTimeout(() => setOrderCopied(false), 1800);
+                          } catch { /* 用户拒绝剪贴板权限时忽略 */ }
+                        }}
+                        disabled={!currentOrderId}
+                        className="rounded-full bg-white px-2.5 py-1 text-[10px] text-amber-700 shadow-sm transition hover:bg-amber-100 disabled:opacity-50"
+                      >
+                        {orderCopied ? "已复制" : "复制"}
+                      </button>
+                    </div>
+                    <p className="mt-1.5 text-[10px] text-amber-600/80">订单号也会显示在下方「我的购买记录」里</p>
                   </div>
 
                   <button
@@ -490,6 +530,10 @@ export default function MembershipPage() {
                       <h3 className="text-sm font-semibold text-slate-900">申请已提交</h3>
                       <p className="mt-1 text-xs text-slate-500">
                         管理员核对到账后，{selected.credits} 次面试将自动入账
+                      </p>
+                      <p className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-[11px] leading-5 text-slate-500">
+                        核对通常在 5 分钟内完成，最晚不超过 24 小时。<br />
+                        本页「我的购买记录」会显示审核进度，到账后页面会自动提示，无需反复刷新。
                       </p>
                       <p className="mt-1 text-[10px] text-slate-400">订单号：{currentOrderId}</p>
                       <button

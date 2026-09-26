@@ -518,6 +518,11 @@ export default function InterviewPrepPage() {
                           })()}
                     </div>
                   )}
+                  {!isMember() && user && (
+                    <p className="text-center text-[10px] leading-5 text-slate-500">
+                      完成并生成报告才扣 1 次 · 中途退出不扣，可继续上次进度
+                    </p>
+                  )}
                     {user ? (
                       <button
                         type="button"

@@ -451,6 +451,7 @@ export default function InterviewReportPage() {
                   `面试模式：${sessionRecord.mode}`,
                   `面试官风格：${sessionRecord.persona}`,
                   `总时长：${Math.max(1, sessionRecord.elapsedSeconds ?? 0)} 秒`,
+                  "计费：本场已完成并计 1 次（优先使用免费额度）",
                 ].map((item) => (
                   <div
                     key={item}

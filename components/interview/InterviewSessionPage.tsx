@@ -1506,6 +1506,9 @@ const resumeQualityRef = useRef<any>(
                   已恢复上次未完成的面试 · 从第 {Math.min(turns.length + 1, totalRounds)} 题继续
                 </p>
               ) : null}
+              <p className="mt-2 text-[11px] text-white/45">
+                本场尚未计费 · 完整做完并生成报告后才扣 1 次
+              </p>
               {/* 本场配置：航司 / 岗位 / 模式 / 面试官 + 简历是否参与 */}
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-[11px] text-white/70">
                 {[company, roleLabel, mode, persona].filter(Boolean).map((item) => (
