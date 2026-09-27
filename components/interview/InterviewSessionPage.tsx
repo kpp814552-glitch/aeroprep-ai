@@ -16,6 +16,8 @@ const REPORT_STEPS = [
 
 /** 候选人完全没有作答时，面试官最多像真人那样重问几次（不占题号） */
 const MAX_SILENT_RETRIES = 2;
+/** 候选人说"没听清/再说一遍"时，最多重新解释几次（不占题号） */
+const MAX_REPEAT_REQUESTS = 2;
 
 // ── 面试中断恢复：把进度存在 sessionStorage，刷新/误关页面后可以接着答 ──
 const PROGRESS_KEY = "aeroprep_interview_progress";
@@ -148,6 +150,8 @@ type InterviewApiReport = {
 
 type PendingQuestion = {
   text: string;
+  /** 屏幕上展示的文本；缺省时与 text 相同（重问时可以说的话和显示的题不一样） */
+  displayText?: string;
   stage: InterviewStage;
   interviewer: string;
   roleLabel: string;
@@ -292,6 +296,7 @@ const resumeQualityRef = useRef<any>(
   const interimTranscriptRef = useRef("");
   // 空回答重问计数 + 本轮静默提醒计数（会写进面试记录，供报告判断"未作答"）
   const silentRetryRef = useRef(0);
+  const repeatRequestRef = useRef(0);
   const silenceWarningCountRef = useRef(0);
   const silenceWarningFlaggedRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -891,6 +896,43 @@ const resumeQualityRef = useRef<any>(
   );
 
 
+  /**
+   * 面试官"没听清"时说的话。
+   * 交给模型生成，语气更像真人；模型不可用时用本地兜底句，流程不会卡住。
+   */
+  const fetchReaskLine = useCallback(
+    async (params: { reason: "silent" | "unclear"; question: string; attempt: number }) => {
+      const fallback = params.reason === "unclear"
+        ? `好的，我换个说法——${params.question}`
+        : params.attempt > 1
+          ? "我这边还是没收到声音，你确认一下麦克风，或者靠近一点，再说一次我听听。"
+          : "不好意思，我这边好像没听清，你能再说一遍吗？";
+
+      try {
+        const response = await fetch("/api/interview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "reask",
+            role,
+            company,
+            mode,
+            persona,
+            question: params.question,
+            reaskReason: params.reason,
+            attempt: params.attempt,
+          }),
+        });
+        const payload = await response.json();
+        const line = typeof payload?.line === "string" ? payload.line.trim() : "";
+        return line || fallback;
+      } catch {
+        return fallback;
+      }
+    },
+    [company, mode, persona, role],
+  );
+
 
   // ── State Machine: Preparing Phase ──
   useEffect(() => {
@@ -1011,7 +1053,7 @@ const resumeQualityRef = useRef<any>(
       await voiceSession?.speakQuestion(pending.text, {
         onPlayStart: () => {
           // Text appears synchronously with audio start (<100ms gap)
-          setCurrentQuestion(pending.text);
+          setCurrentQuestion(pending.displayText || pending.text);
           setCurrentStage(pending.stage);
         },
         onPlayEnd: () => {
@@ -1117,26 +1159,53 @@ const resumeQualityRef = useRef<any>(
       : 0;
 
     // ── 完全没说话（转写为空，或只有"嗯/啊"这类语气词）──
-    // 真实面试官不会当作已经答过，会先确认是不是没听清，再把同一道题问一遍。
-    // 重问不占题号，也不会生成新问题。
+    // 真人不念题目，而是请他"再说一遍刚才的回答"；屏幕继续显示原题，方便他回忆。
     const effectiveAnswer = answerText
       .replace(/[\s\p{P}\p{S}]/gu, "")
       .replace(/(嗯|呃|啊|哦|噢|唉|额|唔|那个|就是|然后)+/g, "");
+
+    // ── 候选人在说"我没听清 / 再说一遍"── 这不是回答，应该把题目换个说法再讲一次 ──
+    const repeatRequested =
+      answerText.length > 0 &&
+      answerText.length <= 40 &&
+      /(没听清|沒聽清|听不清|没听到|没听懂|沒聽懂|听不懂|不明白|什么意思|再说一遍|再说一次|再讲一遍|重复一遍|重复一下|能再(说|讲)|听不太清)/.test(answerText);
+
+    if (repeatRequested && repeatRequestRef.current < MAX_REPEAT_REQUESTS) {
+      repeatRequestRef.current += 1;
+      const pending = pendingQuestionRef.current;
+      const originalQuestion = activeQuestionRef.current || pending?.text || "";
+      setStatusText("面试官正在换个说法解释这道题...");
+      setVoiceActivityState("Processing");
+      const line = await fetchReaskLine({
+        reason: "unclear",
+        question: originalQuestion,
+        attempt: repeatRequestRef.current,
+      });
+      setPhase('playing');
+      await playCurrentQuestion({
+        text: line,
+        stage: pending?.stage ?? currentStage,
+        interviewer: pending?.interviewer ?? interviewerLabel,
+        roleLabel: pending?.roleLabel ?? roleLabel,
+      });
+      return;
+    }
 
     if (!effectiveAnswer && silentRetryRef.current < MAX_SILENT_RETRIES) {
       silentRetryRef.current += 1;
       const pending = pendingQuestionRef.current;
       const originalQuestion = activeQuestionRef.current || pending?.text || "";
-      const reaskPrefix =
-        silentRetryRef.current === 1
-          ? "不好意思，我这边没有听到你的回答，可能是我没听清。我再说一遍——"
-          : "还是没收到你的声音，麻烦你确认一下麦克风是否正常，我们再来一次——";
-      // console.log('[Interview] Empty answer -> re-ask ' + silentRetryRef.current + '/' + MAX_SILENT_RETRIES);
-      setStatusText("没有听到你的回答，面试官正在重新提问...");
+      setStatusText("没有听到你的回答，面试官正在问你...");
       setVoiceActivityState("Processing");
+      const line = await fetchReaskLine({
+        reason: "silent",
+        question: originalQuestion,
+        attempt: silentRetryRef.current,
+      });
       setPhase('playing');
       await playCurrentQuestion({
-        text: `${reaskPrefix}${originalQuestion}`,
+        text: line,
+        displayText: originalQuestion,
         stage: pending?.stage ?? currentStage,
         interviewer: pending?.interviewer ?? interviewerLabel,
         roleLabel: pending?.roleLabel ?? roleLabel,
@@ -1156,6 +1225,7 @@ const resumeQualityRef = useRef<any>(
 
     // 这道题已经翻篇，下一题重新计数
     silentRetryRef.current = 0;
+    repeatRequestRef.current = 0;
     silenceWarningCountRef.current = 0;
     silenceWarningFlaggedRef.current = false;
 
@@ -1226,6 +1296,7 @@ const resumeQualityRef = useRef<any>(
     company,
     timer.elapsedSeconds,
     fetchNextQuestion,
+    fetchReaskLine,
     generateReportAndFinish,
     interviewerLabel,
     isGeneratingReport,
@@ -1249,7 +1320,7 @@ const resumeQualityRef = useRef<any>(
     try {
       await voiceSession?.speakQuestion(pending.text, {
         onPlayStart: () => {
-          setCurrentQuestion(pending.text);
+          setCurrentQuestion(pending.displayText || pending.text);
           setCurrentStage(pending.stage);
         },
         onPlayEnd: () => {

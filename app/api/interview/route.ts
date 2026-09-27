@@ -20,7 +20,7 @@ import type {
 
 
 // ===== Mode-Specific Configurations =====
-import { buildStartQuestionPrompt, buildNextQuestionPrompt, buildReportPrompt, getModeInstruction, getStageByTurnCount, pickResumeAnchor, buildFallbackStartQuestion, buildFallbackNextQuestion, PersonaProfile, CompanyProfile, PERSONA_CONFIG, COMPANY_CONFIG } from "@/lib/interview/prompts";
+import { buildStartQuestionPrompt, buildNextQuestionPrompt, buildReportPrompt, buildReaskPrompt, getModeInstruction, getStageByTurnCount, pickResumeAnchor, buildFallbackStartQuestion, buildFallbackNextQuestion, PersonaProfile, CompanyProfile, PERSONA_CONFIG, COMPANY_CONFIG, type ReaskReason } from "@/lib/interview/prompts";
 import { callDeepSeek } from "@/lib/interview/deepseek";
 
 // 报告生成需要 30-60 秒（推理模型思考 + 长 JSON 输出），
@@ -32,7 +32,7 @@ function getPersonaConfig(persona?: string): PersonaProfile {
   return PERSONA_CONFIG[persona || "专业型HR"] || PERSONA_CONFIG["专业型HR"];
 }
 type InterviewRequestBody = {
-  action: "start" | "next" | "report";
+  action: "start" | "next" | "report" | "reask";
   role: InterviewRole;
   turns?: InterviewTurn[];
   company?: string;
@@ -40,6 +40,10 @@ type InterviewRequestBody = {
   resumeText?: string;
   resumeQuality?: { score: number; deductions: string[]; comment: string };
   persona?: string;
+  /** reask 专用：需要重问的题目、重问原因、第几次重问 */
+  question?: string;
+  reaskReason?: ReaskReason;
+  attempt?: number;
 };
 
 type ModelQuestionResult = {
@@ -299,6 +303,61 @@ export async function POST(request: NextRequest) {
         roleLabel: roleConfig.label,
         ...fallback,
       });
+    }
+  }
+
+  // ── 没听清 / 请重复：让面试官像真人一样变通，而不是机械重念题目 ──
+  if (body.action === "reask") {
+    const question = typeof body.question === "string" ? body.question.trim() : "";
+    const reason: ReaskReason = body.reaskReason === "unclear" ? "unclear" : "silent";
+    const attempt = Math.min(Math.max(Number(body.attempt) || 1, 1), 5);
+
+    const silentPool = attempt > 1
+      ? [
+          "我这边还是没收到声音，你确认一下麦克风，或者靠近一点，再说一次我听听。",
+          "还是没听到你的声音，麻烦看一下麦克风是不是被静音了，我们再试一次。",
+        ]
+      : [
+          "不好意思，我这边好像没听清，你能再说一遍吗？",
+          "抱歉，刚才可能是我这边卡了一下，你再说一次可以吗？",
+          "诶？我这边没接到声音，你再说一遍我听听。",
+          "不好意思，我没太听清楚，刚才那段能再讲一次吗？",
+        ];
+    const unclearPool = [
+      `好的，我换个说法——${question}`,
+      `没问题，那我说得再具体一点——${question}`,
+    ];
+    const pool = reason === "unclear" ? unclearPool : silentPool;
+    const fallbackLine = pool[Math.floor(Math.random() * pool.length)];
+
+    if (!apiKey || !question) {
+      return NextResponse.json({ line: fallbackLine });
+    }
+
+    try {
+      const parsed = await callDeepSeek<{ line?: string }>(
+        apiKey,
+        buildReaskPrompt({
+          reason,
+          attempt,
+          question,
+          role: body.role,
+          company: body.company,
+          persona: body.persona,
+        }),
+        {
+          maxTokens: 512,
+          reasoningEffort: "none",
+          timeoutMs: 15000,
+          endpoint: "interview-reask",
+          userId: user.id,
+        }
+      );
+
+      const line = typeof parsed?.line === "string" ? parsed.line.trim() : "";
+      return NextResponse.json({ line: line || fallbackLine });
+    } catch {
+      return NextResponse.json({ line: fallbackLine });
     }
   }
 
