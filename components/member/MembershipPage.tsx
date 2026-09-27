@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   CheckCircle as CheckCircleIcon,
   Coins,
@@ -36,6 +37,9 @@ type MyOrder = {
 
 export default function MembershipPage() {
   const { user } = useAuth();
+  // 从面试页因"次数不足"跳过来时，给一句明确的原因提示
+  const searchParams = useSearchParams();
+  const quotaNotice = searchParams.get("reason") === "quota";
   const [selected, setSelected] = useState<CreditPack | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
@@ -177,6 +181,18 @@ export default function MembershipPage() {
           </div>
 
           {/* ===== 到账提示 ===== */}
+          {quotaNotice ? (
+            <div className="mx-auto mt-6 flex max-w-lg items-start gap-2.5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3.5 text-sm text-rose-700 shadow-sm">
+              <span className="mt-0.5">⚠️</span>
+              <span>
+                <strong className="font-semibold">面试次数已用完</strong>，购买后即可继续模拟面试。
+                <span className="mt-1 block text-xs text-rose-500">
+                  每个账号第 1 次面试免费；已完成并生成报告才扣次数，中途退出不扣。
+                </span>
+              </span>
+            </div>
+          ) : null}
+
           {creditedBanner ? (
             <div className="mx-auto mt-6 max-w-lg rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3.5 text-center text-sm font-medium text-emerald-700 shadow-sm">
               🎉 {creditedBanner} 次面试已到账，可以开始训练了

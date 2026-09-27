@@ -1423,7 +1423,7 @@ const resumeQualityRef = useRef<any>(
     const check = async () => {
       if (canStartInterview()) return;
       await syncServerMember().catch(() => {});
-      if (!cancelled && !canStartInterview()) router.replace('/member');
+      if (!cancelled && !canStartInterview()) router.replace('/member?reason=quota');
     };
     check();
     return () => { cancelled = true; };

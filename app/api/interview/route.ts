@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { InterviewMode } from "@/lib/site";
 import {
   getRoleConfig,
+  getTotalRoundsForMode,
   interviewStageLabels,
   interviewStages,
 } from "@/lib/interview/config";
@@ -374,6 +375,11 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      // 速度与质量兼顾：情景题要"临场设计一个贴合岗位的场景"，保留一点思考；
+      // 其余题目本质是"接话 + 追问"，关掉思考，问答之间不冷场。
+      const nextStage = getStageByTurnCount(turns, getTotalRoundsForMode(body.mode));
+      const deepThinking = nextStage === "scenario";
+
       const result = await callDeepSeek(
         apiKey,
         buildNextQuestionPrompt(
@@ -386,8 +392,13 @@ export async function POST(request: NextRequest) {
           body.resumeQuality
         ),
         // 下一题必须"答完就接上"，出题延迟直接等于用户干等的秒数：
-        // 关闭思考模式（纯改写+追问，不需要推理链），把 8~10 秒压到 2~4 秒。
-        { maxTokens: 1024, reasoningEffort: "none", timeoutMs: 20000, userId: user.id }
+        // 默认关闭思考模式（纯改写 + 追问，不需要推理链），把 8~10 秒压到 1~2 秒。
+        {
+          maxTokens: deepThinking ? 2048 : 1024,
+          reasoningEffort: deepThinking ? "low" : "none",
+          timeoutMs: 20000,
+          userId: user.id,
+        }
       );
 
       return NextResponse.json(normalizeModelQuestion(result, fallback));
