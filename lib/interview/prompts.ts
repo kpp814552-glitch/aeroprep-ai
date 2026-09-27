@@ -286,9 +286,10 @@ export function buildFallbackNextQuestion(
   role: InterviewRole,
   turns: InterviewTurn[],
   company?: string,
-  persona?: string
+  persona?: string,
+  maxRounds = 8,
 ) {
-  const stage = getStageByTurnCount(turns);
+  const stage = getStageByTurnCount(turns, maxRounds);
   const roleConfig = getRoleConfig(role);
   const lastTurn = turns.at(-1);
   const anchor = pickResumeAnchor(lastTurn?.answer ?? "你刚才提到的内容");

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { hasQuota, loadServerQuota } from "@/lib/member/quota-server";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 import {
+  buildFastStartQuestion,
   getRoleConfig,
   getTotalRoundsForMode,
   interviewStages,
@@ -18,7 +19,7 @@ import type {
 
 
 // ===== Mode-Specific Configurations =====
-import { buildStartQuestionPrompt, buildNextQuestionPrompt, buildReportPrompt, buildReaskPrompt, getStageByTurnCount, buildFallbackStartQuestion, buildFallbackNextQuestion, type ReaskReason } from "@/lib/interview/prompts";
+import { buildNextQuestionPrompt, buildReportPrompt, buildReaskPrompt, getStageByTurnCount, buildFallbackNextQuestion, type ReaskReason } from "@/lib/interview/prompts";
 import { callDeepSeek } from "@/lib/interview/deepseek";
 
 // 报告生成需要 30-60 秒（推理模型思考 + 长 JSON 输出），
@@ -279,45 +280,12 @@ export async function POST(request: NextRequest) {
   const apiKey = process.env.DEEPSEEK_API_KEY;
 
   if (body.action === "start") {
-    const fallback = {
+    return NextResponse.json({
+      interviewer: roleConfig.interviewer,
+      roleLabel: roleConfig.label,
       stage: "self-intro" as InterviewStage,
-      question: buildFallbackStartQuestion(body.role, body.company),
-    };
-
-    if (!apiKey) {
-      return NextResponse.json({
-        interviewer: roleConfig.interviewer,
-        roleLabel: roleConfig.label,
-        ...fallback,
-      });
-    }
-
-    try {
-      const result = await callDeepSeek<ModelQuestionResult>(
-        apiKey,
-        buildStartQuestionPrompt(
-          body.role,
-          body.company,
-          body.mode,
-          body.persona,
-          body.resumeText,
-          body.resumeQuality
-        ),
-        { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000, userId: user.id }
-      );
-
-      return NextResponse.json({
-        interviewer: roleConfig.interviewer,
-        roleLabel: roleConfig.label,
-        ...normalizeModelQuestion(result, fallback),
-      });
-    } catch {
-      return NextResponse.json({
-        interviewer: roleConfig.interviewer,
-        roleLabel: roleConfig.label,
-        ...fallback,
-      });
-    }
+      question: buildFastStartQuestion(body.role, body.company, body.resumeText),
+    });
   }
 
   // ── 没听清 / 请重复：让面试官像真人一样变通，而不是机械重念题目 ──
@@ -380,7 +348,8 @@ export async function POST(request: NextRequest) {
       body.role,
       turns,
       body.company,
-      body.persona
+      body.persona,
+      getTotalRoundsForMode(body.mode),
     );
 
     if (!apiKey) {
@@ -388,10 +357,8 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      // 速度与质量兼顾：情景题要"临场设计一个贴合岗位的场景"，保留一点思考；
-      // 其余题目本质是"接话 + 追问"，关掉思考，问答之间不冷场。
       const nextStage = getStageByTurnCount(turns, getTotalRoundsForMode(body.mode));
-      const deepThinking = nextStage === "scenario";
+      const earlyRound = turns.length < 3;
 
       const result = await callDeepSeek<ModelQuestionResult>(
         apiKey,
@@ -404,12 +371,12 @@ export async function POST(request: NextRequest) {
           body.resumeText,
           body.resumeQuality
         ),
-        // 下一题必须"答完就接上"，出题延迟直接等于用户干等的秒数：
-        // 默认关闭思考模式（纯改写 + 追问，不需要推理链），把 8~10 秒压到 1~2 秒。
+        // 出题延迟直接等于用户干等的秒数：所有轮次关闭思考，前 3 轮
+        // 用更短的硬超时保护；模型来不及就立即返回岗位兜底题。
         {
-          maxTokens: deepThinking ? 2048 : 1024,
-          reasoningEffort: deepThinking ? "low" : "none",
-          timeoutMs: 20000,
+          maxTokens: nextStage === "scenario" ? 768 : 512,
+          reasoningEffort: "none",
+          timeoutMs: earlyRound ? 3500 : 8000,
           userId: user.id,
         }
       );

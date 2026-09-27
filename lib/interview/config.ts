@@ -139,6 +139,23 @@ export function getRoleConfig(role: InterviewRole) {
   return interviewRoles.find((item) => item.value === role) || interviewRoles[0];
 }
 
+/** 首题固定为自我介绍，直接用本地模板生成，避免开场等待大模型。 */
+export function buildFastStartQuestion(
+  role: InterviewRole,
+  company?: string,
+  resumeText?: string,
+) {
+  const roleConfig = getRoleConfig(role);
+  const companyLead = company?.trim()
+    ? `我是${company.trim()}负责${roleConfig.label}岗位面试的面试官。`
+    : `我是本次负责${roleConfig.label}岗位面试的面试官。`;
+  const introLead = resumeText?.trim()
+    ? "你的简历我已经看过了，我们先从自我介绍开始。"
+    : "好的，我们先从自我介绍开始。";
+
+  return `你好，${companyLead}${introLead}请你用一分钟左右介绍姓名、年龄、学校、专业，以及和${roleConfig.label}相关的经历。`;
+}
+
 export function getAnswerSecondsForStage(stage: InterviewStage) {
   return interviewStageAnswerSeconds[stage];
 }

@@ -1,6 +1,15 @@
 import { test, expect } from "@playwright/test";
+import { buildFastStartQuestion } from "../lib/interview/config";
 
 test.describe("AI面试", () => {
+  test("首题本地即时生成", () => {
+    const question = buildFastStartQuestion("pilot", "国航", "航空服务专业");
+    expect(question).toContain("国航");
+    expect(question).toContain("飞行员");
+    expect(question).toContain("简历我已经看过了");
+    expect(question).toContain("自我介绍");
+  });
+
   test("8. 面试准备页加载完成", async ({ page }) => {
     await page.goto("/interview");
     await page.waitForTimeout(2000);

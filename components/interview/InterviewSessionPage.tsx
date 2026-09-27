@@ -18,6 +18,8 @@ const REPORT_STEPS = [
 const MAX_SILENT_RETRIES = 2;
 /** 候选人说"没听清/再说一遍"时，最多重新解释几次（不占题号） */
 const MAX_REPEAT_REQUESTS = 2;
+/** 浏览器语音识别停止后，最多等这么久收尾；保存的实时快照仍会作为兜底。 */
+const RECOGNITION_STOP_TIMEOUT_MS = 1200;
 
 // ── 面试中断恢复：把进度存在 sessionStorage，刷新/误关页面后可以接着答 ──
 const PROGRESS_KEY = "aeroprep_interview_progress";
@@ -464,7 +466,7 @@ export default function InterviewSessionPage() {
         recognitionRef.current = null;
         stopVoiceMonitor();
         resolve(finalTranscriptRef.current);
-      }, 3000);
+      }, RECOGNITION_STOP_TIMEOUT_MS);
       recognitionRef.current.onend = () => {
         window.clearTimeout(timeout);
         recognitionRef.current = null;
