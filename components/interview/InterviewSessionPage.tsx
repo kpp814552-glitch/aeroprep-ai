@@ -4,7 +4,7 @@ import {
   useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Loader2, RotateCcw, ShieldCheck } from "lucide-react";
 
 /** 生成报告时的分阶段提示，避免长时间等待让人觉得卡死 */
 const REPORT_STEPS = [
@@ -1482,6 +1482,19 @@ export default function InterviewSessionPage() {
     }
   }, [answerCountdown, clearAnswerTimer, currentQuestion, isGeneratingReport, startAnswerCountdown, voiceSession]);
 
+  const handleBackToPrep = useCallback(() => {
+    if (isGeneratingReport) return;
+    const confirmed = window.confirm(
+      "确定返回 AI 面试准备页吗？本场未完成不会扣除次数，已完成的作答进度会保留。",
+    );
+    if (!confirmed) return;
+
+    clearAnswerTimer();
+    stopRecognition();
+    voiceSession?.stop();
+    router.push("/interview");
+  }, [clearAnswerTimer, isGeneratingReport, router, stopRecognition, voiceSession]);
+
   // ── 报告生成时的分阶段提示：让等待可感知（报告通常 20-60 秒）──
   useEffect(() => {
     if (!isGeneratingReport) return;
@@ -1555,6 +1568,19 @@ export default function InterviewSessionPage() {
 
       <div className="relative z-10 min-h-dvh-safe px-4 py-4 md:px-5 md:py-5">
         <div className="rise-in mx-auto flex min-h-dvh-safe w-full max-w-[1280px] flex-col">
+          {phase !== 'completed' ? (
+            <div className="mb-3 flex justify-start">
+              <button
+                type="button"
+                onClick={handleBackToPrep}
+                disabled={isGeneratingReport}
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-black/18 px-3.5 py-2 text-[11px] text-white/68 backdrop-blur-md transition hover:border-white/24 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                返回 AI 面试准备页
+              </button>
+            </div>
+          ) : null}
 
           {/* ── Header: Transcript + Timer (playing/listening only) ── */}
           {showHeader && (
