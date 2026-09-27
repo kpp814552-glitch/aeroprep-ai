@@ -51,6 +51,12 @@ export function useInterviewTimer() {
       : 0;
   }, []);
 
+  const markTurnStart = useCallback(() => {
+    turnStartedAtRef.current = Date.now();
+  }, []);
+
+  const getStartedAt = useCallback(() => startAtRef.current, []);
+
   const getTotalElapsedSeconds = useCallback(() => {
     return startAtRef.current === null ? elapsedSeconds : Math.round((Date.now() - startAtRef.current) / 1000);
   }, [elapsedSeconds]);
@@ -61,8 +67,7 @@ export function useInterviewTimer() {
 
   return {
     elapsedSeconds, answerCountdown, setAnswerCountdown,
-    turnStartedAtRef, startAtRef,
     startElapsedTimer, startAnswerCountdown, clearAnswerTimer, clearElapsedTimer,
-    getTurnDuration, getTotalElapsedSeconds,
+    getTurnDuration, getStartedAt, markTurnStart, getTotalElapsedSeconds,
   };
 }

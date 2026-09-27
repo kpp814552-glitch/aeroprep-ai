@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { isAllowlistedAdmin } from "@/lib/admin/auth";
 
@@ -10,7 +9,7 @@ import { isAllowlistedAdmin } from "@/lib/admin/auth";
  * app_metadata.role=admin）才能调用。普通登录用户调用会直接 403，
  * 杜绝"任何登录用户一键把自己变成管理员"。
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {

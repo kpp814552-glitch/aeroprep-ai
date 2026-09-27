@@ -17,9 +17,15 @@ type SpeechRecognition = EventTarget & {
   onend: (() => void) | null;
 };
 
+type SpeechRecognitionWindow = Window & {
+  SpeechRecognition?: SpeechRecognitionConstructor;
+  webkitSpeechRecognition?: SpeechRecognitionConstructor;
+};
+
 function getSpeechRecognitionConstructor(): SpeechRecognitionConstructor | null {
-  const w = typeof window !== "undefined" ? window : null;
-  return ((w as any)?.SpeechRecognition || (w as any)?.webkitSpeechRecognition || null) as SpeechRecognitionConstructor | null;
+  if (typeof window === "undefined") return null;
+  const speechWindow = window as SpeechRecognitionWindow;
+  return speechWindow.SpeechRecognition || speechWindow.webkitSpeechRecognition || null;
 }
 
 export function useInterviewVoice(

@@ -6,7 +6,7 @@ import { useState, type FormEvent } from "react";
 import { Loader2, LogIn, Mail, Lock, User, Sparkles } from "lucide-react";
 import UserAgreements from "@/components/auth/UserAgreements";
 import AppFrame from "@/components/layout/AppFrame";
-import { GlassPanel, GlassButton } from "@/components/ui/glass";
+import { GlassPanel } from "@/components/ui/glass";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function RegisterPage() {

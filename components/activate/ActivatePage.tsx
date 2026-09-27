@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Crown, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { Suspense } from "react";
 import AppFrame from "@/components/layout/AppFrame";
 import { activateMember, PLANS, type PlanId } from "@/lib/member/member-storage";
@@ -26,47 +27,61 @@ export default function ActivatePage() {
 
 function ActivateInner() {
   const searchParams = useSearchParams();
-  const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
-  const [msg, setMsg] = useState("正在验证激活链接...");
+  const planParam = searchParams.get("plan");
+  const plan = PLANS.some((item) => item.id === planParam) ? (planParam as PlanId) : null;
+  const token = searchParams.get("token");
+  const email = searchParams.get("email");
+  const [verification, setVerification] = useState<{
+    status: "success" | "error";
+    msg: string;
+  } | null>(null);
+
+  const invalidMessage = !planParam || !token || !email
+    ? "无效的激活链接，缺少必要参数"
+    : !plan
+      ? "无效的套餐"
+      : null;
 
   useEffect(() => {
-    const plan = searchParams.get("plan") as PlanId | null;
-    const token = searchParams.get("token");
-    const email = searchParams.get("email");
+    if (!plan || !token || !email) return;
+    const planInfo = PLANS.find((item) => item.id === plan);
+    if (!planInfo) return;
 
-    if (!plan || !token || !email) {
-      setMsg("无效的激活链接，缺少必要参数");
-      setStatus("error");
-      return;
-    }
-
-    const planInfo = PLANS.find(p => p.id === plan);
-    if (!planInfo) {
-      setMsg("无效的套餐");
-      setStatus("error");
-      return;
-    }
-
-    // Verify with server
+    let cancelled = false;
     fetch("/api/activate/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan, email, token }),
-    }).then(res => res.json()).then(data => {
-      if (data.success) {
-        // Activate locally
-        activateMember(plan);
-        setMsg(`✅ 会员已激活！有效期 ${planInfo.days} 天`);
-        setStatus("success");
-      } else {
-        setMsg(data.error || "激活失败，链接可能已过期");
-        setStatus("error");
-      }
-    }).catch(() => {
-      setMsg("网络错误，请稍后重试");
-      setStatus("error");
-    });
-  }, [searchParams]);
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data.success) {
+          activateMember(plan);
+          setVerification({
+            status: "success",
+            msg: `会员已激活，有效期 ${planInfo.days} 天`,
+          });
+        } else {
+          setVerification({
+            status: "error",
+            msg: data.error || "激活失败，链接可能已过期",
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setVerification({ status: "error", msg: "网络错误，请稍后重试" });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [email, plan, token]);
+
+  const status = invalidMessage ? "error" : verification?.status ?? "verifying";
+  const msg = invalidMessage || verification?.msg || "正在验证激活链接...";
 
   return (
     <div className="w-full max-w-sm text-center">
@@ -82,9 +97,9 @@ function ActivateInner() {
       </h2>
       <p className="mt-2 text-sm text-slate-500">{msg}</p>
       {status !== "verifying" && (
-        <a href="/" className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-6 py-3 text-sm font-medium text-white shadow-lg hover:brightness-110 transition-all">
+        <Link href="/" className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-6 py-3 text-sm font-medium text-white shadow-lg hover:brightness-110 transition-all">
           返回首页
-        </a>
+        </Link>
       )}
     </div>
   );

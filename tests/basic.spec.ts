@@ -23,4 +23,10 @@ test.describe("核心流程", () => {
       await expect(btn).toBeEnabled();
     }
   });
+
+  test("4. 激活页无效链接可正常提示", async ({ page }) => {
+    await page.goto("/activate");
+    await expect(page.getByText("无效的激活链接，缺少必要参数")).toBeVisible();
+    await expect(page.getByRole("link", { name: "返回首页" })).toBeVisible();
+  });
 });

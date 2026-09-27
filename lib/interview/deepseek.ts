@@ -124,7 +124,7 @@ export async function callDeepSeekRaw(
 }
 
 /** 便捷版：只返回解析后的 JSON（调用方自行断言类型） */
-export async function callDeepSeek<T = any>(
+export async function callDeepSeek<T = unknown>(
   apiKey: string,
   prompt: string,
   options: DeepSeekCallOptions = {}

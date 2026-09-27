@@ -1,19 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
 import { createClient } from "@/lib/supabase/server";
 import { hasQuota, loadServerQuota } from "@/lib/member/quota-server";
 import { checkRateLimit } from "@/lib/server/rate-limit";
-import type { InterviewMode } from "@/lib/site";
 import {
   getRoleConfig,
   getTotalRoundsForMode,
-  interviewStageLabels,
   interviewStages,
 } from "@/lib/interview/config";
 import { analyzeInterviewReport, computeCompetitiveScore, deriveCompetitiveTier } from "@/lib/interview/report";
-import { getAirlineProfile } from "@/lib/interview/airline-profiles";
-import { getRoleModel } from "@/lib/interview/role-models";
 import type {
   InterviewReport,
   InterviewRole,
@@ -23,17 +18,13 @@ import type {
 
 
 // ===== Mode-Specific Configurations =====
-import { buildStartQuestionPrompt, buildNextQuestionPrompt, buildReportPrompt, buildReaskPrompt, getModeInstruction, getStageByTurnCount, pickResumeAnchor, buildFallbackStartQuestion, buildFallbackNextQuestion, PersonaProfile, CompanyProfile, PERSONA_CONFIG, COMPANY_CONFIG, type ReaskReason } from "@/lib/interview/prompts";
+import { buildStartQuestionPrompt, buildNextQuestionPrompt, buildReportPrompt, buildReaskPrompt, getStageByTurnCount, buildFallbackStartQuestion, buildFallbackNextQuestion, type ReaskReason } from "@/lib/interview/prompts";
 import { callDeepSeek } from "@/lib/interview/deepseek";
 
 // 报告生成需要 30-60 秒（推理模型思考 + 长 JSON 输出），
 // 必须显式声明函数最长执行时间，否则 Vercel 默认超时会中途掐断。
 export const maxDuration = 60;
 
-// ===== Route Helpers =====
-function getPersonaConfig(persona?: string): PersonaProfile {
-  return PERSONA_CONFIG[persona || "专业型HR"] || PERSONA_CONFIG["专业型HR"];
-}
 type InterviewRequestBody = {
   action: "start" | "next" | "report" | "reask";
   role: InterviewRole;
@@ -62,13 +53,13 @@ function isInterviewTurn(value: unknown): value is InterviewTurn {
 }
 
 function normalizeModelQuestion(
-  result: ModelQuestionResult,
+  result: ModelQuestionResult | null | undefined,
   fallback: { question: string; stage: InterviewStage }
 ) {
   return {
-    stage: result.stage && interviewStages.includes(result.stage) ? result.stage : fallback.stage,
+    stage: result?.stage && interviewStages.includes(result.stage) ? result.stage : fallback.stage,
     question:
-      typeof result.question === "string" && result.question.trim()
+      typeof result?.question === "string" && result.question.trim()
         ? result.question.trim()
         : fallback.question,
   };
@@ -302,7 +293,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      const result = await callDeepSeek(
+      const result = await callDeepSeek<ModelQuestionResult>(
         apiKey,
         buildStartQuestionPrompt(
           body.role,
@@ -402,7 +393,7 @@ export async function POST(request: NextRequest) {
       const nextStage = getStageByTurnCount(turns, getTotalRoundsForMode(body.mode));
       const deepThinking = nextStage === "scenario";
 
-      const result = await callDeepSeek(
+      const result = await callDeepSeek<ModelQuestionResult>(
         apiKey,
         buildNextQuestionPrompt(
           body.role,

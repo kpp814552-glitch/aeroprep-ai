@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { requireAdmin } from "@/lib/admin/guard";
 import { parseWalletDoc, walletBalance, type CreditOrder } from "@/lib/member/wallet";
-import { loadRegistry, makeOrderId, mutateRegistry } from "@/lib/member/wallet-server";
+import { makeOrderId, mutateRegistry } from "@/lib/member/wallet-server";
 
 /**
  * 管理员手动调整次数（线下转账补发 / 误核发扣回 / 活动赠送）

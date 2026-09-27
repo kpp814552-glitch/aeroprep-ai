@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -9,7 +8,7 @@ import { createClient } from "@/lib/supabase/server";
  * 保留该接口只为兼容仍在运行的旧页面，永远返回 cleared:false，
  * 避免旧客户端把服务端账本覆盖掉。
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "请先登录" }, { status: 401 });

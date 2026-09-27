@@ -131,7 +131,7 @@ function scoreAdaptability(turns: InterviewTurn[]) {
   return normalizeScore(15 + Math.min(8, crossKeywords * 1.5) + Math.min(6, actionBonus) + variedStages * 1);
 }
 
-function scoreServiceAwareness(turns: InterviewTurn[], role: InterviewRole) {
+function scoreServiceAwareness(turns: InterviewTurn[]) {
   const totalText = tokenizeText(turns);
   const serviceKeywords = countMatches(totalText, ["服务", "乘客", "旅客", "沟通", "解释", "安抚", "帮助", "体验", "关怀", "耐心"]);
   const teamKeywords = countMatches(totalText, ["协作", "配合", "团队", "分工", "支援", "协助"]);
@@ -341,7 +341,7 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
   const roleFit = scoreRoleFit(options.turns, options.role, options.company);
   const articulation = scoreArticulation(options.turns);
   const adaptability = scoreAdaptability(options.turns);
-  const serviceAwareness = scoreServiceAwareness(options.turns, options.role);
+  const serviceAwareness = scoreServiceAwareness(options.turns);
 
   const totalScore = normalizeScore(
     expressionAbility * 0.16 +

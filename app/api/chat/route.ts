@@ -1,7 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
-import { chatExampleQA } from "@/lib/interview/examples";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit } from "@/lib/server/rate-limit";
 

@@ -169,7 +169,6 @@ export default function InterviewReportPage() {
   const toggleQuestion = (idx: number) => setExpandedQuestions(prev => ({ ...prev, [idx]: !prev[idx] }));
 
   const router = useRouter();
-  const levelMap: Record<string, string> = { A: '优秀', B: '较强', C: '中等', D: '待提升' };
 
   // 把报告里的逐题分析与 AI 优化打通：带上原文与岗位上下文跳到优化页
   const OPTIMIZE_SEED_KEY = "aeroprep_optimize_seed";

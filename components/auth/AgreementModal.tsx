@@ -1,7 +1,7 @@
 "use client";
 
 import { X, Sparkles } from "lucide-react";
-import type { Agreement, AgreementKey } from "@/lib/agreements";
+import type { AgreementKey } from "@/lib/agreements";
 import { getAgreement } from "@/lib/agreements";
 
 type Props = {

@@ -67,9 +67,7 @@ import {
 import {
   analyzeInterviewReport,
   buildSessionRecord } from "@/lib/interview/report";
-import {
-  readInterviewSession,
-  saveInterviewSession } from "@/lib/interview/session-storage";
+import { saveInterviewSession } from "@/lib/interview/session-storage";
 import {
   
   saveGrowthEvent,
@@ -79,7 +77,6 @@ import type {
   InterviewPhase,
   InterviewReport,
   InterviewRole,
-  InterviewSessionRecord,
   InterviewStage,
   InterviewTurn,
 } from "@/lib/interview/types";
@@ -155,6 +152,12 @@ type PendingQuestion = {
   stage: InterviewStage;
   interviewer: string;
   roleLabel: string;
+};
+
+type ResumeQuality = {
+  score: number;
+  deductions: string[];
+  comment: string;
 };
 
 type VoiceActivityState =
@@ -249,6 +252,27 @@ function createSessionId() {
   return `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function readResumeSessionData(): { text: string; quality: ResumeQuality | null } {
+  if (typeof window === "undefined") return { text: "", quality: null };
+
+  const text = sessionStorage.getItem("aeroprep_resume_text") || "";
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem("aeroprep_resume_quality") || "null") as Partial<ResumeQuality> | null;
+    if (
+      parsed &&
+      typeof parsed.score === "number" &&
+      Array.isArray(parsed.deductions) &&
+      typeof parsed.comment === "string"
+    ) {
+      return { text, quality: parsed as ResumeQuality };
+    }
+  } catch {
+    // Ignore malformed resume data and continue without it.
+  }
+
+  return { text, quality: null };
+}
+
 function toSafeIso(value: unknown): string {
   const numeric = typeof value === "number" ? value : Number(value);
   const date = Number.isFinite(numeric) ? new Date(numeric) : new Date();
@@ -280,17 +304,22 @@ export default function InterviewSessionPage() {
   const searchParams = useSearchParams();
   const { user, loading } = useAuth();
   const sessionIdRef = useRef(createSessionId());
-  const resumeTextRef = useRef(
-  typeof window !== "undefined" ? sessionStorage.getItem("aeroprep_resume_text") || "" : ""
-);
-const resumeQualityRef = useRef<any>(
-  typeof window !== "undefined"
-    ? (() => { try { return JSON.parse(sessionStorage.getItem("aeroprep_resume_quality") || "null"); } catch { return null; } })()
-    : null
-);
+  const resumeTextRef = useRef("");
+  const resumeQualityRef = useRef<ResumeQuality | null>(null);
   const endAnswerRef = useRef<() => void>(() => {});
   // ── Timer Hook ──
-  const timer = useInterviewTimer();
+  const {
+    elapsedSeconds,
+    answerCountdown,
+    setAnswerCountdown,
+    startElapsedTimer,
+    startAnswerCountdown,
+    clearAnswerTimer,
+    getTurnDuration,
+    getStartedAt,
+    markTurnStart,
+    getTotalElapsedSeconds,
+  } = useInterviewTimer();
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const finalTranscriptRef = useRef("");
   const interimTranscriptRef = useRef("");
@@ -324,7 +353,7 @@ const resumeQualityRef = useRef<any>(
   const [phase, setPhase] = useState<InterviewPhase>('preparing');
 
   // ── UI State ──
-  // (timer.elapsedSeconds, answerCountdown from timer hook)
+  // Elapsed time and answer countdown are provided by useInterviewTimer().
   const [currentQuestion, setCurrentQuestion] = useState("");
   const [currentStage, setCurrentStage] = useState<InterviewStage>("self-intro");
   const [interviewerLabel, setInterviewerLabel] = useState("AI 面试官");
@@ -345,17 +374,18 @@ const resumeQualityRef = useRef<any>(
   const [fatalError, setFatalError] = useState("");
   const [isAnswering, setIsAnswering] = useState(false);
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [hasResume, setHasResume] = useState(false);
+  const [successPath, setSuccessPath] = useState(false);
+  const [completedSessionId, setCompletedSessionId] = useState<string | null>(null);
+  const [completedScore, setCompletedScore] = useState(0);
+  const [completedTurns, setCompletedTurns] = useState(0);
 
   // ── Refs for async-safe data flow ──
   const interviewFinishedRef = useRef(false);
   const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const successPathRef = useRef(false);
   const pendingSaveDataRef = useRef<Record<string, unknown> | null>(null);
   const pendingQuestionRef = useRef<PendingQuestion | null>(null);
   const activeQuestionRef = useRef("");
-  const completedSessionIdRef = useRef<string | null>(null);
-  const completedScoreRef = useRef(0);
-  const completedTurnsRef = useRef(0);
 
   const transcriptPreview = useMemo(() => {
     const combined = `${liveTranscript}${interimTranscript ? ` ${interimTranscript}` : ""}`.trim();
@@ -445,22 +475,15 @@ const resumeQualityRef = useRef<any>(
     });
   }, [stopVoiceMonitor]);
 
-  const persistAndNavigateToReport = useCallback(
-    (record: InterviewSessionRecord) => {
-      saveInterviewSession(record);
-      router.push(`/interview/report?sessionId=${encodeURIComponent(record.sessionId)}`);
-    },
-    [router]
-  );
-
   const generateReportAndFinish = useCallback(
     async (finalTurns: InterviewTurn[], totalElapsedSeconds: number) => {
       if (isGeneratingReport) return;
 
+      setReportStep(0);
       setIsGeneratingReport(true);
       setIsAnswering(false);
-      timer.clearAnswerTimer();
-      timer.setAnswerCountdown(0);
+      clearAnswerTimer();
+      setAnswerCountdown(0);
       setVoiceActivityState("Processing");
       setStatusText("正在整理面试记录并生成报告...（1/2 准备报告数据）");
       stopRecognition();
@@ -500,7 +523,7 @@ const resumeQualityRef = useRef<any>(
           persona,
           interviewer: interviewerLabel,
           voiceProviderName,
-          elapsedSeconds: timer.getTotalElapsedSeconds(),
+          elapsedSeconds: getTotalElapsedSeconds(),
           turns: finalTurns,
           createdAt: new Date().toISOString(),
           report: payload.report,
@@ -512,11 +535,11 @@ const resumeQualityRef = useRef<any>(
         // 本场已完成，清掉中断恢复用的进度
         clearSavedProgress();
         // console.log('[Interview Finish] turns=' + finalTurns.length + ' elapsed=' + totalElapsedSeconds + 's score=' + payload.report?.totalScore);
-        completedSessionIdRef.current = record.sessionId;
-        completedScoreRef.current = payload.report?.totalScore ?? 0;
-        completedTurnsRef.current = finalTurns.length;
+        setCompletedSessionId(record.sessionId);
+        setCompletedScore(payload.report?.totalScore ?? 0);
+        setCompletedTurns(finalTurns.length);
         interviewFinishedRef.current = true;
-        successPathRef.current = true;
+        setSuccessPath(true);
         // 完成一场：优先扣免费额度，再扣已购次数（限时会员不扣）
         {
           const quota = consumeInterviewQuota();
@@ -544,7 +567,7 @@ const resumeQualityRef = useRef<any>(
               evaluation: payload.report?.overallEvaluation || "",
               strengths: payload.report?.strengths || [],
               weaknesses: payload.report?.weaknesses || [],
-              started_at: toSafeIso(timer.startAtRef.current),
+              started_at: toSafeIso(getStartedAt()),
               ended_at: new Date().toISOString(),
               duration_seconds: totalElapsedSeconds,
               total_turns: finalTurns.length,
@@ -572,7 +595,7 @@ const resumeQualityRef = useRef<any>(
           mode,
           persona,
           turns: finalTurns,
-          elapsedSeconds: timer.getTotalElapsedSeconds(),
+          elapsedSeconds: getTotalElapsedSeconds(),
         });
         const fallbackRecord = buildSessionRecord({
           sessionId: sessionIdRef.current,
@@ -583,7 +606,7 @@ const resumeQualityRef = useRef<any>(
           persona,
           interviewer: interviewerLabel,
           voiceProviderName,
-          elapsedSeconds: timer.getTotalElapsedSeconds(),
+          elapsedSeconds: getTotalElapsedSeconds(),
           turns: finalTurns,
           createdAt: new Date().toISOString(),
           report: fallbackReport,
@@ -592,11 +615,11 @@ const resumeQualityRef = useRef<any>(
         saveInterviewSession(fallbackRecord);
         saveInterviewCompletionGrowth(fallbackRecord);
         clearSavedProgress();
-        completedSessionIdRef.current = fallbackRecord.sessionId;
-        completedScoreRef.current = fallbackReport.totalScore || 0;
-        completedTurnsRef.current = finalTurns.length;
+        setCompletedSessionId(fallbackRecord.sessionId);
+        setCompletedScore(fallbackReport.totalScore || 0);
+        setCompletedTurns(finalTurns.length);
         interviewFinishedRef.current = true;
-        successPathRef.current = false;
+        setSuccessPath(false);
         // 完成一场（本地兜底报告同样计入）
         {
           const quota = consumeInterviewQuota();
@@ -615,13 +638,15 @@ const resumeQualityRef = useRef<any>(
       isGeneratingReport,
       mode,
       persona,
-      persistAndNavigateToReport,
       role,
       roleLabel,
       stopRecognition,
       voiceProviderName,
-      timer.clearAnswerTimer,
+      clearAnswerTimer,
+      getStartedAt,
+      getTotalElapsedSeconds,
       user,
+      setAnswerCountdown,
     ]
   );
 
@@ -746,7 +771,7 @@ const resumeQualityRef = useRef<any>(
 
         // ─── Update recording timer ───
         if (recordingTimerRef.current) {
-          const elapsed = timer.getTurnDuration();
+          const elapsed = getTurnDuration();
           const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
           const secs = String(elapsed % 60).padStart(2, '0');
           recordingTimerRef.current.textContent = mins + ':' + secs;
@@ -760,7 +785,7 @@ const resumeQualityRef = useRef<any>(
     } catch {
       setStatusText("麦克风权限已打开，但声音检测初始化失败");
     }
-  }, [mediaSupported]);
+  }, [getTurnDuration, mediaSupported]);
 
   const startRecognition = useCallback(async () => {
     if (!recognitionSupported) {
@@ -783,7 +808,7 @@ const resumeQualityRef = useRef<any>(
     setVoiceActivityState("Listening");
     silenceWarningFlaggedRef.current = false;
     setStatusText("请开始回答，系统正在实时识别");
-    timer.turnStartedAtRef.current = Date.now();
+    markTurnStart();
     setIsAnswering(true);
 
     await startVoiceMonitor();
@@ -838,6 +863,7 @@ const resumeQualityRef = useRef<any>(
     recognition.start();
   }, [
     phase,
+    markTurnStart,
     recognitionSupported,
     startVoiceMonitor,
     stopRecognition,
@@ -952,6 +978,11 @@ const resumeQualityRef = useRef<any>(
 
     async function prepare() {
       try {
+        const resumeData = readResumeSessionData();
+        resumeTextRef.current = resumeData.text;
+        resumeQualityRef.current = resumeData.quality;
+        setHasResume(Boolean(resumeData.text.trim()));
+
         // 0. 刷新或误关页面后，直接从上次进度接着答（30 分钟内有效）
         const progressKey = `${role}|${company}|${mode}|${persona}`;
         const saved = readSavedProgress(progressKey);
@@ -1072,9 +1103,9 @@ const resumeQualityRef = useRef<any>(
           setVoiceActivityState('waiting_answer');
           setStatusText('请开始作答');
           const answerSeconds = getAnswerSecondsForStage(pending.stage);
-          timer.setAnswerCountdown(answerSeconds);
+          setAnswerCountdown(answerSeconds);
           startRecognition();
-          timer.startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
+          startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
         },
       });
 
@@ -1100,7 +1131,7 @@ const resumeQualityRef = useRef<any>(
       setVoiceRetryAvailable(true);
       setPhase('error');
     }
-  }, [company, mode, timer.startAnswerCountdown, startRecognition, voiceSession]);
+  }, [company, mode, setAnswerCountdown, startAnswerCountdown, startRecognition, voiceSession]);
 
   const handleRetryVoice = useCallback(async () => {
     const pending = pendingQuestionRef.current;
@@ -1119,7 +1150,7 @@ const resumeQualityRef = useRef<any>(
     if (!pending) return;
 
     // Start elapsed timer
-    timer.startElapsedTimer();
+    startElapsedTimer();
 
     saveGrowthEvent({
       type: 'interview_started',
@@ -1131,7 +1162,7 @@ const resumeQualityRef = useRef<any>(
 
     setPhase('playing');
     await playCurrentQuestion(pending);
-  }, [company, mode, phase, playCurrentQuestion, preflightAccepted, timer.startElapsedTimer]);
+  }, [company, mode, phase, playCurrentQuestion, preflightAccepted, startElapsedTimer]);
 
   // ── Handle user ending answer (listening → processing → playing) ──
   const handleEndAnswer = useCallback(async () => {
@@ -1145,13 +1176,13 @@ const resumeQualityRef = useRef<any>(
     setPhase('processing');
     setVoiceActivityState('Processing');
     setStatusText('正在结束本轮回答...');
-    timer.setAnswerCountdown(0);
+    setAnswerCountdown(0);
 
     // Snapshot transcript BEFORE stopping recognition (protect against lost chunks)
     const transcriptSnapshot = finalTranscriptRef.current.trim();
 
     const completeTranscript = await stopRecognitionAsync();
-    timer.clearAnswerTimer();
+    clearAnswerTimer();
     setIsAnswering(false);
     setLiveTranscript('');
     setInterimTranscript('');
@@ -1164,9 +1195,7 @@ const resumeQualityRef = useRef<any>(
       : transcriptSnapshot;
     const answerText = (completeTranscript || bestTranscript || interimTranscriptRef.current).trim();
     // console.log('[ASR] Final transcript length=' + answerText.length + ' snapshot=' + transcriptSnapshot.length);
-    const answerDurationSeconds = timer.turnStartedAtRef.current
-      ? Math.max(1, Math.round((Date.now() - timer.turnStartedAtRef.current) / 1000))
-      : 0;
+    const answerDurationSeconds = getTurnDuration();
 
     // ── 完全没说话（转写为空，或只有"嗯/啊"这类语气词）──
     // 真人不念题目，而是请他"再说一遍刚才的回答"；屏幕继续显示原题，方便他回忆。
@@ -1253,8 +1282,7 @@ const resumeQualityRef = useRef<any>(
     const nextTurns = [...turns, turn];
     setTurns(nextTurns);
 
-    const totalElapsedSeconds =
-      timer.startAtRef.current === null ? timer.elapsedSeconds : Math.round((Date.now() - timer.startAtRef.current) / 1000);
+    const totalElapsedSeconds = getTotalElapsedSeconds();
 
     const effectiveMaxRounds = getTotalRoundsForMode(mode);
 
@@ -1301,24 +1329,30 @@ const resumeQualityRef = useRef<any>(
       setPhase('error');
     }
   }, [
-    timer.clearAnswerTimer,
+    clearAnswerTimer,
     currentStage,
     company,
-    timer.elapsedSeconds,
     fetchNextQuestion,
     fetchReaskLine,
     generateReportAndFinish,
+    getTotalElapsedSeconds,
+    getTurnDuration,
     interviewerLabel,
     isGeneratingReport,
     mode,
+    persona,
     phase,
     playCurrentQuestion,
+    role,
     roleLabel,
+    setAnswerCountdown,
     stopRecognitionAsync,
     turns,
     voiceSession,
   ]);
-  endAnswerRef.current = handleEndAnswer;
+  useEffect(() => {
+    endAnswerRef.current = handleEndAnswer;
+  }, [handleEndAnswer]);
 
   // ── Handle autoplay-blocked resume ──
   const handleResumeAudioPlayback = useCallback(async () => {
@@ -1338,9 +1372,9 @@ const resumeQualityRef = useRef<any>(
           setVoiceActivityState('waiting_answer');
           setStatusText('请开始作答');
           const answerSeconds = getAnswerSecondsForStage(pending.stage);
-          timer.setAnswerCountdown(answerSeconds);
+          setAnswerCountdown(answerSeconds);
           startRecognition();
-          timer.startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
+          startAnswerCountdown(answerSeconds, () => endAnswerRef.current());
         },
       });
     } catch (error) {
@@ -1353,7 +1387,7 @@ const resumeQualityRef = useRef<any>(
       setVoiceRetryAvailable(true);
       setPhase('error');
     }
-  }, [autoplayBlocked, phase, timer.startAnswerCountdown, startRecognition, voiceSession]);
+  }, [autoplayBlocked, phase, setAnswerCountdown, startAnswerCountdown, startRecognition, voiceSession]);
 
   // ── Scroll transcript ──
   useEffect(() => {
@@ -1386,69 +1420,6 @@ const resumeQualityRef = useRef<any>(
     setPhase('completed');
   }, []);
 
-  // ── Retry report generation (for network failure recovery) ──
-  const handleRetryReport = useCallback(async () => {
-    const sid = completedSessionIdRef.current;
-    if (!sid || isGeneratingReport) return;
-
-    const savedRecord = readInterviewSession(sid);
-    if (!savedRecord) return;
-
-    setIsGeneratingReport(true);
-    setStatusText('正在重新生成面试报告...');
-
-    try {
-      const resp = await fetch("/api/interview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "report",
-          role: savedRecord.role,
-          company: savedRecord.company,
-          mode: savedRecord.mode,
-          persona: savedRecord.persona,
-          resumeText: resumeTextRef.current,
-      resumeQuality: resumeQualityRef.current,
-          turns: savedRecord.turns,
-        }),
-      });
-      const payload = await resp.json();
-      if (!resp.ok || !payload.report) throw new Error("报告生成失败");
-
-      savedRecord.report = payload.report;
-      saveInterviewSession(savedRecord);
-      // 重新生成的报告也同步回服务端，保证换设备看到的是最新版本
-      if (user) {
-        fetch("/api/interview/save", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            session_id: savedRecord.sessionId,
-            role: savedRecord.role,
-            role_label: savedRecord.roleLabel,
-            company: savedRecord.company,
-            mode: savedRecord.mode,
-            persona: savedRecord.persona,
-            score: payload.report?.totalScore || 0,
-            evaluation: payload.report?.overallEvaluation || "",
-            strengths: payload.report?.strengths || [],
-            weaknesses: payload.report?.weaknesses || [],
-            started_at: savedRecord.createdAt,
-            ended_at: new Date().toISOString(),
-            duration_seconds: savedRecord.elapsedSeconds,
-            total_turns: savedRecord.turns?.length ?? 0,
-            report: payload.report,
-          }),
-        }).catch(() => undefined);
-      }
-      router.push('/interview/report?sessionId=' + encodeURIComponent(sid));
-    } catch (err) {
-      console.error('[Retry Report] Failed:', err);
-      setStatusText('网络连接异常，请稍后重试');
-      setIsGeneratingReport(false);
-    }
-  }, [isGeneratingReport, router, user]);
-
   // ── Quota guard：无免费额度且无已购次数时才去购买页 ──
   // 注意：本地缓存可能尚未同步（直接打开 / 刷新面试页时），必须先用服务端结果确认，
   // 否则有额度的用户刷新页面会被误踢到购买页。
@@ -1470,14 +1441,14 @@ const resumeQualityRef = useRef<any>(
 
   // ── Auto-navigate to report after completion ──
   useEffect(() => {
-    if (phase === 'completed' && completedSessionIdRef.current && !isGeneratingReport) {
-      const sid = completedSessionIdRef.current;
+    if (phase === 'completed' && completedSessionId && !isGeneratingReport) {
+      const sid = completedSessionId;
       const timer = setTimeout(() => {
         router.push('/interview/report?sessionId=' + encodeURIComponent(sid));
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [phase, isGeneratingReport, router]);
+  }, [completedSessionId, phase, isGeneratingReport, router]);
 
   // ── Cleanup on unmount ──
   useEffect(() => {
@@ -1492,14 +1463,14 @@ const resumeQualityRef = useRef<any>(
   const handleReplayQuestion = useCallback(async () => {
     const text = activeQuestionRef.current || currentQuestion;
     if (!text || !voiceSession || isGeneratingReport) return;
-    const remaining = timer.answerCountdown;
-    timer.clearAnswerTimer();
+    const remaining = answerCountdown;
+    clearAnswerTimer();
     setStatusText('正在重播题目...');
     try {
       await voiceSession.speakQuestion(text);
       setVoiceRetryAvailable(false);
       if (remaining > 0) {
-        timer.startAnswerCountdown(remaining, () => endAnswerRef.current());
+        startAnswerCountdown(remaining, () => endAnswerRef.current());
         setStatusText('请继续作答');
       }
     } catch {
@@ -1507,14 +1478,11 @@ const resumeQualityRef = useRef<any>(
       setFatalError('面试官语音重播失败，请检查网络后重试。');
       setPhase('error');
     }
-  }, [currentQuestion, isGeneratingReport, timer, voiceSession]);
+  }, [answerCountdown, clearAnswerTimer, currentQuestion, isGeneratingReport, startAnswerCountdown, voiceSession]);
 
   // ── 报告生成时的分阶段提示：让等待可感知（报告通常 20-60 秒）──
   useEffect(() => {
-    if (!isGeneratingReport) {
-      setReportStep(0);
-      return;
-    }
+    if (!isGeneratingReport) return;
     const id = window.setInterval(() => {
       setReportStep((s) => Math.min(s + 1, REPORT_STEPS.length - 1));
     }, 9000);
@@ -1528,7 +1496,7 @@ const resumeQualityRef = useRef<any>(
 
   // ── Computed UI values ──
   const activeVoiceState = voiceStateMeta[voiceActivityState] ?? voiceStateMeta.Silent;
-  const answerCountdownLabel = formatAnswerCountdown(timer.answerCountdown);
+  const answerCountdownLabel = formatAnswerCountdown(answerCountdown);
   const showHeader = phase === 'playing' || phase === 'listening' || phase === 'processing';
   const showBottomCard = phase === 'playing' || phase === 'listening' || phase === 'processing';
   const isPlayingPhase = phase === 'playing';
@@ -1538,7 +1506,7 @@ const resumeQualityRef = useRef<any>(
   const roundLabel = `第 ${Math.min(turns.length + 1, totalRounds)} / ${totalRounds} 题`;
   const answerTotalSeconds = currentStage ? getAnswerSecondsForStage(currentStage) : 0;
   const answerProgress = answerTotalSeconds > 0
-    ? Math.max(0, Math.min(1, timer.answerCountdown / answerTotalSeconds))
+    ? Math.max(0, Math.min(1, answerCountdown / answerTotalSeconds))
     : 0;
 
   // ── Save dialog (shown when API fails) ──
@@ -1596,11 +1564,11 @@ const resumeQualityRef = useRef<any>(
                   </span>
                 ))}
                 <span className={`rounded-full border px-3 py-1 ${
-                  resumeTextRef.current
+                  hasResume
                     ? "border-emerald-300/25 bg-emerald-400/10 text-emerald-100/80"
                     : "border-white/10 bg-white/[0.055]"
                 }`}>
-                  {resumeTextRef.current ? "已结合简历提问" : "岗位通用提问"}
+                  {hasResume ? "已结合简历提问" : "岗位通用提问"}
                 </span>
               </div>
 
@@ -1650,7 +1618,7 @@ const resumeQualityRef = useRef<any>(
                     面试时长 / Duration
                   </p>
                   <p className="mt-3 font-light tabular-nums tracking-[0.1em] text-white/92 text-[2rem] md:text-[2.35rem]">
-                    {formatDuration(timer.elapsedSeconds)}
+                    {formatDuration(elapsedSeconds)}
                   </p>
                   <p className="mt-2 text-[10px] leading-5 text-white/42">
                     保持自然语速，不必急于结束回答
@@ -1697,7 +1665,7 @@ const resumeQualityRef = useRef<any>(
                 ))}
               </div>
               <p className="mt-3 text-[11px] text-white/45">
-                {resumeTextRef.current ? "已结合你上传的简历提问" : "未上传简历 · 将按岗位通用问题面试"}
+                {hasResume ? "已结合你上传的简历提问" : "未上传简历 · 将按岗位通用问题面试"}
               </p>
 
               <div className="mt-6 w-full max-w-2xl rounded-[22px] border border-white/10 bg-[linear-gradient(180deg,rgba(26,17,13,0.7),rgba(10,8,7,0.48))] px-5 py-5 text-left shadow-[0_18px_44px_rgba(0,0,0,0.18)] backdrop-blur-md md:px-6">
@@ -1796,15 +1764,15 @@ const resumeQualityRef = useRef<any>(
                 面试已结束
               </p>
               <p className="mt-2 text-sm text-white/50">
-                {completedTurnsRef.current /* eslint-disable-line react-hooks/refs */} 轮 · 用时 {Math.floor(timer.elapsedSeconds / 60)} 分 {timer.elapsedSeconds % 60} 秒
+                {completedTurns} 轮 · 用时 {Math.floor(elapsedSeconds / 60)} 分 {elapsedSeconds % 60} 秒
               </p>
               <p className="mt-1 text-sm text-white/50">
-                综合评分：{completedScoreRef.current /* eslint-disable-line react-hooks/refs */} 分
+                综合评分：{completedScore} 分
               </p>
               <button
                 type="button"
                 onClick={() => {
-                  const sid = completedSessionIdRef.current;
+                  const sid = completedSessionId;
                   if (sid) router.push('/interview/report?sessionId=' + encodeURIComponent(sid));
                 }}
                 className="mt-10 inline-flex items-center gap-2 rounded-full border border-[#f5c689]/24 bg-[#f5c689]/10 px-6 py-3 text-sm uppercase tracking-[0.22em] text-[#ffe2bf] transition hover:border-[#f5c689]/34 hover:bg-[#f5c689]/16 hover:text-white"
@@ -1812,7 +1780,7 @@ const resumeQualityRef = useRef<any>(
                 查看面试报告
               </button>
 
-              {successPathRef.current ? (
+              {successPath ? (
                 <p className="mt-2 text-[0.6rem] tracking-[0.15em] text-[#f5c689]/50">
                   报告已生成 · 即将自动跳转
                 </p>

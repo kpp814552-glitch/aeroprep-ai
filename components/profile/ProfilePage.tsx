@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { BarChart3, Clock3, FileSearch, LineChart, TrendingUp, X } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import AppFrame from "@/components/layout/AppFrame";
@@ -28,7 +27,6 @@ function formatMeta(value: string) {
 }
 
 export default function ProfilePage() {
-  const router = useRouter();
   const { user, loading } = useAuth();
   // 未登录也可以预览成长中心；登录后才能保存 / 查看属于自己的记录
   const [sessions, setSessions] = useState(() => readInterviewSessions());
@@ -129,7 +127,7 @@ export default function ProfilePage() {
     const answered = growthEvents.filter((event) => event.type === "question_answered").length;
     const ttsPlayed = growthEvents.filter((event) => event.type === "tts_played").length;
     return { started, completed, answered, ttsPlayed };
-  }, [growthEvents]);
+  }, [completedSessions.length, growthEvents]);
 
   // ⚠️ 所有 hook 必须在这两个 return 之前，否则会触发
   // "Rendered more hooks than during the previous render" 白屏

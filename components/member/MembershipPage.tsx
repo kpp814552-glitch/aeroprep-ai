@@ -60,7 +60,7 @@ export default function MembershipPage() {
   const [orderCopied, setOrderCopied] = useState(false);
 
   useEffect(() => {
-    setQuota(getQuotaSummary());
+    const quotaSync = window.setTimeout(() => setQuota(getQuotaSummary()), 0);
     // 收款码（管理员可在后台更换，存数据库）
     fetch("/api/site-config?key=payment_qr", { cache: "no-store" })
       .then((r) => r.json())
@@ -71,6 +71,7 @@ export default function MembershipPage() {
       .then((r) => r.json())
       .then((d) => setSupportContact(typeof d?.value === "string" ? d.value.trim() : ""))
       .catch(() => setSupportContact(""));
+    return () => window.clearTimeout(quotaSync);
   }, []);
 
   const loadMyOrders = useCallback(async () => {
@@ -460,7 +461,12 @@ export default function MembershipPage() {
 
                   <div className="mx-auto mt-5 flex h-44 w-44 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-amber-200 bg-white">
                     {qrSrc ? (
-                      <img src={qrSrc} alt="支付宝收款码" loading="lazy" decoding="async" className="h-full w-full object-contain" />
+                      <div
+                        role="img"
+                        aria-label="支付宝收款码"
+                        className="h-full w-full bg-contain bg-center bg-no-repeat"
+                        style={{ backgroundImage: `url(${JSON.stringify(qrSrc)})` }}
+                      />
                     ) : (
                       <div className="text-center">
                         <CreditCard className="mx-auto h-10 w-10 text-amber-400" />

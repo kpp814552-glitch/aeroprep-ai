@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 /** 记录一次有效登录活跃；同一浏览器会话内由客户端限频。 */
-export async function POST(request: NextRequest) {
+export async function POST() {
   const supabase = await createClient();
   const {
     data: { user },

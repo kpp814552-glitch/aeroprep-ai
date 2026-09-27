@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   AlertTriangle,
@@ -61,6 +61,27 @@ function readCache(): Record<string, OptimizeAnalysis> {
   } catch {
     return {};
   }
+}
+
+function readHistory(): HistoryItem[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? (JSON.parse(raw) as HistoryItem[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildHistoryItem(
+  input: Omit<HistoryItem, "id" | "createdAt">,
+): HistoryItem {
+  const now = Date.now();
+  return {
+    ...input,
+    id: `${now}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date(now).toISOString(),
+  };
 }
 
 function writeCache(key: string, analysis: OptimizeAnalysis): void {
@@ -153,10 +174,10 @@ export default function ChatWorkspace() {
   const dimensionNames = kind === "resume" ? RESUME_DIMENSIONS : INTERVIEW_DIMENSIONS;
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(HISTORY_KEY);
-      if (raw) setHistory(JSON.parse(raw) as HistoryItem[]);
-    } catch { /* ignore */ }
+    const stored = readHistory();
+    if (stored.length > 0) {
+      startTransition(() => setHistory(stored));
+    }
   }, []);
 
   // 从面试报告「用 AI 深入优化这段回答」跳转过来时，自动带入原文与岗位上下文
@@ -172,22 +193,21 @@ export default function ChatWorkspace() {
         answerType?: string;
       };
       if (!seed?.content?.trim()) return;
-      setKind("interview");
-      setDraft(seed.content.slice(0, 5000));
-      if (seed.recruitType) setRecruitType(seed.recruitType);
-      if (seed.answerType) setAnswerType(seed.answerType);
-      const matchedPosition = positionOptions.find((p) => p.label === seed.positionLabel);
-      if (matchedPosition) setPosition(matchedPosition.value);
-      setSeedHint(true);
+      startTransition(() => {
+        setKind("interview");
+        setDraft(seed.content!.slice(0, 5000));
+        if (seed.recruitType) setRecruitType(seed.recruitType);
+        if (seed.answerType) setAnswerType(seed.answerType);
+        const matchedPosition = positionOptions.find((p) => p.label === seed.positionLabel);
+        if (matchedPosition) setPosition(matchedPosition.value);
+        setSeedHint(true);
+      });
     } catch { /* ignore */ }
   }, []);
 
   // 深度分析耗时较久，用分阶段提示让等待可感知
   useEffect(() => {
-    if (!loading) {
-      setProgressStep(0);
-      return;
-    }
+    if (!loading) return;
     const id = window.setInterval(() => {
       setProgressStep((s) => Math.min(s + 1, PROGRESS_STEPS.length - 1));
     }, 8000);
@@ -237,6 +257,7 @@ export default function ChatWorkspace() {
     }
 
     setCachedHint(false);
+    setProgressStep(0);
     setLoading(true);
     resetResult();
     try {
@@ -267,16 +288,14 @@ export default function ChatWorkspace() {
       setAnalysis(next);
       setTab("overview");
       writeCache(cacheKey, next);
-      persistHistory({
-        id: `${Date.now()}`,
+      persistHistory(buildHistoryItem({
         kind,
         positionLabel,
         answerType: kind === "interview" ? answerType : "简历",
         recruitType,
         content: draft.trim(),
         analysis: next,
-        createdAt: new Date().toISOString(),
-      });
+      }));
       window.setTimeout(() => resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     } catch {
       setError("网络异常，请检查网络后重试");

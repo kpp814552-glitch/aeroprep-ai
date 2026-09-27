@@ -30,6 +30,8 @@ export type AdminGuardResult =
   | { ok: false; response: NextResponse };
 
 export async function requireAdmin(request: NextRequest): Promise<AdminGuardResult> {
+  // 预留给后续的 Origin / CSRF 校验，当前身份判断不依赖 request 内容。
+  void request;
   const session = (await createClient()) as unknown as SupabaseClient;
 
   const { data: { user } } = await session.auth.getUser();

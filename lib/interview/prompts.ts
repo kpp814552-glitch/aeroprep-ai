@@ -1,9 +1,7 @@
-import type { InterviewMode } from "@/lib/site";
 import {
   getRoleConfig,
   getTotalRoundsForMode,
   interviewStageLabels,
-  interviewStages,
 } from "@/lib/interview/config";
 import { getAirlineProfile } from "@/lib/interview/airline-profiles";
 import { getRoleModel } from "@/lib/interview/role-models";
@@ -295,8 +293,6 @@ export function buildFallbackNextQuestion(
   const lastTurn = turns.at(-1);
   const anchor = pickResumeAnchor(lastTurn?.answer ?? "你刚才提到的内容");
   const airline = company || "这家航司";
-  const interviewerTone = persona || "专业型HR";
-  const companyCfg = getCompanyConfig(company);
   const personaCfg = getPersonaConfig(persona);
 
   const stageQuestions: Record<InterviewStage, string> = {
@@ -594,7 +590,6 @@ export function buildReportPrompt(
   resumeQuality?: { score: number; deductions: string[]; comment: string }
 ) {
   const roleConfig = getRoleConfig(role);
-  const companyCfg = getCompanyConfig(company);
   const personaCfg = getPersonaConfig(persona);
   const modeInstruction = getModeInstruction(mode || "校招", resumeText || "", resumeQuality);
 

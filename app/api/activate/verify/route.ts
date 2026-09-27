@@ -19,10 +19,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "无效套餐" }, { status: 400 });
     }
 
-    // Verify HMAC signature
-    const payload = JSON.stringify({ email: email.toLowerCase(), plan, days: planInfo.days, ts: "*" });
-    const basePayload = payload.replace('"*"', '"*"');
-
     // We need to find the valid ts - try recent timestamps (within last 7 days)
     const now = Date.now();
     let valid = false;
