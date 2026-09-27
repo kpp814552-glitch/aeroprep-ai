@@ -524,9 +524,11 @@ export default function InterviewReportPage() {
                           <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-sky-600">
                             第 {index + 1} 题
                           </span>
-                          <span className="mt-1 block text-sm text-slate-800">
-                            {turn?.question || "（本场问题记录）"}
-                          </span>
+                          {turn?.question ? (
+                            <span className="mt-1 block text-sm text-slate-800">
+                              {turn.question}
+                            </span>
+                          ) : null}
                         </span>
                         <ChevronDown
                           className={`mt-1 h-4 w-4 shrink-0 text-slate-400 transition duration-200 ${expanded ? "rotate-180" : ""}`}

@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
   const sessionId = typeof body.session_id === "string" ? body.session_id.slice(0, 120) : "";
   const report = body.report && typeof body.report === "object" ? body.report : null;
-  const turns = Array.isArray(body.turns) ? body.turns : null;
+  // 注意：按需求"只存报告"，问答原文（turns）不入库，避免把用户回答原文长期存在服务端。
 
   // 基础字段（老表结构也能写）
   const basePayload = {
@@ -71,7 +71,6 @@ export async function POST(request: NextRequest) {
     ...basePayload,
     session_id: sessionId || null,
     report,
-    turns,
   };
   const isNewRow = !existingId;
   let interview: Record<string, unknown> | null = null;

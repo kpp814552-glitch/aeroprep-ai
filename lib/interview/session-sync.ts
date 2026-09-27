@@ -17,9 +17,11 @@ export type ServerInterviewRow = {
   mode?: string | null;
   persona?: string | null;
   duration_seconds?: number | null;
+  total_turns?: number | null;
   started_at?: string | null;
   created_at?: string | null;
   report?: InterviewReport | null;
+  /** 兼容旧数据：现在服务端只存报告，不再存问答原文 */
   turns?: InterviewTurn[] | null;
 };
 
@@ -36,6 +38,7 @@ export function rowToSessionRecord(row: ServerInterviewRow | null | undefined): 
     interviewer: "",
     voiceProviderName: null,
     elapsedSeconds: row.duration_seconds ?? 0,
+    totalTurns: row.total_turns ?? 0,
     turns: Array.isArray(row.turns) ? row.turns : [],
     createdAt: row.started_at ?? row.created_at ?? new Date().toISOString(),
     report: row.report ?? undefined,

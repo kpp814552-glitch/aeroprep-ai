@@ -80,7 +80,7 @@ export default function ProfilePage() {
         title: `${session.company} · ${session.roleLabel} · ${session.mode}`,
         meta: formatMeta(session.createdAt),
         score: session.report?.totalScore ?? 0,
-        rounds: session.turns?.length ?? 0,
+        rounds: session.turns?.length || session.totalTurns || 0,
         durationSeconds: session.elapsedSeconds ?? 0,
         competitiveLevel: session.report?.competitiveLevel ?? "",
         competitiveRange: session.report?.competitiveRange ?? "",
@@ -356,7 +356,7 @@ export default function ProfilePage() {
                   面试报告
                 </p>
                 <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                  <span>{selectedSession.turns?.length ?? 0} 轮 · 用时 {Math.floor((selectedSession.elapsedSeconds ?? 0) / 60)} 分 · 评分 {selectedSession.report.totalScore}</span>
+                  <span>{selectedSession.turns?.length || selectedSession.totalTurns || 0} 轮 · 用时 {Math.floor((selectedSession.elapsedSeconds ?? 0) / 60)} 分 · 评分 {selectedSession.report.totalScore}</span>
                   {selectedSession.report.competitiveLevel ? (
                     <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-medium text-sky-700">
                       竞争定位 {COMPETITIVE_LABELS[selectedSession.report.competitiveLevel] ?? selectedSession.report.competitiveLevel}

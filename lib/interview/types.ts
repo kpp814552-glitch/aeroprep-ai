@@ -105,6 +105,8 @@ export type InterviewSessionRecord = {
   voiceProviderName?: string | null;
   elapsedSeconds: number;
   turns: InterviewTurn[];
+  /** 轮数（服务端同步回来时可能不带问答原文，用这个字段显示"N 轮"） */
+  totalTurns?: number;
   createdAt: string;
   report?: InterviewReport;
 };

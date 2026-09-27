@@ -548,9 +548,8 @@ const resumeQualityRef = useRef<any>(
               ended_at: new Date().toISOString(),
               duration_seconds: totalElapsedSeconds,
               total_turns: finalTurns.length,
-              // 完整报告 + 逐题问答，用于跨设备查看历史报告
+              // 只同步完整报告（含逐题分析）；问答原文仅留在本机，不上传
               report: payload.report,
-              turns: finalTurns,
             }),
           }).catch(() => {
             console.warn("[Interview] Failed to save to DB");
@@ -1439,7 +1438,6 @@ const resumeQualityRef = useRef<any>(
             duration_seconds: savedRecord.elapsedSeconds,
             total_turns: savedRecord.turns?.length ?? 0,
             report: payload.report,
-            turns: savedRecord.turns,
           }),
         }).catch(() => undefined);
       }
