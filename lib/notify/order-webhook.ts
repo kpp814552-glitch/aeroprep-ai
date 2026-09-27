@@ -25,18 +25,67 @@ export function buildWebhookPayload(url: string, content: string) {
   return { msgtype: "text", text: { content } };
 }
 
-/** 发送一条群消息；失败只记日志，不影响下单主流程 */
-export async function sendWebhook(url: string, content: string) {
-  if (!url) return false;
-  try {
-    const res = await fetch(url, {
+/** 识别"只填了 PushPlus token"的简写形式 */
+export function normalizeNotifyTarget(raw: string) {
+  const value = raw.trim();
+  if (!value) return "";
+  if (value.includes("://")) return value;
+  // 没写协议、也不像网址：按 PushPlus token 处理
+  if (/^[A-Za-z0-9_-]{16,64}$/.test(value)) {
+    return `https://www.pushplus.plus/send?token=${value}`;
+  }
+  return value;
+}
+
+/** 把统一的内容转换成各平台需要的请求（企业微信/钉钉/飞书群机器人、PushPlus、Server酱） */
+function buildNotifyRequest(url: string, content: string) {
+  if (url.includes("pushplus.plus")) {
+    const token = new URL(url).searchParams.get("token") || "";
+    return {
+      target: "https://www.pushplus.plus/send",
+      init: {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, title: "AeroPrep 新订单", content, template: "txt" }),
+      } as RequestInit,
+    };
+  }
+  if (url.includes("sctapi.ftqq.com")) {
+    const key = new URL(url).pathname.split("/").filter(Boolean)[0] || "";
+    return {
+      target: `https://sctapi.ftqq.com/${key}.send`,
+      init: {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ title: "AeroPrep 新订单", desp: content }).toString(),
+      } as RequestInit,
+    };
+  }
+  return {
+    target: url,
+    init: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(buildWebhookPayload(url, content)),
-      signal: AbortSignal.timeout(6000),
-    });
+    } as RequestInit,
+  };
+}
+
+/** 发送一条提醒；失败只记日志，不影响下单主流程 */
+export async function sendWebhook(rawUrl: string, content: string) {
+  const url = normalizeNotifyTarget(rawUrl);
+  if (!url) return false;
+  try {
+    const { target, init } = buildNotifyRequest(url, content);
+    const res = await fetch(target, { ...init, signal: AbortSignal.timeout(8000) });
     if (!res.ok) {
       console.warn("[Notify] webhook 返回非 200:", res.status, (await res.text().catch(() => "")).slice(0, 200));
+      return false;
+    }
+    // PushPlus / Server酱 即使业务失败也返回 200，这里再看一眼返回体
+    const text = await res.text().catch(() => "");
+    if (/"(code|errcode)":\s*(\d+)/.test(text) && !/"(code|errcode)":\s*200|"(code|errcode)":\s*0/.test(text)) {
+      console.warn("[Notify] 推送服务返回失败:", text.slice(0, 200));
       return false;
     }
     return true;

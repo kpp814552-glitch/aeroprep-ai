@@ -972,8 +972,9 @@ export default function AdminOrders() {
               <div className="rounded-xl border border-slate-200/70 bg-white/60 px-4 py-3">
                 <p className="mb-1 text-[11px] font-medium text-slate-700">新订单提醒（推到手机）</p>
                 <p className="mb-2 text-[10px] leading-5 text-slate-400">
-                  在企业微信 / 钉钉 / 飞书里建一个只有自己的群 → 添加「群机器人」→ 把它的 Webhook 地址粘到这里。
-                  以后用户一提交购买申请，你手机上立刻收到订单号，核对到账后回后台点一下通过即可。
+                  三种方式任选：① 企业微信/钉钉/飞书群 → 添加「群机器人」→ 粘贴它的 Webhook 地址；
+                  ② PushPlus（关注公众号即得 token，不用建群）→ 直接粘贴 token；
+                  ③ Server酱 的 SendKey 地址。配置后用户一提交购买申请，你手机立刻收到订单号。
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <input
@@ -981,7 +982,7 @@ export default function AdminOrders() {
                     value={notifyUrlDraft}
                     disabled={notifyEnvOverride}
                     onChange={(e) => setNotifyUrlDraft(e.target.value.slice(0, 500))}
-                    placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."
+                    placeholder="群机器人 Webhook 地址，或直接粘贴 PushPlus 的 token"
                     className="min-w-[240px] flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-sky-300 disabled:bg-slate-50 disabled:text-slate-400"
                   />
                   <button

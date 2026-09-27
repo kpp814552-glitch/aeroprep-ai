@@ -61,8 +61,13 @@ export async function POST(request: NextRequest) {
   const url = body.url.trim();
   // 允许 https，以及本地调试用的 http://localhost / 127.0.0.1
   const isLocalHttp = /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(url);
-  if (url && !isLocalHttp && !/^https:\/\//i.test(url)) {
-    return NextResponse.json({ error: "请填写 https:// 开头的 Webhook 地址" }, { status: 400 });
+  // 也允许直接粘贴 PushPlus 的 token（纯字母数字串）
+  const isToken = /^[A-Za-z0-9_-]{16,64}$/.test(url);
+  if (url && !isLocalHttp && !isToken && !/^https:\/\//i.test(url)) {
+    return NextResponse.json(
+      { error: "请填写 Webhook 地址（https:// 开头），或直接粘贴 PushPlus 的 token" },
+      { status: 400 },
+    );
   }
   if (url.length > 500) {
     return NextResponse.json({ error: "地址过长" }, { status: 400 });
