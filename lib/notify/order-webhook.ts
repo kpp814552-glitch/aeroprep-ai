@@ -8,12 +8,25 @@
 // 公开读接口 /api/site-config 不暴露这个 key，只有管理端接口能读到。
 // ============================================================
 
+import { createHmac } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type NotifyWebhookTarget = {
   url: string;
+  /** 钉钉「加签」模式的密钥（SEC 开头）；其它平台为空 */
+  secret?: string;
   source: "env" | "database";
 };
+
+/** 钉钉加签：timestamp + "\n" + secret 做 HMAC-SHA256，再把 sign 拼到 URL 上 */
+export function signDingTalkUrl(url: string, secret: string) {
+  const timestamp = Date.now();
+  const sign = createHmac("sha256", secret).update(`${timestamp}\n${secret}`).digest("base64");
+  const signed = new URL(url);
+  signed.searchParams.set("timestamp", String(timestamp));
+  signed.searchParams.set("sign", sign);
+  return signed.toString();
+}
 
 /** 群里显示的文本按各平台的格式包一层 */
 export function buildWebhookPayload(url: string, content: string) {
@@ -38,7 +51,7 @@ export function normalizeNotifyTarget(raw: string) {
 }
 
 /** 把统一的内容转换成各平台需要的请求（企业微信/钉钉/飞书群机器人、PushPlus、Server酱） */
-function buildNotifyRequest(url: string, content: string) {
+function buildNotifyRequest(url: string, content: string, secret?: string) {
   if (url.includes("pushplus.plus")) {
     const token = new URL(url).searchParams.get("token") || "";
     return {
@@ -61,8 +74,9 @@ function buildNotifyRequest(url: string, content: string) {
       } as RequestInit,
     };
   }
+  const needsSign = secret && url.includes("oapi.dingtalk.com");
   return {
-    target: url,
+    target: needsSign ? signDingTalkUrl(url, secret as string) : url,
     init: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -72,11 +86,11 @@ function buildNotifyRequest(url: string, content: string) {
 }
 
 /** 发送一条提醒；失败只记日志，不影响下单主流程 */
-export async function sendWebhook(rawUrl: string, content: string) {
+export async function sendWebhook(rawUrl: string, content: string, secret?: string) {
   const url = normalizeNotifyTarget(rawUrl);
   if (!url) return false;
   try {
-    const { target, init } = buildNotifyRequest(url, content);
+    const { target, init } = buildNotifyRequest(url, content, secret);
     const res = await fetch(target, { ...init, signal: AbortSignal.timeout(8000) });
     if (!res.ok) {
       console.warn("[Notify] webhook 返回非 200:", res.status, (await res.text().catch(() => "")).slice(0, 200));
@@ -98,17 +112,20 @@ export async function sendWebhook(rawUrl: string, content: string) {
 /** 环境变量优先，其次取管理员在后台配置的地址 */
 export async function resolveNotifyWebhook(db: SupabaseClient): Promise<NotifyWebhookTarget | null> {
   const fromEnv = process.env.ORDER_WEBHOOK_URL?.trim();
-  if (fromEnv) return { url: fromEnv, source: "env" };
+  if (fromEnv) {
+    return { url: fromEnv, secret: process.env.ORDER_WEBHOOK_SECRET?.trim() || undefined, source: "env" };
+  }
 
   try {
     const { data, error } = await db
       .from("site_config")
-      .select("value")
-      .eq("key", "order_webhook")
-      .maybeSingle();
+      .select("key, value")
+      .in("key", ["order_webhook", "order_webhook_secret"]);
     if (error) return null;
-    const url = (data?.value as string | null)?.trim();
-    return url ? { url, source: "database" } : null;
+    const map = new Map((data ?? []).map((row) => [row.key as string, (row.value as string | null) ?? ""]));
+    const url = (map.get("order_webhook") || "").trim();
+    if (!url) return null;
+    return { url, secret: (map.get("order_webhook_secret") || "").trim() || undefined, source: "database" };
   } catch {
     return null;
   }
@@ -140,6 +157,6 @@ export function notifyNewOrder(db: SupabaseClient, notice: NewOrderNotice) {
   void (async () => {
     const target = await resolveNotifyWebhook(db);
     if (!target) return;
-    await sendWebhook(target.url, formatOrderNotice(notice));
+    await sendWebhook(target.url, formatOrderNotice(notice), target.secret);
   })();
 }

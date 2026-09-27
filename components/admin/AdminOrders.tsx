@@ -140,6 +140,8 @@ export default function AdminOrders() {
   // 新订单提醒（群机器人 webhook）
   const [notifyUrl, setNotifyUrl] = useState("");
   const [notifyUrlDraft, setNotifyUrlDraft] = useState("");
+  const [notifySecret, setNotifySecret] = useState("");
+  const [notifySecretDraft, setNotifySecretDraft] = useState("");
   const [notifyConfigured, setNotifyConfigured] = useState(false);
   const [notifySource, setNotifySource] = useState<string | null>(null);
   const [notifyEnvOverride, setNotifyEnvOverride] = useState(false);
@@ -232,8 +234,11 @@ export default function AdminOrders() {
       const res = await fetch("/api/admin/notify-settings", { cache: "no-store" });
       const data = await res.json().catch(() => ({}));
       const url = typeof data?.url === "string" ? data.url : "";
+      const secret = typeof data?.secret === "string" ? data.secret : "";
       setNotifyUrl(url);
       setNotifyUrlDraft(url);
+      setNotifySecret(secret);
+      setNotifySecretDraft(secret);
       setNotifyConfigured(Boolean(data?.configured));
       setNotifySource(typeof data?.source === "string" ? data.source : null);
       setNotifyEnvOverride(Boolean(data?.envOverride));
@@ -248,11 +253,12 @@ export default function AdminOrders() {
       const res = await fetch("/api/admin/notify-settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: notifyUrlDraft.trim() }),
+        body: JSON.stringify({ url: notifyUrlDraft.trim(), secret: notifySecretDraft.trim() }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setNotifyUrl(notifyUrlDraft.trim());
+        setNotifySecret(notifySecretDraft.trim());
         setNotifyConfigured(Boolean(data.configured));
         setNotifySource(data.configured ? "database" : null);
         flash("ok", data.configured ? "已保存，新订单会推送到你的群机器人" : "已清空提醒地址");
@@ -964,6 +970,16 @@ export default function AdminOrders() {
                     保存
                   </button>
                 </div>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={notifySecretDraft}
+                    disabled={notifyEnvOverride}
+                    onChange={(e) => setNotifySecretDraft(e.target.value.slice(0, 200))}
+                    placeholder="钉钉「加签」密钥（SEC 开头，可选；填了才需要）"
+                    className="min-w-[240px] flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-sky-300 disabled:bg-slate-50 disabled:text-slate-400"
+                  />
+                </div>
                 <p className="mt-2 text-[10px] text-slate-400">
                   {supportContact ? `当前：${supportContact}` : "当前：未设置（用户端不显示联系方式）"}
                 </p>
@@ -987,7 +1003,11 @@ export default function AdminOrders() {
                   />
                   <button
                     type="button"
-                    disabled={savingNotify || notifyEnvOverride || notifyUrlDraft.trim() === notifyUrl}
+                    disabled={
+                      savingNotify ||
+                      notifyEnvOverride ||
+                      (notifyUrlDraft.trim() === notifyUrl && notifySecretDraft.trim() === notifySecret)
+                    }
                     onClick={saveNotifyUrl}
                     className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-50"
                   >

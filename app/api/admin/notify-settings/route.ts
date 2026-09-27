@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     configured: Boolean(target),
     source: target?.source ?? null,
     url: target?.url ?? "",
+    secret: target?.secret ?? "",
     envOverride: Boolean(process.env.ORDER_WEBHOOK_URL?.trim()),
   });
 }
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
   if (!guard.ok) return guard.response;
   const { db, user: admin, serviceRole } = guard.ctx;
 
-  let body: { url?: string; test?: boolean } = {};
+  let body: { url?: string; secret?: string; test?: boolean } = {};
   try {
     body = await request.json();
   } catch { /* ignore */ }
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
         email: "test@example.com",
         appliedAt: new Date().toISOString(),
       }),
+      target.secret,
     );
     return ok
       ? NextResponse.json({ success: true })
@@ -73,13 +75,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "地址过长" }, { status: 400 });
   }
 
+  const secret = typeof body.secret === "string" ? body.secret.trim() : "";
+  if (secret.length > 200) {
+    return NextResponse.json({ error: "密钥过长" }, { status: 400 });
+  }
+
+  const now = new Date().toISOString();
+  const reviewer = admin.email || admin.id;
   const { error } = await db.from("site_config").upsert(
-    {
-      key: "order_webhook",
-      value: url,
-      updated_at: new Date().toISOString(),
-      updated_by: admin.email || admin.id,
-    },
+    [
+      { key: "order_webhook", value: url, updated_at: now, updated_by: reviewer },
+      { key: "order_webhook_secret", value: secret, updated_at: now, updated_by: reviewer },
+    ],
     { onConflict: "key" },
   );
 

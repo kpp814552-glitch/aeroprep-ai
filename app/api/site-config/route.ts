@@ -8,7 +8,7 @@ const ALLOWED_KEYS = new Set(["payment_qr", "payment_note", "support_contact"]);
 /** 可以公开读取的配置项（客服 webhook 之类的只在管理端接口读取） */
 const PUBLIC_READ_KEYS = ALLOWED_KEYS;
 /** 管理员可写、但不公开读取的配置项（新订单提醒 webhook） */
-const ADMIN_ONLY_KEYS = new Set(["order_webhook"]);
+const ADMIN_ONLY_KEYS = new Set(["order_webhook", "order_webhook_secret"]);
 
 /** 公开读取（收款码等需要展示给所有访客） */
 export async function GET(request: NextRequest) {
