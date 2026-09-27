@@ -10,6 +10,7 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  Send,
   Undo2,
   Upload,
   Wallet,
@@ -136,6 +137,14 @@ export default function AdminOrders() {
   const [supportContact, setSupportContact] = useState("");
   const [supportContactDraft, setSupportContactDraft] = useState("");
   const [savingContact, setSavingContact] = useState(false);
+  // 新订单提醒（群机器人 webhook）
+  const [notifyUrl, setNotifyUrl] = useState("");
+  const [notifyUrlDraft, setNotifyUrlDraft] = useState("");
+  const [notifyConfigured, setNotifyConfigured] = useState(false);
+  const [notifySource, setNotifySource] = useState<string | null>(null);
+  const [notifyEnvOverride, setNotifyEnvOverride] = useState(false);
+  const [savingNotify, setSavingNotify] = useState(false);
+  const [testingNotify, setTestingNotify] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const flash = useCallback((type: "ok" | "err" | "info", text: string) => {
@@ -218,6 +227,62 @@ export default function AdminOrders() {
     }
   }, []);
 
+  const loadNotifySettings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/notify-settings", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      const url = typeof data?.url === "string" ? data.url : "";
+      setNotifyUrl(url);
+      setNotifyUrlDraft(url);
+      setNotifyConfigured(Boolean(data?.configured));
+      setNotifySource(typeof data?.source === "string" ? data.source : null);
+      setNotifyEnvOverride(Boolean(data?.envOverride));
+    } catch {
+      setNotifyConfigured(false);
+    }
+  }, []);
+
+  const saveNotifyUrl = async () => {
+    setSavingNotify(true);
+    try {
+      const res = await fetch("/api/admin/notify-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: notifyUrlDraft.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setNotifyUrl(notifyUrlDraft.trim());
+        setNotifyConfigured(Boolean(data.configured));
+        setNotifySource(data.configured ? "database" : null);
+        flash("ok", data.configured ? "已保存，新订单会推送到你的群机器人" : "已清空提醒地址");
+      } else {
+        flash("err", data?.error || "保存失败");
+      }
+    } catch {
+      flash("err", "网络异常，操作未完成");
+    } finally {
+      setSavingNotify(false);
+    }
+  };
+
+  const testNotify = async () => {
+    setTestingNotify(true);
+    try {
+      const res = await fetch("/api/admin/notify-settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      flash(res.ok && data.success ? "ok" : "err", res.ok && data.success ? "测试消息已发送，请查看群消息" : data?.error || "发送失败");
+    } catch {
+      flash("err", "网络异常，发送失败");
+    } finally {
+      setTestingNotify(false);
+    }
+  };
+
   useEffect(() => {
     const timer = window.setTimeout(() => loadOrders(), 0);
     return () => window.clearTimeout(timer);
@@ -235,6 +300,11 @@ export default function AdminOrders() {
     const timer = window.setTimeout(() => loadSupportContact(), 0);
     return () => window.clearTimeout(timer);
   }, [loadSupportContact]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadNotifySettings(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadNotifySettings]);
 
   const saveSupportContact = async () => {
     setSavingContact(true);
@@ -896,6 +966,49 @@ export default function AdminOrders() {
                 </div>
                 <p className="mt-2 text-[10px] text-slate-400">
                   {supportContact ? `当前：${supportContact}` : "当前：未设置（用户端不显示联系方式）"}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200/70 bg-white/60 px-4 py-3">
+                <p className="mb-1 text-[11px] font-medium text-slate-700">新订单提醒（推到手机）</p>
+                <p className="mb-2 text-[10px] leading-5 text-slate-400">
+                  在企业微信 / 钉钉 / 飞书里建一个只有自己的群 → 添加「群机器人」→ 把它的 Webhook 地址粘到这里。
+                  以后用户一提交购买申请，你手机上立刻收到订单号，核对到账后回后台点一下通过即可。
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={notifyUrlDraft}
+                    disabled={notifyEnvOverride}
+                    onChange={(e) => setNotifyUrlDraft(e.target.value.slice(0, 500))}
+                    placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=..."
+                    className="min-w-[240px] flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-sky-300 disabled:bg-slate-50 disabled:text-slate-400"
+                  />
+                  <button
+                    type="button"
+                    disabled={savingNotify || notifyEnvOverride || notifyUrlDraft.trim() === notifyUrl}
+                    onClick={saveNotifyUrl}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-50"
+                  >
+                    {savingNotify ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                    保存
+                  </button>
+                  <button
+                    type="button"
+                    disabled={testingNotify || !notifyConfigured}
+                    onClick={testNotify}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+                  >
+                    {testingNotify ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+                    发送测试
+                  </button>
+                </div>
+                <p className="mt-2 text-[10px] text-slate-400">
+                  {notifyEnvOverride
+                    ? "当前：已通过环境变量 ORDER_WEBHOOK_URL 配置（后台不可修改）"
+                    : notifyConfigured
+                      ? `当前：已配置${notifySource === "database" ? "（后台设置）" : ""}`
+                      : "当前：未配置（不会推送提醒）"}
                 </p>
               </div>
             </div>

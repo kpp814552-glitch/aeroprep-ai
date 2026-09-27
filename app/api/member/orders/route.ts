@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { findOrder, walletBalance, type CreditOrder, type OrderStatus } from "@/lib/member/wallet";
 import { PACKS, loadRegistry, loadWallet, makeOrderId, mutateWallet } from "@/lib/member/wallet-server";
+import { notifyNewOrder } from "@/lib/notify/order-webhook";
 
 const MAX_PENDING = 5;
 
@@ -69,6 +70,20 @@ export async function POST(request: NextRequest) {
   }
   if (!result.value) {
     return NextResponse.json({ error: "你有待审核的订单尚未处理，请等待管理员核对" }, { status: 429 });
+  }
+
+  // 新订单立刻推送到管理员手机（企业微信/钉钉/飞书群机器人）
+  // 只在"刚刚创建"的订单上触发，重复提交同一单不会重复打扰
+  const appliedMs = new Date(result.value.appliedAt).getTime();
+  if (Number.isFinite(appliedMs) && Date.now() - appliedMs < 60_000) {
+    notifyNewOrder(supabase, {
+      orderId: result.value.id,
+      packLabel: pack.label,
+      credits: pack.credits,
+      amount: pack.amount,
+      email: user.email ?? null,
+      appliedAt: result.value.appliedAt,
+    });
   }
 
   const registry = "error" in registryRow ? undefined : registryRow.registry;
