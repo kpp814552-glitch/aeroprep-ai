@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/guard";
 
 /** 允许通过该接口读写的配置项 */
-const ALLOWED_KEYS = new Set(["payment_qr", "payment_note"]);
+const ALLOWED_KEYS = new Set(["payment_qr", "payment_note", "support_contact"]);
 
 /** 公开读取（收款码等需要展示给所有访客） */
 export async function GET(request: NextRequest) {
@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
   const key = body.key || "";
   if (!ALLOWED_KEYS.has(key)) return NextResponse.json({ error: "不支持的配置项" }, { status: 400 });
   if (typeof body.value !== "string") return NextResponse.json({ error: "缺少内容" }, { status: 400 });
+  if (key === "support_contact" && body.value.length > 300) {
+    return NextResponse.json({ error: "客服联系方式请控制在 300 字以内" }, { status: 400 });
+  }
   if (body.value.length > 900_000) return NextResponse.json({ error: "图片过大，请压缩后再上传" }, { status: 413 });
 
   const { error } = await db

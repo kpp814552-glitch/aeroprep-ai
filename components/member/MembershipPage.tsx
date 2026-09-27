@@ -46,6 +46,7 @@ export default function MembershipPage() {
   const [submitted, setSubmitted] = useState(false);
   const [step, setStep] = useState<"pay" | "result">("pay");
   const [qrSrc, setQrSrc] = useState<string | null>(null);
+  const [supportContact, setSupportContact] = useState("");
   const [currentOrderId, setCurrentOrderId] = useState("");
   const [payError, setPayError] = useState("");
   const [quota, setQuota] = useState<{ freeLeft: number; credits: number; isMember: boolean } | null>(null);
@@ -60,6 +61,11 @@ export default function MembershipPage() {
       .then((r) => r.json())
       .then((d) => setQrSrc(typeof d?.value === "string" && d.value ? d.value : "/qr-payment.jpg"))
       .catch(() => setQrSrc("/qr-payment.jpg"));
+    // 客服联系方式（管理员后台设置；没设置就不显示）
+    fetch("/api/site-config?key=support_contact", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => setSupportContact(typeof d?.value === "string" ? d.value.trim() : ""))
+      .catch(() => setSupportContact(""));
   }, []);
 
   const loadMyOrders = useCallback(async () => {
@@ -446,6 +452,13 @@ export default function MembershipPage() {
                     </div>
                     <p className="mt-1.5 text-[10px] text-amber-600/80">订单号也会显示在下方「我的购买记录」里</p>
                   </div>
+
+                  {supportContact ? (
+                    <p className="mt-3 text-center text-[11px] leading-5 text-slate-400">
+                      支付遇到问题？联系客服
+                      <span className="ml-1 font-medium text-slate-600">{supportContact}</span>
+                    </p>
+                  ) : null}
 
                   <button
                     type="button"

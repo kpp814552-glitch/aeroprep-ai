@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   BarChart3,
@@ -168,7 +168,13 @@ const FAQS: FaqItem[] = [
     id: "support",
     category: "account",
     q: "遇到问题如何联系客服？",
-    a: "请记录问题发生时间、面试岗位、订单号（如涉及支付）和页面提示，通过网站内反馈渠道提交。涉及支付时请一并提供付款截图，便于快速核对。",
+    a: "把问题发生时间、面试岗位、订单号（涉及支付时）和页面提示整理好，通过下方客服联系方式联系我们；涉及支付请附付款截图，便于快速核对。",
+  },
+  {
+    id: "forgot-password",
+    category: "account",
+    q: "忘记密码怎么办？",
+    a: "直接把注册邮箱发给客服，管理员核实身份后帮你重置密码。为了账号安全，重置后请立即在登录页用新密码登录，并不要把密码告诉他人。",
   },
 ];
 
@@ -182,6 +188,19 @@ export default function FaqPage() {
   const [activeCategory, setActiveCategory] = useState<CategoryKey>("before");
   const [openId, setOpenId] = useState<string | null>("prepare");
   const [query, setQuery] = useState("");
+  const [supportContact, setSupportContact] = useState("");
+
+  // 客服联系方式由管理员在后台「收款设置」里维护
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/site-config?key=support_contact", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setSupportContact(typeof d?.value === "string" ? d.value.trim() : "");
+      })
+      .catch(() => undefined);
+    return () => { cancelled = true; };
+  }, []);
 
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
@@ -394,6 +413,12 @@ export default function FaqPage() {
                             <p className="border-t border-slate-100 px-5 py-4 text-[13px] leading-7 text-slate-600 md:px-6">
                               {faq.a}
                             </p>
+                            {faq.id === "support" && supportContact ? (
+                              <p className="px-5 pb-4 text-[13px] leading-7 text-slate-600 md:px-6">
+                                客服联系方式：
+                                <span className="font-medium text-slate-800">{supportContact}</span>
+                              </p>
+                            ) : null}
                           </div>
                         </div>
                       </article>

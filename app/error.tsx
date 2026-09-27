@@ -18,8 +18,11 @@ export default function Error({
       <div className="w-full max-w-md rounded-[28px] border border-white/48 bg-white/62 px-8 py-10 text-center shadow-[0_18px_52px_rgba(65,48,31,0.08)] backdrop-blur-md">
         <p className="text-sm font-medium text-slate-900">页面出现了一点问题</p>
         <p className="mt-3 text-xs leading-6 text-slate-500">
-          {error.message || "加载过程中发生错误，请重试。"}
+          加载过程中出现异常，可以先点「重新加载」；如果反复出现，请刷新页面或联系客服。
         </p>
+        {error.digest ? (
+          <p className="mt-2 text-[10px] tracking-wide text-slate-400">错误编号：{error.digest}</p>
+        ) : null}
         <div className="mt-7 flex justify-center gap-3">
           <button
             type="button"

@@ -166,10 +166,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (!error) {
         // After signup, the trigger creates the profile.
-        // Give it a moment, then fetch it.
+        // 不阻塞注册后的跳转：资料在后台补齐（onAuthStateChange 也会补一次）
         const { data: { user: newUser } } = await supabase.auth.getUser();
         if (newUser) {
-          await fetchProfile(newUser.id);
+          void fetchProfile(newUser.id);
         }
       }
       return { error: error?.message ? translateAuthError(error.message) : null };

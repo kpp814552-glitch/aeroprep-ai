@@ -133,6 +133,9 @@ export default function AdminOrders() {
   const [qr, setQr] = useState<string | null>(null);
   const [qrLoaded, setQrLoaded] = useState(false);
   const [savingQr, setSavingQr] = useState(false);
+  const [supportContact, setSupportContact] = useState("");
+  const [supportContactDraft, setSupportContactDraft] = useState("");
+  const [savingContact, setSavingContact] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
   const flash = useCallback((type: "ok" | "err" | "info", text: string) => {
@@ -203,6 +206,18 @@ export default function AdminOrders() {
     }
   }, []);
 
+  const loadSupportContact = useCallback(async () => {
+    try {
+      const res = await fetch("/api/site-config?key=support_contact", { cache: "no-store" });
+      const data = await res.json().catch(() => ({}));
+      const value = typeof data?.value === "string" ? data.value : "";
+      setSupportContact(value);
+      setSupportContactDraft(value);
+    } catch {
+      setSupportContact("");
+    }
+  }, []);
+
   useEffect(() => {
     const timer = window.setTimeout(() => loadOrders(), 0);
     return () => window.clearTimeout(timer);
@@ -215,6 +230,33 @@ export default function AdminOrders() {
     const timer = window.setTimeout(() => loadQr(), 0);
     return () => window.clearTimeout(timer);
   }, [loadQr]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => loadSupportContact(), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadSupportContact]);
+
+  const saveSupportContact = async () => {
+    setSavingContact(true);
+    try {
+      const res = await fetch("/api/site-config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "support_contact", value: supportContactDraft.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setSupportContact(supportContactDraft.trim());
+        flash("ok", supportContactDraft.trim() ? "客服联系方式已保存" : "已清空客服联系方式");
+      } else {
+        flash("err", data?.error || "保存失败");
+      }
+    } catch {
+      flash("err", "网络异常，操作未完成");
+    } finally {
+      setSavingContact(false);
+    }
+  };
 
   // 轮询：待审核订单自动刷新
   useEffect(() => {
@@ -825,6 +867,35 @@ export default function AdminOrders() {
                 <p>
                   按次收费：1 次 ¥2 · 5 次 ¥9（省 ¥1）· 10 次 ¥16（省 ¥4）。用户扫码支付时需备注订单号，你在「订单管理」核对到账后点「通过」，
                   次数会立即写入该用户的服务端钱包，用户端无需刷新即可看到。
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200/70 bg-white/60 px-4 py-3">
+                <p className="mb-1 text-[11px] font-medium text-slate-700">客服联系方式（展示给用户）</p>
+                <p className="mb-2 text-[10px] leading-5 text-slate-400">
+                  填微信 / QQ / 邮箱都可以。会显示在购买页和常见问题的「联系客服」里，
+                  用户支付或账号出问题时能直接找到你；留空则不展示。
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="text"
+                    value={supportContactDraft}
+                    onChange={(e) => setSupportContactDraft(e.target.value.slice(0, 300))}
+                    placeholder="例如：微信 aeroprep-helper 或 support@yourdomain.com"
+                    className="min-w-[240px] flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700 outline-none placeholder:text-slate-400 focus:border-sky-300"
+                  />
+                  <button
+                    type="button"
+                    disabled={savingContact || supportContactDraft.trim() === supportContact}
+                    onClick={saveSupportContact}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-sky-500 to-violet-500 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:brightness-110 disabled:opacity-50"
+                  >
+                    {savingContact ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                    保存
+                  </button>
+                </div>
+                <p className="mt-2 text-[10px] text-slate-400">
+                  {supportContact ? `当前：${supportContact}` : "当前：未设置（用户端不显示联系方式）"}
                 </p>
               </div>
             </div>
