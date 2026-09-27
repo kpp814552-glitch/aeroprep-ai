@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { findOrder, walletBalance, type CreditOrder, type OrderStatus } from "@/lib/member/wallet";
+import {
+  findOrder,
+  INTRO_PACK_ID,
+  isFirstOrderEligible,
+  mergeOrders,
+  walletBalance,
+  type CreditOrder,
+  type OrderStatus,
+} from "@/lib/member/wallet";
 import { PACKS, loadRegistry, loadWallet, makeOrderId, mutateWallet } from "@/lib/member/wallet-server";
 import { notifyNewOrder } from "@/lib/notify/order-webhook";
 
@@ -27,12 +35,16 @@ export async function POST(request: NextRequest) {
   // 管理端核发账本：用户账本里可能残留"已审核但没同步"的订单，
   // 必须先合并出真实状态，否则历史 pending 会一直占着待审核名额。
   const registryRow = await loadRegistry(supabase, user.id);
+  const registry = "error" in registryRow ? undefined : registryRow.registry;
   const decidedById = new Map<string, OrderStatus>();
   for (const entry of ("error" in registryRow ? [] : registryRow.registry.entries)) {
     decidedById.set(entry.id, entry.status);
   }
 
+  const state: { error?: string } = {};
   const result = await mutateWallet(supabase, user.id, (doc) => {
+    state.error = undefined;
+
     // 自愈：把管理端已有结论的订单状态同步回用户账本
     let healed = false;
     for (const order of doc.orders) {
@@ -45,6 +57,11 @@ export async function POST(request: NextRequest) {
 
     const existing = findOrder(doc, orderId);
     if (existing) return { commit: healed, value: existing };
+
+    if (body.packId === INTRO_PACK_ID && !isFirstOrderEligible(mergeOrders(doc.orders, registry))) {
+      state.error = "首单体验已使用，请选择正式套餐";
+      return { commit: healed, value: null };
+    }
 
     const pendingCount = doc.orders.filter((o) => o.status === "pending").length;
     if (pendingCount >= MAX_PENDING) {
@@ -68,6 +85,9 @@ export async function POST(request: NextRequest) {
   if (!result.ok) {
     return NextResponse.json({ error: result.error || "提交失败，请重试" }, { status: 500 });
   }
+  if (state.error) {
+    return NextResponse.json({ error: state.error }, { status: 403 });
+  }
   if (!result.value) {
     return NextResponse.json({ error: "你有待审核的订单尚未处理，请等待管理员核对" }, { status: 429 });
   }
@@ -86,7 +106,6 @@ export async function POST(request: NextRequest) {
     });
   }
 
-  const registry = "error" in registryRow ? undefined : registryRow.registry;
   const row = await loadWallet(supabase, user.id);
   const left = "error" in row ? 0 : walletBalance(row.doc, registry);
 

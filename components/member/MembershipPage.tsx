@@ -15,6 +15,7 @@ import LoginModal from "@/components/auth/LoginModal";
 import { useAuth } from "@/hooks/useAuth";
 import {
   CREDIT_PACKS,
+  INTRO_CREDIT_PACK,
   PRICE_PER_INTERVIEW,
   getCredits,
   getQuotaSummary,
@@ -24,6 +25,9 @@ import {
   type CreditPack,
 } from "@/lib/member/member-storage";
 import { ORDER_STATUS_LABEL, type OrderStatus } from "@/lib/member/wallet";
+
+const FIVE_PACK = CREDIT_PACKS.find((pack) => pack.id === "c5");
+const TEN_PACK = CREDIT_PACKS.find((pack) => pack.id === "c10");
 
 type MyOrder = {
   id: string;
@@ -52,6 +56,7 @@ export default function MembershipPage() {
   const [quota, setQuota] = useState<{ freeLeft: number; credits: number; isMember: boolean } | null>(null);
   const [creditedBanner, setCreditedBanner] = useState<number | null>(null);
   const [myOrders, setMyOrders] = useState<MyOrder[]>([]);
+  const [introEligible, setIntroEligible] = useState(false);
   const [orderCopied, setOrderCopied] = useState(false);
 
   useEffect(() => {
@@ -74,6 +79,7 @@ export default function MembershipPage() {
       if (!res.ok) return;
       const data = await res.json();
       setMyOrders(Array.isArray(data.orders) ? data.orders : []);
+      setIntroEligible(Boolean(data.firstOrderEligible));
     } catch { /* 忽略网络异常 */ }
   }, []);
 
@@ -117,6 +123,8 @@ export default function MembershipPage() {
 
   const handlePay = async (pack: CreditPack) => {
     setSelected(pack);
+    setCurrentOrderId("");
+    setOrderCopied(false);
     // 游客可以先浏览；真正下单前引导登录 / 注册
     if (!user) {
       setShowLogin(true);
@@ -153,6 +161,10 @@ export default function MembershipPage() {
       return;
     }
 
+    if (selected.id === INTRO_CREDIT_PACK.id) {
+      setIntroEligible(false);
+    }
+
     try {
       const records = JSON.parse(localStorage.getItem("aeroprep_payments") || "[]");
       records.unshift({
@@ -169,6 +181,8 @@ export default function MembershipPage() {
     loadMyOrders();
   };
 
+  const showIntroOffer = !user || introEligible;
+
   return (
     <AppFrame>
       <main className="relative z-10 min-h-dvh-safe">
@@ -179,10 +193,12 @@ export default function MembershipPage() {
               <Coins className="h-3 w-3 text-amber-500" /> 面试次数
             </div>
             <h1 className="text-4xl font-semibold tracking-[-0.04em] md:text-5xl">
-              按次付费，<span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">¥{PRICE_PER_INTERVIEW} / 次起</span>
+              首单 <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">¥{INTRO_CREDIT_PACK.price}</span>
+              ，正式价 ¥{PRICE_PER_INTERVIEW} / 次
             </h1>
             <p className="mt-4 text-sm leading-6 text-slate-500">
-              每个账号首次面试免费。单次 ¥{PRICE_PER_INTERVIEW}，5 次 ¥3.99、10 次 ¥6.66 更划算（最低约 ¥0.67/次），次数长期有效。
+              每个账号首次面试免费。首单可 ¥{INTRO_CREDIT_PACK.price} 体验 1 次（仅限一次）；正式价单次 ¥{PRICE_PER_INTERVIEW}，
+              5 次 ¥{FIVE_PACK?.price ?? 9.9}、10 次 ¥{TEN_PACK?.price ?? 16.9} 更划算，次数长期有效。
             </p>
           </div>
 
@@ -237,6 +253,37 @@ export default function MembershipPage() {
               </div>
             </div>
           )}
+
+          {/* ===== 首单体验 ===== */}
+          {showIntroOffer ? (
+            <div className="mx-auto mt-10 max-w-4xl overflow-hidden rounded-[24px] border border-amber-200/70 bg-[linear-gradient(120deg,rgba(255,251,235,0.96),rgba(255,247,237,0.72))] px-5 py-5 shadow-[0_18px_46px_rgba(245,158,11,0.10)] md:px-7">
+              <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+                <div className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-sm">
+                    <Sparkles className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">新用户首单体验</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      {user
+                        ? "当前账号符合首单资格，支付 ¥1 即可获得 1 次完整 AI 面试。"
+                        : "登录后即可享受首单 ¥1 体验完整 AI 面试，每个账号仅限一次。"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex w-full shrink-0 items-center justify-between gap-4 md:w-auto">
+                  <p className="text-3xl font-bold text-amber-600">¥{INTRO_CREDIT_PACK.price}</p>
+                  <button
+                    type="button"
+                    onClick={() => handlePay(INTRO_CREDIT_PACK)}
+                    className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-2.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110"
+                  >
+                    {user ? "首单体验" : "登录后领取"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {/* ===== 我的订单 ===== */}
           {myOrders.length > 0 && (
@@ -453,6 +500,12 @@ export default function MembershipPage() {
                     <p className="mt-1.5 text-[10px] text-amber-600/80">订单号也会显示在下方「我的购买记录」里</p>
                   </div>
 
+                  {payError ? (
+                    <div className="mt-3 rounded-xl bg-rose-50 px-4 py-2.5 text-center text-xs text-rose-600">
+                      {payError}
+                    </div>
+                  ) : null}
+
                   {supportContact ? (
                     <p className="mt-3 text-center text-[11px] leading-5 text-slate-400">
                       支付遇到问题？联系客服
@@ -463,9 +516,10 @@ export default function MembershipPage() {
                   <button
                     type="button"
                     onClick={() => setStep("result")}
-                    className="mt-4 w-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110"
+                    disabled={!currentOrderId || Boolean(payError)}
+                    className="mt-4 w-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2.5 text-xs font-medium text-white shadow-sm transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-slate-300 disabled:to-slate-300"
                   >
-                    我已知晓
+                    {payError ? "订单生成失败" : "我已知晓"}
                   </button>
                 </>
               )}

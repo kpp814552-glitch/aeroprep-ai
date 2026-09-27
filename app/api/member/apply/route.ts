@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { findOrder, type CreditOrder } from "@/lib/member/wallet";
-import { PACKS, makeOrderId, mutateWallet } from "@/lib/member/wallet-server";
+import {
+  findOrder,
+  INTRO_PACK_ID,
+  isFirstOrderEligible,
+  mergeOrders,
+  type CreditOrder,
+} from "@/lib/member/wallet";
+import { loadRegistry, PACKS, makeOrderId, mutateWallet } from "@/lib/member/wallet-server";
 
 /**
  * 兼容入口：用户提交购买申请。
@@ -20,10 +26,19 @@ export async function POST(request: NextRequest) {
   if (!pack) return NextResponse.json({ error: "参数不完整" }, { status: 400 });
 
   const id = (orderId && String(orderId).trim()) || makeOrderId();
+  const registryRow = await loadRegistry(supabase, user.id);
+  const registry = "error" in registryRow ? undefined : registryRow.registry;
 
+  const state: { error?: string } = {};
   const result = await mutateWallet<CreditOrder | null>(supabase, user.id, (doc) => {
+    state.error = undefined;
     const existing = findOrder(doc, id);
     if (existing) return { commit: false, value: existing };
+
+    if (packId === INTRO_PACK_ID && !isFirstOrderEligible(mergeOrders(doc.orders, registry))) {
+      state.error = "首单体验已使用，请选择正式套餐";
+      return { commit: false, value: null };
+    }
 
     const order: CreditOrder = {
       id,
@@ -39,6 +54,7 @@ export async function POST(request: NextRequest) {
   });
 
   if (!result.ok) return NextResponse.json({ error: result.error || "提交失败" }, { status: 500 });
+  if (state.error) return NextResponse.json({ error: state.error }, { status: 403 });
 
   return NextResponse.json({ success: true, credits: pack.credits, order: result.value });
 }

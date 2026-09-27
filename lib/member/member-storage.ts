@@ -1,6 +1,6 @@
 // ============================================================
 // 会员 / 计费存储层
-// 现行模式：按次收费（¥1/次），每个账号首次面试免费
+// 现行模式：首单体验 ¥1，正式价按次收费（¥2.9/次起），每个账号首次面试免费
 // 遗留模式：限时会员（1天/3天/30天），保留兼容至过期
 // ============================================================
 
@@ -31,7 +31,7 @@ export const PLANS: PlanInfo[] = [
 export type MemberInfo = { plan: PlanId; activatedAt: string; expiresAt: string } | null;
 
 // ---------- 现行：按次收费 ----------
-export const PRICE_PER_INTERVIEW = 1;
+export const PRICE_PER_INTERVIEW = 2.9;
 
 export type CreditPack = {
   id: string;
@@ -46,10 +46,18 @@ export type CreditPack = {
 
 // 价格以 lib/member/wallet-server.ts 的 PACKS 为准（服务端下单金额取自那里），
 // 这里同步展示；改动价格时两处都要改。
+export const INTRO_CREDIT_PACK: CreditPack = {
+  id: "first1",
+  credits: 1,
+  price: 1,
+  label: "首单体验",
+  desc: "新用户首单专享，每个账号仅限一次",
+};
+
 export const CREDIT_PACKS: CreditPack[] = [
-  { id: "c1", credits: 1, price: 1, label: "1 次面试", desc: "单次体验，随时开练" },
-  { id: "c5", credits: 5, price: 3.99, label: "5 次面试", desc: "适合面试前集中突击", recommended: true, save: 1.01 },
-  { id: "c10", credits: 10, price: 6.66, label: "10 次面试", desc: "完整备战周期，长期陪伴", save: 3.34 },
+  { id: "c1", credits: 1, price: 2.9, label: "1 次面试", desc: "单次体验，随时开练" },
+  { id: "c5", credits: 5, price: 9.9, label: "5 次面试", desc: "适合面试前集中突击", recommended: true, save: 4.6 },
+  { id: "c10", credits: 10, price: 16.9, label: "10 次面试", desc: "完整备战周期，长期陪伴", save: 12.1 },
 ];
 
 const MEMBER_KEY = "aeroprep_member";

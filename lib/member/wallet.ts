@@ -18,8 +18,11 @@
 
 export type OrderStatus = "pending" | "approved" | "rejected" | "revoked";
 
+/** 首单体验包：每个账号最多购买一次 */
+export const INTRO_PACK_ID = "first1";
+
 /** 单次价格（元）：仅用于补全历史订单里缺失的金额字段 */
-const SINGLE_PRICE_FALLBACK = 1;
+const SINGLE_PRICE_FALLBACK = 2.9;
 
 export type CreditOrder = {
   id: string;
@@ -66,6 +69,19 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   rejected: "已拒绝",
   revoked: "已撤销",
 };
+
+/**
+ * 首单体验资格：账号从未产生过有效的付费订单时可用。
+ * 管理员手工调账（manual）和历史次数迁移（legacy）都不属于付费订单。
+ */
+export function isFirstOrderEligible(orders: CreditOrder[]): boolean {
+  return !orders.some(
+    (order) =>
+      order.channel !== "manual" &&
+      order.channel !== "legacy" &&
+      order.status !== "rejected",
+  );
+}
 
 /**
  * 每个账号的免费体验次数：与账号绑定，由服务端按"已完成面试条数"计算，

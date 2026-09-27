@@ -12,6 +12,9 @@ import { createHmac } from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   emptyRegistry,
+  INTRO_PACK_ID,
+  isFirstOrderEligible,
+  mergeOrders,
   parseRegistry,
   parseWalletDoc,
   serializeRegistry,
@@ -21,15 +24,31 @@ import {
 } from "./wallet";
 
 export const PACKS: Record<string, { credits: number; amount: number; label: string }> = {
-  c1: { credits: 1, amount: 1, label: "1 次面试" },
-  c5: { credits: 5, amount: 3.99, label: "5 次面试" },
-  c10: { credits: 10, amount: 6.66, label: "10 次面试" },
+  [INTRO_PACK_ID]: { credits: 1, amount: 1, label: "首单体验（1 次面试）" },
+  c1: { credits: 1, amount: 2.9, label: "1 次面试" },
+  c5: { credits: 5, amount: 9.9, label: "5 次面试" },
+  c10: { credits: 10, amount: 16.9, label: "10 次面试" },
 };
 
-export const PRICE_PER_INTERVIEW = 1;
+export const PRICE_PER_INTERVIEW = 2.9;
 
 export type WalletRow = { raw: string | null; doc: WalletDoc };
 export type RegistryRow = { raw: string | null; registry: GrantRegistry };
+
+/** 读取账号的首单体验资格（服务端权威） */
+export async function loadFirstOrderEligibility(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ eligible: boolean; error?: string }> {
+  const [walletRow, registryRow] = await Promise.all([
+    loadWallet(supabase, userId),
+    loadRegistry(supabase, userId),
+  ]);
+
+  if ("error" in walletRow) return { eligible: false, error: walletRow.error };
+  const registry = "error" in registryRow ? undefined : registryRow.registry;
+  return { eligible: isFirstOrderEligible(mergeOrders(walletRow.doc.orders, registry)) };
+}
 
 /** 管理端核发表的 key：对用户 ID 做哈希，避免在公共可读的表里直接暴露用户 ID */
 export function registryKey(userId: string): string {

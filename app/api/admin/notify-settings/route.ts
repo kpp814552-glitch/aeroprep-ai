@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         orderId: "AP-TEST-0001",
         packLabel: "10 次面试",
         credits: 10,
-        amount: 6.66,
+        amount: 16.9,
         email: "test@example.com",
         appliedAt: new Date().toISOString(),
       }),

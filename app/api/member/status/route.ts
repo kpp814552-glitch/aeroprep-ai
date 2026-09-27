@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { FREE_TRIAL_LIMIT, deriveUsage, mergeOrders, totalGranted } from "@/lib/member/wallet";
+import {
+  FREE_TRIAL_LIMIT,
+  deriveUsage,
+  isFirstOrderEligible,
+  mergeOrders,
+  totalGranted,
+} from "@/lib/member/wallet";
 import { loadRegistry, loadWallet } from "@/lib/member/wallet-server";
 import { isPlatformAdmin } from "@/lib/admin/auth";
 
@@ -33,6 +39,7 @@ export async function GET(request: NextRequest) {
       grantedCredits: 0,
       wallet: { granted: 0, used: 0, left: 0 },
       orders: [],
+      firstOrderEligible: false,
     });
   }
 
@@ -48,6 +55,7 @@ export async function GET(request: NextRequest) {
       grantedCredits: 0,
       wallet: { granted: 0, used: 0, left: 0 },
       orders: [],
+      firstOrderEligible: false,
     });
   }
 
@@ -77,7 +85,8 @@ export async function GET(request: NextRequest) {
     left: Math.max(0, granted - usage.paidUsed),
     legacyGranted: doc.legacyGranted,
   };
-  const orders = mergeOrders(doc.orders, registry).slice(0, 20);
+  const mergedOrders = mergeOrders(doc.orders, registry);
+  const orders = mergedOrders.slice(0, 20);
 
   // 遗留限时会员的套餐推断
   let planId: string | null = null;
@@ -102,6 +111,7 @@ export async function GET(request: NextRequest) {
     grantedCredits: 0,
     wallet,
     orders,
+    firstOrderEligible: isFirstOrderEligible(mergedOrders),
     legacyPlan: doc.legacy || null,
   });
 }
