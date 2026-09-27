@@ -349,7 +349,7 @@ export async function POST(request: NextRequest) {
           maxTokens: 512,
           reasoningEffort: "none",
           timeoutMs: 15000,
-          endpoint: "interview-reask",
+          endpoint: "interview",
           userId: user.id,
         }
       );
@@ -385,7 +385,9 @@ export async function POST(request: NextRequest) {
           body.resumeText,
           body.resumeQuality
         ),
-        { maxTokens: 4096, reasoningEffort: "low", timeoutMs: 25000, userId: user.id }
+        // 下一题必须"答完就接上"，出题延迟直接等于用户干等的秒数：
+        // 关闭思考模式（纯改写+追问，不需要推理链），把 8~10 秒压到 2~4 秒。
+        { maxTokens: 1024, reasoningEffort: "none", timeoutMs: 20000, userId: user.id }
       );
 
       return NextResponse.json(normalizeModelQuestion(result, fallback));
