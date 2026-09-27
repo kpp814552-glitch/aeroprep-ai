@@ -433,6 +433,22 @@ export default function FaqPage() {
                 )}
               </div>
             </section>
+
+            {supportContact ? (
+              <section className="mt-8 rounded-[22px] border border-white/60 bg-white/55 px-6 py-5 shadow-sm backdrop-blur-md">
+                <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-800">
+                  <Headphones className="h-4 w-4 text-sky-500" />
+                  没找到答案？直接联系客服
+                </p>
+                <p className="mt-2 text-[13px] leading-6 text-slate-600">
+                  客服联系方式：
+                  <span className="font-medium text-slate-900">{supportContact}</span>
+                </p>
+                <p className="mt-1 text-[11px] leading-5 text-slate-400">
+                  支付到账、次数异常、账号问题都可以直接找我们；涉及支付时请附上订单号和付款截图，便于快速核对。
+                </p>
+              </section>
+            ) : null}
           </div>
         </div>
       </main>

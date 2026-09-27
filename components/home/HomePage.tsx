@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Clock,
+  Headphones,
   Mic,
   ShieldCheck,
   Sparkles,
@@ -27,6 +28,21 @@ export default function HomePage() {
   const router = useRouter();
   const pageRef = useRef<HTMLElement | null>(null);
   const heroPanelRef = useRef<HTMLDivElement | null>(null);
+  const [supportContact, setSupportContact] = useState("");
+
+  // 客服联系方式由管理员在后台「收款设置」维护；没设置就不显示
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/site-config?key=support_contact", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled) setSupportContact(typeof d?.value === "string" ? d.value.trim() : "");
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     router.prefetch("/interview");
@@ -154,6 +170,14 @@ export default function HomePage() {
                 );
               })}
             </div>
+
+            {supportContact ? (
+              <p className="mt-9 flex flex-wrap items-center justify-center gap-1.5 text-[11px] leading-5 text-slate-400">
+                <Headphones className="h-3.5 w-3.5" />
+                遇到问题？联系客服
+                <span className="font-medium text-slate-600">{supportContact}</span>
+              </p>
+            ) : null}
           </div>
         </section>
       </main>
