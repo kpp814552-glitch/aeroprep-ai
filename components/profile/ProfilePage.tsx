@@ -13,6 +13,7 @@ import {
   subscribeGrowthEvents,
 } from "@/lib/profile/growth-storage";
 import { readInterviewSessions, subscribeInterviewSessions } from "@/lib/interview/session-storage";
+import { syncServerSessions } from "@/lib/interview/session-sync";
 import type { InterviewSessionRecord } from "@/lib/interview/types";
 
 const COMPETITIVE_LABELS: Record<string, string> = { A: "优秀", B: "较强", C: "中等", D: "待提升" };
@@ -60,6 +61,12 @@ export default function ProfilePage() {
       unsubscribeGrowth();
     };
   }, []);
+
+  // 换设备 / 清缓存后，把服务端保存的完整报告同步回本机（失败静默忽略）
+  useEffect(() => {
+    if (!user) return;
+    void syncServerSessions();
+  }, [user]);
 
   const completedSessions = useMemo(
     () => sessions.filter((session) => session.report),

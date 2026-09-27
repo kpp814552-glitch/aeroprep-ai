@@ -16,7 +16,9 @@ import AppFrame from "@/components/layout/AppFrame";
 import {
   readInterviewSession,
   readInterviewSessions,
+  saveInterviewSession,
 } from "@/lib/interview/session-storage";
+import { fetchServerSession } from "@/lib/interview/session-sync";
 import type { InterviewSessionRecord } from "@/lib/interview/types";
 
 function getRadarPoint(index: number, total: number, value: number) {
@@ -138,13 +140,27 @@ export default function InterviewReportPage() {
   const [completedSessionCount, setCompletedSessionCount] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+
     const syncSession = window.setTimeout(() => {
       setHasHydrated(true);
-      setSessionRecord(readInterviewSession(sessionId) as InterviewSessionRecord | null);
+      const local = readInterviewSession(sessionId) as InterviewSessionRecord | null;
+      setSessionRecord(local);
       setCompletedSessionCount(readInterviewSessions().length);
+
+      // 本机没有这场记录（换设备 / 清了缓存）→ 从服务端把完整报告取回来
+      if (!local && sessionId) {
+        void fetchServerSession(sessionId).then((remote) => {
+          if (cancelled || !remote) return;
+          saveInterviewSession(remote);
+          setSessionRecord(remote);
+          setCompletedSessionCount(readInterviewSessions().length);
+        });
+      }
     }, 0);
 
     return () => {
+      cancelled = true;
       window.clearTimeout(syncSession);
     };
   }, [sessionId]);

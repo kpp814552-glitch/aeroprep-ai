@@ -534,6 +534,7 @@ const resumeQualityRef = useRef<any>(
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              session_id: sessionIdRef.current,
               role,
               role_label: roleLabel,
               company,
@@ -547,6 +548,9 @@ const resumeQualityRef = useRef<any>(
               ended_at: new Date().toISOString(),
               duration_seconds: totalElapsedSeconds,
               total_turns: finalTurns.length,
+              // 完整报告 + 逐题问答，用于跨设备查看历史报告
+              report: payload.report,
+              turns: finalTurns,
             }),
           }).catch(() => {
             console.warn("[Interview] Failed to save to DB");
@@ -1414,13 +1418,38 @@ const resumeQualityRef = useRef<any>(
 
       savedRecord.report = payload.report;
       saveInterviewSession(savedRecord);
+      // 重新生成的报告也同步回服务端，保证换设备看到的是最新版本
+      if (user) {
+        fetch("/api/interview/save", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: savedRecord.sessionId,
+            role: savedRecord.role,
+            role_label: savedRecord.roleLabel,
+            company: savedRecord.company,
+            mode: savedRecord.mode,
+            persona: savedRecord.persona,
+            score: payload.report?.totalScore || 0,
+            evaluation: payload.report?.overallEvaluation || "",
+            strengths: payload.report?.strengths || [],
+            weaknesses: payload.report?.weaknesses || [],
+            started_at: savedRecord.createdAt,
+            ended_at: new Date().toISOString(),
+            duration_seconds: savedRecord.elapsedSeconds,
+            total_turns: savedRecord.turns?.length ?? 0,
+            report: payload.report,
+            turns: savedRecord.turns,
+          }),
+        }).catch(() => undefined);
+      }
       router.push('/interview/report?sessionId=' + encodeURIComponent(sid));
     } catch (err) {
       console.error('[Retry Report] Failed:', err);
       setStatusText('网络连接异常，请稍后重试');
       setIsGeneratingReport(false);
     }
-  }, [isGeneratingReport, router]);
+  }, [isGeneratingReport, router, user]);
 
   // ── Quota guard：无免费额度且无已购次数时才去购买页 ──
   // 注意：本地缓存可能尚未同步（直接打开 / 刷新面试页时），必须先用服务端结果确认，
