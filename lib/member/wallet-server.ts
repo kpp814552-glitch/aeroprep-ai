@@ -21,12 +21,12 @@ import {
 } from "./wallet";
 
 export const PACKS: Record<string, { credits: number; amount: number; label: string }> = {
-  c1: { credits: 1, amount: 2, label: "1 次面试" },
-  c5: { credits: 5, amount: 9, label: "5 次面试" },
-  c10: { credits: 10, amount: 16, label: "10 次面试" },
+  c1: { credits: 1, amount: 1, label: "1 次面试" },
+  c5: { credits: 5, amount: 3.99, label: "5 次面试" },
+  c10: { credits: 10, amount: 6.66, label: "10 次面试" },
 };
 
-export const PRICE_PER_INTERVIEW = 2;
+export const PRICE_PER_INTERVIEW = 1;
 
 export type WalletRow = { raw: string | null; doc: WalletDoc };
 export type RegistryRow = { raw: string | null; registry: GrantRegistry };

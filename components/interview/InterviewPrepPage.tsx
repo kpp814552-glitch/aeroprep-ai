@@ -518,7 +518,7 @@ export default function InterviewPrepPage() {
                             const free = getRemainingFreeInterviews();
                             const credits = getCredits();
                             if (free > 0) return "免费剩余 " + free + " 次 · 已购 " + credits + " 次";
-                            if (credits > 0) return "已购次数剩余 " + credits + " 次（¥2/次）";
+                            if (credits > 0) return "已购次数剩余 " + credits + " 次（¥1/次）";
                             return "免费次数已用完 · 购买后继续面试";
                           })()}
                     </div>

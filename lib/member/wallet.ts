@@ -18,6 +18,9 @@
 
 export type OrderStatus = "pending" | "approved" | "rejected" | "revoked";
 
+/** 单次价格（元）：仅用于补全历史订单里缺失的金额字段 */
+const SINGLE_PRICE_FALLBACK = 1;
+
 export type CreditOrder = {
   id: string;
   packId: string;
@@ -131,7 +134,7 @@ function normalizeOrder(raw: unknown): CreditOrder | null {
     id,
     packId: typeof o.packId === "string" && o.packId ? o.packId : `c${credits}`,
     credits,
-    amount: Number.isFinite(Number(o.amount)) ? Number(o.amount) : credits * 2,
+    amount: Number.isFinite(Number(o.amount)) ? Number(o.amount) : credits * SINGLE_PRICE_FALLBACK,
     channel: typeof o.channel === "string" && o.channel ? o.channel : "wechat",
     status: isOrderStatus(o.status) ? o.status : "pending",
     appliedAt: typeof o.appliedAt === "string" ? o.appliedAt : new Date(0).toISOString(),
@@ -189,7 +192,7 @@ export function parseWalletDoc(raw: unknown): WalletDoc {
         id: `LEGACY-${Date.now().toString(36).toUpperCase()}`,
         packId: `c${credits}`,
         credits,
-        amount: credits * 2,
+        amount: credits * SINGLE_PRICE_FALLBACK,
         channel: "wechat",
         status: "pending",
         appliedAt: new Date().toISOString(),
@@ -209,7 +212,7 @@ export function parseWalletDoc(raw: unknown): WalletDoc {
         id: `LEGACY-${Date.now().toString(36).toUpperCase()}`,
         packId: `c${credits}`,
         credits,
-        amount: credits * 2,
+        amount: credits * SINGLE_PRICE_FALLBACK,
         channel: "wechat",
         status: "approved",
         appliedAt: new Date().toISOString(),

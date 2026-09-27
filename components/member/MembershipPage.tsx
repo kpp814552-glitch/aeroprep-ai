@@ -182,7 +182,7 @@ export default function MembershipPage() {
               按次付费，<span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">¥{PRICE_PER_INTERVIEW} / 次起</span>
             </h1>
             <p className="mt-4 text-sm leading-6 text-slate-500">
-              每个账号首次面试免费。单次 ¥{PRICE_PER_INTERVIEW}，买 5 次或 10 次有优惠（最低 ¥1.6/次），次数长期有效。
+              每个账号首次面试免费。单次 ¥{PRICE_PER_INTERVIEW}，5 次 ¥3.99、10 次 ¥6.66 更划算（最低约 ¥0.67/次），次数长期有效。
             </p>
           </div>
 
@@ -321,7 +321,7 @@ export default function MembershipPage() {
                     <p className="mt-1.5 text-xs text-slate-400">
                       {pack.credits === 1
                         ? `¥${pack.price} / 次`
-                        : `折合 ¥${(pack.price / pack.credits).toFixed(1).replace(/\.0$/, "")} / 次`}
+                        : `折合 ¥${(pack.price / pack.credits).toFixed(2).replace(/0+$/, "").replace(/\.$/, "")} / 次`}
                     </p>
                   </div>
 
