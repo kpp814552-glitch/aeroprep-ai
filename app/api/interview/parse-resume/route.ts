@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/server/rate-limit";
 
 /**
  * Parses a PDF or DOCX resume and returns extracted text.
@@ -11,6 +12,15 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "请先登录后再上传简历" }, { status: 401 });
+  }
+
+  // 解析 + 质量分析都要跑模型，限制一下频率
+  const limited = checkRateLimit(`resume:${user.id}`, 6, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "上传太频繁了，请稍后再试" },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } },
+    );
   }
 
   let formData: FormData;

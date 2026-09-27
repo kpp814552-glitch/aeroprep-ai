@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/server/rate-limit";
 import { callDeepSeekRaw } from "@/lib/interview/deepseek";
 import { buildOptimizePrompt } from "@/lib/optimize/prompt";
 
@@ -129,6 +130,15 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "请先登录后使用 AI 优化" }, { status: 401 });
+  }
+
+  // AI 优化对登录用户免费，但要防止脚本刷接口（每次都是大模型调用）
+  const limited = checkRateLimit(`optimize:${user.id}`, 10, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "分析太频繁了，请等一分钟再试" },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } },
+    );
   }
 
   const apiKey = process.env.DEEPSEEK_API_KEY;

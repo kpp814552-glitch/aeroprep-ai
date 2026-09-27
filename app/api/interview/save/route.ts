@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/server/rate-limit";
 import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -8,6 +9,12 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 一场面试只保存一次；限制频率避免有人刷记录污染统计
+  const limited = checkRateLimit(`save:${user.id}`, 20, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json({ error: "保存过于频繁" }, { status: 429 });
   }
 
   let body: Record<string, unknown>;

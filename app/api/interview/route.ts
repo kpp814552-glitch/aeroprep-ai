@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
 import { createClient } from "@/lib/supabase/server";
+import { hasQuota, loadServerQuota } from "@/lib/member/quota-server";
+import { checkRateLimit } from "@/lib/server/rate-limit";
 import type { InterviewMode } from "@/lib/site";
 import {
   getRoleConfig,
@@ -258,6 +260,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // ── 服务端权威额度校验 ──
+  // 前端次数判断可以被绕过；出题 / 语音 / 报告都是按量付费的调用，
+  // 必须在这里拦住"次数用完还在刷接口"的情况。
+  const quota = await loadServerQuota(supabase, user.id);
+  if (!hasQuota(quota)) {
+    return NextResponse.json(
+      { error: "面试次数已用完，请先购买次数", code: "NO_QUOTA" },
+      { status: 402 },
+    );
+  }
+
+  // 正常面试大约 30 秒一次调用，40 次/分钟足够宽松，只挡脚本刷接口
+  const limited = checkRateLimit(`interview:${user.id}`, 40, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "操作过于频繁，请稍后再试" },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } },
+    );
+  }
+
   const turns = Array.isArray(body.turns) && body.turns.every(isInterviewTurn)
     ? body.turns
     : [];
@@ -408,6 +430,10 @@ export async function POST(request: NextRequest) {
   }
 
   if (body.action === "report") {
+    // 没有问答记录就要求出报告，属于异常调用（也避免白烧一次大模型）
+    if (turns.length === 0) {
+      return NextResponse.json({ error: "面试记录为空，无法生成报告" }, { status: 400 });
+    }
     // // console.log('[Report Generate] turns=' + turns.length + ' role=' + body.role);
     try {
       const fallbackReport = analyzeInterviewReport({

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { logApiUsage, estimateDeepSeekCost } from "@/lib/admin/usage-logger";
 import { chatExampleQA } from "@/lib/interview/examples";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/server/rate-limit";
 
 type Message = {
   role: "system" | "user" | "assistant";
@@ -128,6 +129,15 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "请先登录后使用 AI 优化" }, { status: 401 });
+  }
+
+  // 对话接口按量计费，限制单账号频率，挡住脚本刷额度
+  const limited = checkRateLimit(`chat:${user.id}`, 12, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "对话太频繁了，请稍后再试" },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } },
+    );
   }
 
   const apiKey = process.env.DEEPSEEK_API_KEY;

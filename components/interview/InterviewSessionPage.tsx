@@ -859,12 +859,16 @@ const resumeQualityRef = useRef<any>(
     });
 
     const payload = (await response.json()) as InterviewApiQuestion;
+    // 服务端判定"次数已用完"（前端缓存可能还没同步）：直接去购买页
+    if (response.status === 402) {
+      router.replace('/member?reason=quota');
+    }
     if (!response.ok || !payload.question) {
       throw new Error("首轮问题获取失败");
     }
 
     return payload;
-  }, [company, mode, persona, role]);
+  }, [company, mode, persona, role, router]);
 
   const fetchNextQuestion = useCallback(
     async (nextTurns: InterviewTurn[]) => {
@@ -886,13 +890,16 @@ const resumeQualityRef = useRef<any>(
       });
 
       const payload = (await response.json()) as InterviewApiQuestion;
+      if (response.status === 402) {
+        router.replace('/member?reason=quota');
+      }
       if (!response.ok || !payload.question) {
         throw new Error("追问生成失败");
       }
 
       return payload;
     },
-    [company, mode, persona, role]
+    [company, mode, persona, role, router]
   );
 
 

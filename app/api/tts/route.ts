@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { logApiUsage, estimateTTSCost } from "@/lib/admin/usage-logger";
 import { ensureVolcengineConfig } from "@/lib/volcengine/config";
+import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/server/rate-limit";
+
+/** 单次合成的字数上限：面试问题都在 100 字以内，超过基本可以断定是滥用 */
+const MAX_TTS_CHARS = 400;
 
 type TtsRequestBody = {
   text?: string;
@@ -40,6 +45,22 @@ function buildInterviewerSpeech(text: string) {
 }
 
 export async function POST(request: Request) {
+  // 语音合成按字符向火山计费：必须登录 + 限流 + 限制单次长度，
+  // 否则任何人都能拿这个接口把额度刷光。
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "请先登录" }, { status: 401 });
+  }
+
+  const limited = checkRateLimit(`tts:${user.id}`, 80, 60_000);
+  if (!limited.ok) {
+    return NextResponse.json(
+      { error: "语音请求过于频繁，请稍后再试" },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } },
+    );
+  }
+
   let body: TtsRequestBody;
 
   try {
@@ -50,6 +71,13 @@ export async function POST(request: Request) {
 
   if (!body?.text || typeof body.text !== "string" || !body.text.trim()) {
     return NextResponse.json({ error: "Text is required." }, { status: 400 });
+  }
+
+  if (body.text.trim().length > MAX_TTS_CHARS) {
+    return NextResponse.json(
+      { error: `单次语音最多 ${MAX_TTS_CHARS} 字` },
+      { status: 400 },
+    );
   }
 
   const config = ensureVolcengineConfig();
@@ -178,6 +206,7 @@ export async function POST(request: Request) {
   const ttsText = body.text.trim();
   const charCount = ttsText.length;
   logApiUsage({
+    userId: user.id,
     model: 'volcengine-tts',
     inputTokens: 0,
     outputTokens: 0,
