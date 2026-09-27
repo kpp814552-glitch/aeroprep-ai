@@ -324,14 +324,22 @@ function buildOverallEvaluation(
   const roleLabel = getRoleConfig(role).label;
 
   if (totalScore >= 80) {
-    return `你在这场${company || "目标航司"} ${roleLabel}${mode ? ` ${mode}` : ""}面试中的综合表现已经比较成熟，回答质量和岗位贴合度都达到了较强水平。`;
+    return `这场${company || "目标航司"} ${roleLabel}${mode ? ` ${mode}` : ""}面试中，候选人的综合表现已经比较成熟，回答质量、岗位理解和临场反应均达到较强水平。`;
   }
 
   if (totalScore >= 65) {
-    return `你在这场${company || "目标航司"} ${roleLabel}${mode ? ` ${mode}` : ""}面试中表现出较好的基础和可培养性，已经具备比较正常的校招竞争力。`;
+    return `这场${company || "目标航司"} ${roleLabel}${mode ? ` ${mode}` : ""}面试中，候选人达到基础线以上，具备一定校招竞争力，但部分回答仍停留在原则层面，缺少能支撑判断的具体案例。`;
   }
 
-  return `你已经具备一定的表达基础，但如果想在${company || "目标航司"} ${roleLabel}校招中更稳地脱颖而出，还需要继续强化结构化表达和岗位针对性。`;
+  if (totalScore >= 55) {
+    return `这场${company || "目标航司"} ${roleLabel}${mode ? ` ${mode}` : ""}面试中，候选人表现达到基础线，但还没有形成稳定竞争力。部分问题能够作答，关键岗位能力上的证据不足。`;
+  }
+
+  if (totalScore >= 40) {
+    return `这场${company || "目标航司"} ${roleLabel}${mode ? ` ${mode}` : ""}面试中，候选人尚未达到稳定通过面试的标准。回答比较空泛，岗位理解、专业知识和案例支撑均明显不足。`;
+  }
+
+  return `这场${company || "目标航司"} ${roleLabel}${mode ? ` ${mode}` : ""}面试中，面试能力偏弱，暂未达到该岗位的基本面试要求。按本次表现，进入下一轮的可能性较低。`;
 }
 
 export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport {
@@ -442,14 +450,30 @@ export function analyzeInterviewReport(options: AnalyzeOptions): InterviewReport
   if (weaknesses.length) interviewEvalLines.push(`最大短板：${weaknesses[0]}`);
 
   const perQuestionAnalysis = options.turns.map((turn, idx) => {
-    const ansLen = turn.answer.trim().length;
-    const hasStructure = structureSignals.some(s => turn.answer.includes(s));
-    const hasExamples = resultSignals.some(s => turn.answer.includes(s));
-    let comment = `第${idx+1}题回答${ansLen > 50 ? '较充分' : '因识别记录较短，建议在安静环境重测'}`;
-    if (hasStructure) comment += '，有层次感';
-    if (hasExamples) comment += '，有具体案例支撑';
-    if (!hasStructure) comment += '，建议补充结构信号词（首先/其次/最后）';
-    return comment;
+    const answer = turn.answer.trim();
+    const ansLen = answer.length;
+    const stage = stageSummary(turn.stage);
+    const hasStructure = structureSignals.some(s => answer.includes(s));
+    const hasExamples = resultSignals.some(s => answer.includes(s));
+    const coreTopics = getRoleConfig(options.role).coreTopics;
+    const hasRoleEvidence = coreTopics.some(topic => answer.includes(topic));
+
+    if (ansLen < 20) {
+      return `第${idx + 1}题（${stage}）：未形成有效回答。优点：暂无明显有效内容。不足：回答过短，无法证明岗位理解或经历真实性。面试官判断：真实面试中会直接扣分，并很可能不再给额外机会。建议：先给出结论，再补充具体经历、动作和结果。`;
+    }
+
+    const strengths: string[] = [];
+    const gaps: string[] = [];
+    if (hasStructure) strengths.push("回答有一定层次");
+    else gaps.push("缺少清晰结构");
+    if (hasExamples) strengths.push("提到了过程或结果");
+    else gaps.push("没有给出可验证的结果");
+    if (hasRoleEvidence) strengths.push("能带到岗位关键词");
+    else gaps.push("岗位针对性不足");
+    if (ansLen >= 80) strengths.push("信息量相对完整");
+
+    const excerpt = answer.replace(/\s+/g, " ").slice(0, 18);
+    return `第${idx + 1}题（${stage}）：你提到“${excerpt}${ansLen > 18 ? "…" : ""}”。优点：${strengths.join("；") || "暂无突出优点"}。不足：${gaps.join("；") || "主要问题是深度仍不足"}。面试官判断：${gaps.length >= 2 ? "这段回答不足以让面试官形成稳定正面判断" : "内容基本可听，但还缺少区分度"}。建议：围绕具体场景补充“我做了什么、为什么这样做、结果如何”。`;
   });
 
   const improvements: string[] = [];

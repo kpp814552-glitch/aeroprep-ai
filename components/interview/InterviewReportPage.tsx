@@ -7,15 +7,12 @@ import {
   ArrowRight,
   BarChart3,
   ChevronDown,
-  CircleGauge,
   Radar,
-  TrendingUp,
   WandSparkles,
 } from "lucide-react";
 import AppFrame from "@/components/layout/AppFrame";
 import {
   readInterviewSession,
-  readInterviewSessions,
   saveInterviewSession,
 } from "@/lib/interview/session-storage";
 import { fetchServerSession } from "@/lib/interview/session-sync";
@@ -108,36 +105,11 @@ function ScoreRadar({
   );
 }
 
-function ReportList({
-  title,
-  items,
-}: {
-  title: string;
-  items: string[];
-}) {
-  return (
-    <div className="rounded-[32px] border border-white/44 bg-white/56 p-6 shadow-[0_18px_42px_rgba(75,54,31,0.06)]">
-      <p className="text-sm font-medium text-slate-950">{title}</p>
-      <div className="mt-4 space-y-3">
-        {items.map((item, index) => (
-          <div
-            key={`${title}-${index}-${item}`}
-            className="rounded-[22px] border border-white/44 bg-white/74 px-4 py-4 text-sm leading-7 text-slate-700"
-          >
-            {item}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function InterviewReportPage() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("sessionId");
   const [hasHydrated, setHasHydrated] = useState(false);
   const [sessionRecord, setSessionRecord] = useState<InterviewSessionRecord | null>(null);
-  const [completedSessionCount, setCompletedSessionCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -146,7 +118,6 @@ export default function InterviewReportPage() {
       setHasHydrated(true);
       const local = readInterviewSession(sessionId) as InterviewSessionRecord | null;
       setSessionRecord(local);
-      setCompletedSessionCount(readInterviewSessions().length);
 
       // 本机没有这场记录（换设备 / 清了缓存）→ 从服务端把完整报告取回来
       if (!local && sessionId) {
@@ -154,7 +125,6 @@ export default function InterviewReportPage() {
           if (cancelled || !remote) return;
           saveInterviewSession(remote);
           setSessionRecord(remote);
-          setCompletedSessionCount(readInterviewSessions().length);
         });
       }
     }, 0);
@@ -264,235 +234,27 @@ export default function InterviewReportPage() {
     <AppFrame backHref="/interview" backLabel="返回准备页">
       <main className="relative z-10 px-5 pb-16 pt-8 md:px-8">
         <div className="stagger-section mx-auto max-w-7xl space-y-6">
-          <div className="rounded-[36px] border border-white/48 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.48))] px-6 py-8 shadow-[0_24px_64px_rgba(74,56,31,0.08)] md:px-8 md:py-10">
-            <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
-              <div>
-                <div className="inline-flex items-center gap-2 rounded-full bg-white/74 px-4 py-2 text-xs font-medium uppercase tracking-[0.26em] text-slate-500">
-                  <BarChart3 className="h-4 w-4 text-sky-600" />
-                  Interview Report
-                </div>
-                <h1 className="mt-7 text-3xl font-semibold tracking-[-0.04em] text-slate-950 md:text-5xl">
-                  面试报告
-                </h1>
-                <p className="mt-4 max-w-3xl text-base leading-7 text-slate-600">
-                  基于本次 {sessionRecord.company} · {sessionRecord.roleLabel} · {sessionRecord.mode}
-                  面试记录生成，包含真实评分、优势、不足、改进方向与岗位竞争力评估。
-                </p>
-                <p className="mt-6 text-sm leading-7 text-slate-700">{report.narrativeSummary}</p>
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="rounded-[28px] border border-white/46 bg-white/68 px-5 py-5">
-                  <CircleGauge className="h-5 w-5 text-sky-600" />
-                  <p className="mt-4 text-xs uppercase tracking-[0.24em] text-slate-500">
-                    综合评分
-                  </p>
-                  <p className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {report.totalScore}
-                  </p>
-                </div>
-                <div className="rounded-[28px] border border-white/46 bg-white/68 px-5 py-5">
-                  <TrendingUp className="h-5 w-5 text-emerald-600" />
-                  <p className="mt-4 text-xs uppercase tracking-[0.24em] text-slate-500">
-                    竞争定位
-                  </p>
-                  <p className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {{'A':'优秀','B':'较强','C':'中等','D':'待提升'}[report.competitiveLevel] || '—'}
-                  </p>
-                  <p className="mt-0.5 text-xs tracking-[0.08em] text-slate-500">
-                    参考区间：{report.competitiveRange || '—'}
-                  </p>
-                </div>
-                <div className="rounded-[28px] border border-white/46 bg-white/68 px-5 py-5">
-                  <Radar className="h-5 w-5 text-amber-600" />
-                  <p className="mt-4 text-xs uppercase tracking-[0.24em] text-slate-500">
-                    面试轮次
-                  </p>
-                  <p className="mt-2 text-4xl font-semibold tracking-[-0.04em] text-slate-950">
-                    {Math.max(1, completedSessionCount)}
-                  </p>
-                </div>
-              </div>
+          <div className="rounded-[30px] border border-white/48 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.48))] px-6 py-6 shadow-[0_20px_54px_rgba(74,56,31,0.08)] md:px-8">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/74 px-4 py-2 text-xs font-medium uppercase tracking-[0.26em] text-slate-500">
+              <BarChart3 className="h-4 w-4 text-sky-600" />
+              Interview Report
             </div>
+            <h1 className="mt-5 text-3xl font-semibold tracking-[-0.04em] text-slate-950 md:text-4xl">
+              面试报告
+            </h1>
+            <p className="mt-3 text-sm leading-7 text-slate-600">
+              {sessionRecord.company} · {sessionRecord.roleLabel} · {sessionRecord.mode}
+            </p>
           </div>
 
           <ScoreRadar items={radarItems} />
 
-          {/* ── 民航岗位竞争力评估 ── */}
-          {report.competitiveLevel ? (
-            <div className="rounded-[34px] border border-white/44 bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(255,255,255,0.46))] p-6 shadow-[0_22px_58px_rgba(72,52,31,0.08)]">
-              <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
-                <TrendingUp className="h-5 w-5 text-emerald-600" />
-                民航岗位竞争力评估
-              </p>
-              <p className="mt-2 text-xs leading-5 text-slate-500">
-                本评估仅基于本次模拟面试表现生成，不代表真实招聘结果。
-              </p>
-
-              {/* 竞争力分数 + 等级 */}
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">当前等级</p>
-                  <p className="mt-1 text-3xl font-bold tracking-[-0.04em] text-slate-950">{report.competitiveLevel}</p>
-                </div>
-                <div className="rounded-[20px] border border-white/46 bg-white/68 px-4 py-3 text-center">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">参考区间</p>
-                  <p className="mt-1 text-2xl font-bold tracking-[-0.04em] text-slate-950">{report.competitiveRange}</p>
-                </div>
-
-              </div>
-
-              {/* 优势因素 */}
-              {report.competitiveStrengths && report.competitiveStrengths.length > 0 ? (
-                <div className="mt-5">
-                  <p className="text-sm font-medium text-emerald-700">优势因素</p>
-                  <div className="mt-2 space-y-2">
-                    {report.competitiveStrengths.map((item, i) => (
-                      <div key={i} className="rounded-[16px] border border-emerald-200/60 bg-emerald-50/50 px-4 py-3 text-sm text-emerald-800">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* 限制因素 */}
-              {report.competitiveWeaknesses && report.competitiveWeaknesses.length > 0 ? (
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-amber-700">限制因素</p>
-                  <div className="mt-2 space-y-2">
-                    {report.competitiveWeaknesses.map((item, i) => (
-                      <div key={i} className="rounded-[16px] border border-amber-200/60 bg-amber-50/50 px-4 py-3 text-sm text-amber-800">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              {/* 面试官视角 */}
-              {report.interviewerPerspective ? (
-                <div className="mt-5 rounded-[20px] border border-sky-100 bg-sky-50/60 px-5 py-4">
-                  <p className="text-sm font-medium text-sky-800">如果我是航空公司面试官</p>
-                  <p className="mt-2 text-sm leading-7 text-sky-700">{report.interviewerPerspective}</p>
-                </div>
-              ) : null}
-
-              {/* 影响因素说明 */}
-              {report.externalFactors ? (
-                <div className="mt-4 rounded-[20px] border border-white/48 bg-white/60 px-5 py-4">
-                  <p className="text-xs font-medium text-slate-600">影响因素说明</p>
-                  <p className="mt-2 text-xs leading-6 text-slate-500">{report.externalFactors}</p>
-                </div>
-              ) : null}
-
-              {/* 提升模拟 */}
-              {report.trainingProjection ? (
-                <div className="mt-4 rounded-[20px] border border-indigo-100 bg-indigo-50/60 px-5 py-4">
-                  <p className="text-sm font-medium text-indigo-800">训练提升预测</p>
-                  <p className="mt-2 text-sm leading-7 text-indigo-700">{report.trainingProjection}</p>
-                </div>
-              ) : null}
-
+          <section className="rounded-[32px] border border-white/44 bg-white/56 p-6 shadow-[0_18px_42px_rgba(75,54,31,0.06)] md:p-8">
+            <p className="text-sm font-medium text-slate-950">综合评价</p>
+            <div className="mt-4 whitespace-pre-wrap text-base leading-8 text-slate-700">
+              {report.comprehensiveEvaluation || report.overallEvaluation}
             </div>
-          ) : null}
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            <ReportList title="优势分析" items={report.strengths} />
-            <ReportList title="不足分析" items={report.weaknesses} />
-          </div>
-
-            <ReportList title="改进建议" items={report.improvementSuggestions} />
-
-          <div className="grid gap-6 lg:grid-cols-[1fr_0.95fr]">
-           <div className="rounded-[32px] border border-white/44 bg-white/56 p-6 shadow-[0_18px_42px_rgba(75,54,31,0.06)]">
-             <p className="text-sm font-medium text-slate-950">综合评价</p>
-             <p className="mt-4 text-base leading-8 text-slate-700">{report.overallEvaluation}</p>
-             {report.comprehensiveEvaluation ? (
-               <div className="mt-6 border-t border-white/40 pt-6">
-                 <p className="text-sm font-medium text-slate-950">面试综合评价</p>
-                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
-                   {report.comprehensiveEvaluation}
-                 </div>
-               </div>
-             ) : null}
-             
-             
-             {report.careerMatch ? (
-               <div className="mt-6 border-t border-white/40 pt-6">
-                 <p className="text-sm font-medium text-slate-950">岗位匹配分析</p>
-                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
-                   {report.careerMatch}
-                 </div>
-               </div>
-             ) : null}
-             
-             {report.nextPrediction ? (
-               <div className="mt-6 border-t border-white/40 pt-6">
-                 <p className="text-sm font-medium text-slate-950">下一次面试预测</p>
-                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-slate-700">
-                   {report.nextPrediction}
-                 </div>
-               </div>
-             ) : null}
-             {report.growthMessage ? (
-               <div className="mt-6 border-t border-slate-200/60 pt-6">
-                 <p className="text-sm font-medium text-cyan-800">成长寄语</p>
-                 <div className="mt-3 whitespace-pre-wrap text-base leading-8 text-cyan-700">
-                   {report.growthMessage}
-                 </div>
-               </div>
-             ) : null}
-             {report.highlights?.length ? (
-                <div className="mt-6 space-y-3">
-                  {report.highlights.map((item, index) => (
-                    <div
-                      key={`${item}-${index}`}
-                      className="rounded-[20px] border border-white/46 bg-white/72 px-4 py-4 text-sm leading-7 text-slate-700"
-                    >
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="rounded-[32px] border border-white/44 bg-white/56 p-6 shadow-[0_18px_42px_rgba(75,54,31,0.06)]">
-              <p className="text-sm font-medium text-slate-950">本次面试信息</p>
-              <div className="mt-4 grid gap-3">
-                {[
-                  `目标航司：${sessionRecord.company}`,
-                  `目标岗位：${sessionRecord.roleLabel}`,
-                  `面试模式：${sessionRecord.mode}`,
-                  `面试官风格：${sessionRecord.persona}`,
-                  `总时长：${Math.max(1, sessionRecord.elapsedSeconds ?? 0)} 秒`,
-                  "计费：本场已完成并计 1 次（优先使用免费额度）",
-                ].map((item) => (
-                  <div
-                    key={item}
-                    className="rounded-[20px] border border-white/46 bg-white/72 px-4 py-4 text-sm text-slate-700"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/profile"
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700 shadow-none transition-all duration-200 ease-in-out hover:-translate-y-px hover:border-white/25 hover:bg-white/18"
-                >
-                  进入成长中心
-                </Link>
-                <Link
-                  href="/interview"
-                  className="inline-flex h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-medium text-slate-700 shadow-none transition-all duration-200 ease-in-out hover:-translate-y-px hover:border-white/25 hover:bg-white/18"
-                >
-                  再练一次
-                </Link>
-              </div>
-            </div>
-          </div>
+          </section>
 
           {/* ===== 逐题分析（默认折叠，每题独立）===== */}
           {report.perQuestionAnalysis?.length ? (
@@ -568,15 +330,6 @@ export default function InterviewReportPage() {
             </section>
           ) : null}
 
-          <div className="mt-8 flex justify-end">
-            <Link
-              href="/profile"
-              className="inline-flex items-center gap-2 text-sm font-medium text-sky-700"
-            >
-              查看成长中心
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
         </div>
       </main>
     </AppFrame>

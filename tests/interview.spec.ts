@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { buildFastStartQuestion } from "../lib/interview/config";
+import { analyzeInterviewReport } from "../lib/interview/report";
 
 test.describe("AI面试", () => {
   test("首题本地即时生成", () => {
@@ -8,6 +9,65 @@ test.describe("AI面试", () => {
     expect(question).toContain("飞行员");
     expect(question).toContain("简历我已经看过了");
     expect(question).toContain("自我介绍");
+  });
+
+  test("弱回答会直接指出面试能力不足", () => {
+    const report = analyzeInterviewReport({
+      role: "pilot",
+      company: "国航",
+      mode: "校招",
+      turns: [
+        { question: "请自我介绍", answer: "我叫小王。", stage: "self-intro" },
+        { question: "为什么想成为飞行员？", answer: "因为喜欢飞机。", stage: "role-fit" },
+        { question: "如何处理飞行中的异常？", answer: "听机长的。", stage: "scenario" },
+      ],
+    });
+
+    expect(report.comprehensiveEvaluation).toContain("面试能力偏弱");
+    expect(report.comprehensiveEvaluation).toContain("进入下一轮的可能性较低");
+    expect(report.perQuestionAnalysis[0]).toContain("面试官判断");
+  });
+
+  test("报告页只展示雷达图、综合评价和逐题分析", async ({ page }) => {
+    const turns = [
+      { question: "请做一个自我介绍", answer: "我叫小王，是航空服务专业学生，参加过礼仪培训。", stage: "self-intro" as const },
+      { question: "为什么选择这个岗位？", answer: "我了解岗位需要安全意识，也愿意持续学习。", stage: "role-fit" as const },
+    ];
+    const report = analyzeInterviewReport({
+      role: "cabin-crew",
+      company: "南航",
+      mode: "校招",
+      turns,
+    });
+    const record = {
+      sessionId: "report-page-contract",
+      company: "南航",
+      role: "cabin-crew",
+      roleLabel: "乘务员",
+      mode: "校招",
+      persona: "亲和型HR",
+      interviewer: "客舱服务招聘面试官",
+      elapsedSeconds: 420,
+      turns,
+      createdAt: new Date(0).toISOString(),
+      report,
+    };
+
+    await page.addInitScript((session) => {
+      localStorage.setItem("aeroprep-ai-interview-sessions", JSON.stringify([session]));
+      localStorage.setItem("aeroprep-ai-latest-session", session.sessionId);
+    }, record);
+
+    await page.goto("/interview/report?sessionId=report-page-contract");
+    await expect(page.getByText("能力雷达图")).toBeVisible();
+    await expect(page.getByText("综合评价", { exact: true })).toBeVisible();
+    await expect(page.getByText("逐题分析", { exact: true })).toBeVisible();
+    await expect(page.getByText("优势分析", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("民航岗位竞争力评估", { exact: true })).toHaveCount(0);
+
+    await page.getByRole("button", { name: /第 1 题/ }).click();
+    await expect(page.getByText("你的回答原文")).toBeVisible();
+    await expect(page.getByRole("button", { name: /用 AI 深入优化这段回答/ })).toBeVisible();
   });
 
   test("8. 面试准备页加载完成", async ({ page }) => {

@@ -419,7 +419,7 @@ export async function POST(request: NextRequest) {
          fallbackReport,
          body.resumeQuality
         ),
-        { maxTokens: 16000, reasoningEffort: "low", timeoutMs: 110000, userId: user.id }
+        { maxTokens: 10000, reasoningEffort: "low", timeoutMs: 110000, userId: user.id }
       );
 
       return NextResponse.json({
