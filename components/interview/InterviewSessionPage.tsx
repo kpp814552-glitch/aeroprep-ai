@@ -20,6 +20,8 @@ const MAX_SILENT_RETRIES = 2;
 const MAX_REPEAT_REQUESTS = 2;
 /** 浏览器语音识别停止后，最多等这么久收尾；保存的实时快照仍会作为兜底。 */
 const RECOGNITION_STOP_TIMEOUT_MS = 1200;
+/** 下一题接口超时后立即走本地兜底，避免停在“AI 正在分析”。 */
+const NEXT_QUESTION_TIMEOUT_MS = 8000;
 
 // ── 面试中断恢复：把进度存在 sessionStorage，刷新/误关页面后可以接着答 ──
 const PROGRESS_KEY = "aeroprep_interview_progress";
@@ -61,7 +63,7 @@ function clearSavedProgress(): void {
   } catch { /* ignore */ }
 }
 import {
-  
+  buildQuickNextQuestion,
   getAnswerSecondsForStage,
   interviewStageLabels,
   getTotalRoundsForMode,
@@ -903,32 +905,41 @@ export default function InterviewSessionPage() {
 
   const fetchNextQuestion = useCallback(
     async (nextTurns: InterviewTurn[]) => {
-      const response = await fetch("/api/interview", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action: "next",
-          role,
-          company,
-          mode,
-          persona,
-          resumeText: resumeTextRef.current,
-      resumeQuality: resumeQualityRef.current,
-          turns: nextTurns,
-        }),
-      });
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), NEXT_QUESTION_TIMEOUT_MS);
 
-      const payload = (await response.json()) as InterviewApiQuestion;
-      if (response.status === 402) {
-        router.replace('/member?reason=quota');
-      }
-      if (!response.ok || !payload.question) {
-        throw new Error("追问生成失败");
-      }
+      try {
+        const response = await fetch("/api/interview", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            action: "next",
+            role,
+            company,
+            mode,
+            persona,
+            resumeText: resumeTextRef.current,
+            resumeQuality: resumeQualityRef.current,
+            turns: nextTurns,
+          }),
+          signal: controller.signal,
+        });
 
-      return payload;
+        const payload = (await response.json()) as InterviewApiQuestion;
+        if (response.status === 402) {
+          router.replace('/member?reason=quota');
+          throw new Error("NO_QUOTA");
+        }
+        if (!response.ok || !payload.question) {
+          throw new Error("追问生成失败");
+        }
+
+        return payload;
+      } finally {
+        window.clearTimeout(timeout);
+      }
     },
     [company, mode, persona, role, router]
   );
@@ -1293,43 +1304,55 @@ export default function InterviewSessionPage() {
       return;
     }
 
-    // Fetch next question + preload TTS (pipeline)
+    // Fetch next question. If the network or model is slow, use a local
+    // role-specific question immediately instead of leaving the user stuck.
+    let nextQ: InterviewApiQuestion;
     try {
-      const nextQ = await fetchNextQuestion(nextTurns);
-      const qText = nextQ.question?.trim() ?? '';
-      if (!qText) throw new Error('下一轮问题内容为空');
-
-      pendingQuestionRef.current = {
-        text: qText,
-        stage: nextQ.stage ?? currentStage,
-        interviewer: nextQ.interviewer ?? interviewerLabel,
-        roleLabel: nextQ.roleLabel ?? roleLabel,
-      };
-      activeQuestionRef.current = qText;
-
-      if (nextQ.interviewer) setInterviewerLabel(nextQ.interviewer);
-      if (nextQ.roleLabel) setRoleLabel(nextQ.roleLabel);
-
-      // 记录进度：已答 nextTurns.length 题，下一题已就绪
-      writeSavedProgress({
-        key: `${role}|${company}|${mode}|${persona}`,
-        turns: nextTurns,
-        pending: pendingQuestionRef.current,
-        savedAt: Date.now(),
-      });
-
-      // Preload TTS while still showing "AI 正在分析你的回答..."
-      setStatusText('AI 正在分析你的回答...（语音准备中）');
-      await voiceSession?.preloadQuestion(qText);
-
-      // Transition to playing — text will only appear when TTS starts
-      setPhase('playing');
-      await playCurrentQuestion(pendingQuestionRef.current);
+      nextQ = await fetchNextQuestion(nextTurns);
     } catch (err) {
-      setFatalError(err instanceof Error ? err.message : '下一轮问题生成失败');
+      if (err instanceof Error && err.message === "NO_QUOTA") return;
+      nextQ = {
+        ...buildQuickNextQuestion(role, nextTurns, company),
+        interviewer: interviewerLabel,
+        roleLabel,
+      };
+    }
+
+    const qText = nextQ.question?.trim() ?? '';
+    if (!qText) {
+      setFatalError('下一轮问题内容为空');
       setStatusText('失败，请刷新后重试');
       setPhase('error');
+      return;
     }
+
+    pendingQuestionRef.current = {
+      text: qText,
+      stage: nextQ.stage ?? currentStage,
+      interviewer: nextQ.interviewer ?? interviewerLabel,
+      roleLabel: nextQ.roleLabel ?? roleLabel,
+    };
+    activeQuestionRef.current = qText;
+
+    if (nextQ.interviewer) setInterviewerLabel(nextQ.interviewer);
+    if (nextQ.roleLabel) setRoleLabel(nextQ.roleLabel);
+
+    // 记录进度：已答 nextTurns.length 题，下一题已就绪
+    writeSavedProgress({
+      key: `${role}|${company}|${mode}|${persona}`,
+      turns: nextTurns,
+      pending: pendingQuestionRef.current,
+      savedAt: Date.now(),
+    });
+
+    // Preload is best-effort and capped at 3s. Playback below still has its
+    // own bounded retry, so a slow TTS service cannot freeze the interview.
+    setStatusText('AI 正在分析你的回答...（语音准备中）');
+    await voiceSession?.preloadQuestion(qText, { timeoutMs: 3000 });
+
+    // Transition to playing — text will only appear when TTS starts
+    setPhase('playing');
+    await playCurrentQuestion(pendingQuestionRef.current);
   }, [
     clearAnswerTimer,
     currentStage,

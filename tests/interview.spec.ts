@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { buildFastStartQuestion } from "../lib/interview/config";
+import { buildFastStartQuestion, buildQuickNextQuestion } from "../lib/interview/config";
 import { analyzeInterviewReport } from "../lib/interview/report";
 
 test.describe("AI面试", () => {
@@ -9,6 +9,17 @@ test.describe("AI面试", () => {
     expect(question).toContain("飞行员");
     expect(question).toContain("简历我已经看过了");
     expect(question).toContain("自我介绍");
+  });
+
+  test("下一题接口异常时有本地兜底", () => {
+    const fallback = buildQuickNextQuestion(
+      "pilot",
+      [{ question: "请做自我介绍", answer: "我叫小王。", stage: "self-intro" }],
+      "国航",
+    );
+
+    expect(fallback.question.length).toBeGreaterThan(10);
+    expect(fallback.stage).toBeTruthy();
   });
 
   test("弱回答会直接指出面试能力不足", () => {

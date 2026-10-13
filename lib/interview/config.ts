@@ -3,6 +3,7 @@ import type {
   InterviewRole,
   InterviewRoleConfig,
   InterviewStage,
+  InterviewTurn,
 } from './types';
 
 export const MAX_FOLLOW_UPS = 3;
@@ -154,6 +155,38 @@ export function buildFastStartQuestion(
     : "好的，我们先从自我介绍开始。";
 
   return `你好，${companyLead}${introLead}请你用一分钟左右介绍姓名、年龄、学校、专业，以及和${roleConfig.label}相关的经历。`;
+}
+
+/** 下一题接口超时时的本地兜底，保证面试不会卡在分析阶段。 */
+export function buildQuickNextQuestion(
+  role: InterviewRole,
+  turns: InterviewTurn[],
+  company?: string,
+) {
+  const plan = [...interviewStages];
+  const dropOrder: InterviewStage[] = ["education", "internship", "project"];
+  for (const stage of dropOrder) {
+    if (plan.length <= TOTAL_INTERVIEW_ROUNDS) break;
+    const index = plan.indexOf(stage);
+    if (index >= 0) plan.splice(index, 1);
+  }
+  const stage = plan[Math.min(turns.length, plan.length - 1)] ?? "summary";
+  const roleConfig = getRoleConfig(role);
+  const airline = company?.trim() || "目标航司";
+
+  const questions: Record<InterviewStage, string> = {
+    "self-intro": `请你用一分钟左右介绍姓名、年龄、学校、专业，以及和${roleConfig.label}相关的经历。`,
+    education: `请结合你的学校经历说一说，哪一门课程或哪一次训练对你准备${roleConfig.label}岗位帮助最大？`,
+    project: "请挑一个你最有代表性的项目，讲讲你具体负责了什么，最后得到了什么结果？",
+    internship: "你有没有相关的实习、见习或值班经历？当时你承担了什么角色，具体做了什么？",
+    "role-fit": `如果进入${airline}的${roleConfig.label}岗位，你觉得自己最能直接胜任的能力是什么？请举一个例子。`,
+    professional: `围绕${roleConfig.coreTopics[0]}和${roleConfig.coreTopics[1]}，你如何理解它们在实际工作中的重要性？`,
+    scenario: `如果${airline}的${roleConfig.label}岗位突然遇到一个需要你独立判断的突发情况，你会先确认什么，再采取什么行动？`,
+    career: `如果你顺利进入${airline}，你希望自己未来三到五年成长成什么样的状态？`,
+    summary: `最后一个问题，如果请你用一句话总结，为什么${airline}应该选择你从事${roleConfig.label}工作？`,
+  };
+
+  return { stage, question: questions[stage] };
 }
 
 export function getAnswerSecondsForStage(stage: InterviewStage) {

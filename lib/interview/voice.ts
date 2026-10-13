@@ -23,7 +23,7 @@ export type InterviewVoiceSession = {
     voiceLabel: string | null;
   }>;
   /** Pre-fetches TTS audio for the next question so speakQuestion can play it instantly. */
-  preloadQuestion: (text: string) => Promise<void>;
+  preloadQuestion: (text: string, options?: { timeoutMs?: number }) => Promise<void>;
   stop: () => void;
 };
 
@@ -68,8 +68,8 @@ export function createInterviewVoiceSession(
     ? new TtsPlayer({
         endpoint: options.endpoint || "/api/tts",
         voiceId: options.voiceId,
-        retries: 3,
-        timeoutMs: 25000,
+        retries: 0,
+        timeoutMs: 8000,
       })
     : null;
 
@@ -85,10 +85,10 @@ export function createInterviewVoiceSession(
       return null;
     },
     async prepare() {},
-    async preloadQuestion(text: string) {
+    async preloadQuestion(text: string, options?: { timeoutMs?: number }) {
       const normalizedText = buildInterviewerPrompt(text);
       try {
-        await ttsPlayer?.preload(normalizedText);
+        await ttsPlayer?.preload(normalizedText, { timeoutMs: options?.timeoutMs });
       } catch {
         console.error("[InterviewVoice] preload failed, speakQuestion will fetch directly.");
       }
@@ -98,7 +98,7 @@ export function createInterviewVoiceSession(
 
       try {
         await ttsPlayer?.play(normalizedText, {
-          timeoutMs: 25000,
+          timeoutMs: 8000,
           onPlayStart: callbacks?.onPlayStart,
           onPlayEnd: callbacks?.onPlayEnd,
         });
